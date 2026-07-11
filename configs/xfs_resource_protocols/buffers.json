@@ -1,0 +1,30 @@
+[
+  {
+    "protocol_id": "xfs.buffer.get_read.relse",
+    "resource_kind": "xfs_buf",
+    "acquire_functions": ["xfs_buf_get", "xfs_buf_read", "xfs_buf_get_uncached", "xfs_buf_read_uncached"],
+    "release_functions": ["xfs_buf_relse"],
+    "success_condition": "return_value == 0 and out buffer pointer assigned",
+    "resource_expr": "out_parameter",
+    "required_action": "xfs_buf_relse",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "XFS buffers acquired through get/read helpers should be released with xfs_buf_relse unless ownership is transferred."
+  },
+  {
+    "protocol_id": "xfs.transaction.buffer.get_read.brelse",
+    "resource_kind": "xfs_trans_buf",
+    "acquire_functions": ["xfs_trans_get_buf", "xfs_trans_get_buf_map", "xfs_trans_read_buf", "xfs_trans_read_buf_map"],
+    "release_functions": ["xfs_trans_brelse", "xfs_buf_relse"],
+    "success_condition": "return_value == 0 and out buffer pointer assigned",
+    "resource_expr": "out_parameter",
+    "required_action": "xfs_trans_brelse",
+    "exceptions": ["released_on_transaction_commit", "ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "XFS buffers joined to a transaction should be released with xfs_trans_brelse or consumed by transaction completion."
+  }
+]

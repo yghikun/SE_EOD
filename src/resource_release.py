@@ -32,6 +32,17 @@ def release_functions(resource: Any) -> list[str]:
     return [str(item) for item in releases]
 
 
+def release_arg_index(resource: Any) -> int:
+    if isinstance(resource, dict):
+        value = resource.get("release_arg_index", 0)
+    else:
+        value = getattr(resource, "release_arg_index", 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def cleanup_call_releases_resource(call_expr: str, resource: Any) -> bool:
     name, args = call_name_and_args(call_expr)
     return call_releases_resource(name, args, resource)
@@ -52,10 +63,16 @@ def _action_releases_resource(name: str, args: list[str], resource: Any) -> bool
     var = resource_var(resource)
     kind = resource_kind(resource)
     first_arg = args[0] if args else ""
+    arg_index = release_arg_index(resource)
 
     if name == "kmem_cache_free" and "kmem_cache_free" in releases:
         target = args[1] if len(args) >= 2 else first_arg
         return same_resource_expr(target, var)
+
+    if name in releases:
+        target = args[arg_index] if len(args) > arg_index else first_arg
+        if same_resource_expr(target, var):
+            return True
 
     if name in releases and same_resource_expr(first_arg, var):
         return True

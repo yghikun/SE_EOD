@@ -9,12 +9,16 @@ from src.evidence_ranker import (
     candidate_id_for_row,
     rank_candidate_rows,
 )
+from src.error_condition import classify_condition
+from src.label_resolver import Statement
 from src.llm_task_builder import extract_deepseek_true_candidates
 from src.main import main
 from src.manual_review import ManualReviewDB, ManualReviewLabel
 from src.ownership_transfer import ownership_transfer_hints_for_candidate
 from src.protocol_db import ResourceProtocolDB
 from src.resource_expr import same_resource_expr
+from src.resource_release import cleanup_call_releases_resource
+from src.resource_tracker import ResourceTracker, load_resource_map
 from src.wrapper_summary import WrapperSummaryDB
 
 
@@ -784,3 +788,71 @@ def test_extract_deepseek_true_candidates(tmp_path):
             "suggested_next_step": "inspect",
         }
     ]
+
+
+def test_xfs_config_loads_protocols_and_wrappers():
+    resource_map = load_resource_map("configs/xfs_resource_map.json")
+    protocols = ResourceProtocolDB.load_from_dir("configs/xfs_resource_protocols")
+    wrappers = WrapperSummaryDB.load_from_file("configs/xfs_wrapper_summaries.json")
+
+    assert "xfs_trans_alloc" in resource_map["acquire_functions"]
+    assert not protocols.warnings
+    assert protocols.find_by_resource_kind("xfs_transaction")
+    assert protocols.find_by_required_action("xfs_trans_cancel")
+    assert protocols.find_by_acquire_function("xfs_trans_get_buf")
+    assert protocols.find_by_release_function("xfs_qm_dqrele")
+    assert not wrappers.warnings
+    assert wrappers.releases_resource_kind("xfs_trans_brelse", "xfs_trans_buf")
+    assert wrappers.releases_resource_kind("xfs_irele", "xfs_inode_ref")
+
+
+def test_xfs_out_parameter_acquire_and_second_arg_release_tracking():
+    tracker = ResourceTracker(load_resource_map("configs/xfs_resource_map.json"))
+    statements = [
+        Statement("error = xfs_trans_alloc(mp, resv, 0, 0, 0, &tp);", 10),
+        Statement("error = xfs_trans_get_buf(tp, target, blkno, len, 0, &bp);", 11),
+        Statement("xfs_trans_brelse(tp, bp);", 12),
+    ]
+    condition = classify_condition("other_error")
+
+    held = tracker.held_before(
+        statements,
+        error_line=20,
+        condition=condition,
+        error_source_expr="some_other_call()",
+        function_name="demo_xfs",
+    )
+
+    assert [resource.var for resource in held] == ["tp"]
+    assert held[0].release_suggestion == "xfs_trans_cancel(tp)"
+
+
+def test_xfs_out_parameter_acquire_failure_is_not_reported_as_held():
+    tracker = ResourceTracker(load_resource_map("configs/xfs_resource_map.json"))
+    statements = [
+        Statement("error = xfs_trans_alloc(mp, resv, 0, 0, 0, &tp);", 10),
+    ]
+    condition = classify_condition("error")
+
+    held = tracker.held_before(
+        statements,
+        error_line=11,
+        condition=condition,
+        error_source_expr="xfs_trans_alloc(mp, resv, 0, 0, 0, &tp)",
+        function_name="demo_xfs",
+    )
+
+    assert held == []
+
+
+def test_release_arg_index_matches_xfs_trans_brelse_second_arg():
+    resource = {
+        "var": "bp",
+        "resource_type": "xfs_trans_buf",
+        "release_functions": ["xfs_trans_brelse", "xfs_buf_relse"],
+        "release_arg_index": 1,
+    }
+
+    assert cleanup_call_releases_resource("xfs_trans_brelse(tp, bp)", resource)
+    assert cleanup_call_releases_resource("xfs_buf_relse(bp)", resource)
+    assert not cleanup_call_releases_resource("xfs_trans_brelse(tp, other_bp)", resource)

@@ -1,0 +1,183 @@
+{
+  "acquire_functions": {
+    "kmalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kzalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kcalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kmalloc_array": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kcalloc_node": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kvmalloc": {
+      "resource_type": "memory",
+      "release": ["kvfree", "kfree"]
+    },
+    "kvzalloc": {
+      "resource_type": "memory",
+      "release": ["kvfree", "kfree"]
+    },
+    "kvcalloc": {
+      "resource_type": "memory",
+      "release": ["kvfree", "kfree"]
+    },
+    "vmalloc": {
+      "resource_type": "memory",
+      "release": ["vfree", "kvfree"]
+    },
+    "kmem_alloc": {
+      "resource_type": "memory",
+      "release": ["kmem_free", "kvfree", "kfree"]
+    },
+    "kmem_cache_alloc": {
+      "resource_type": "memory",
+      "release": ["kmem_cache_free", "kfree"]
+    },
+    "kmem_cache_zalloc": {
+      "resource_type": "memory",
+      "release": ["kmem_cache_free", "kfree"]
+    },
+    "xfs_trans_alloc": {
+      "resource_type": "xfs_transaction",
+      "release": ["xfs_trans_cancel", "xfs_trans_commit"],
+      "out_resource_arg": 5,
+      "out_arg_requires_address": true
+    },
+    "xfs_trans_alloc_empty": {
+      "resource_type": "xfs_transaction",
+      "release": ["xfs_trans_cancel", "xfs_trans_commit"],
+      "out_resource_arg": 1,
+      "out_arg_requires_address": true
+    },
+    "xfs_buf_get": {
+      "resource_type": "xfs_buf",
+      "release": ["xfs_buf_relse"],
+      "out_resource_arg": 3,
+      "out_arg_requires_address": true
+    },
+    "xfs_buf_read": {
+      "resource_type": "xfs_buf",
+      "release": ["xfs_buf_relse"],
+      "out_resource_arg": 4,
+      "out_arg_requires_address": true
+    },
+    "xfs_buf_get_uncached": {
+      "resource_type": "xfs_buf",
+      "release": ["xfs_buf_relse"],
+      "out_resource_arg": 3,
+      "out_arg_requires_address": true
+    },
+    "xfs_buf_read_uncached": {
+      "resource_type": "xfs_buf",
+      "release": ["xfs_buf_relse"],
+      "out_resource_arg": 4,
+      "out_arg_requires_address": true
+    },
+    "xfs_trans_get_buf": {
+      "resource_type": "xfs_trans_buf",
+      "release": ["xfs_trans_brelse", "xfs_buf_relse"],
+      "out_resource_arg": 5,
+      "out_arg_requires_address": true,
+      "release_arg_index": 1,
+      "release_suggestion": "xfs_trans_brelse(tp, {var})"
+    },
+    "xfs_trans_get_buf_map": {
+      "resource_type": "xfs_trans_buf",
+      "release": ["xfs_trans_brelse", "xfs_buf_relse"],
+      "out_resource_arg": 5,
+      "out_arg_requires_address": true,
+      "release_arg_index": 1,
+      "release_suggestion": "xfs_trans_brelse(tp, {var})"
+    },
+    "xfs_trans_read_buf": {
+      "resource_type": "xfs_trans_buf",
+      "release": ["xfs_trans_brelse", "xfs_buf_relse"],
+      "out_resource_arg": 6,
+      "out_arg_requires_address": true,
+      "release_arg_index": 1,
+      "release_suggestion": "xfs_trans_brelse(tp, {var})"
+    },
+    "xfs_trans_read_buf_map": {
+      "resource_type": "xfs_trans_buf",
+      "release": ["xfs_trans_brelse", "xfs_buf_relse"],
+      "out_resource_arg": 6,
+      "out_arg_requires_address": true,
+      "release_arg_index": 1,
+      "release_suggestion": "xfs_trans_brelse(tp, {var})"
+    },
+    "xfs_iget": {
+      "resource_type": "xfs_inode_ref",
+      "release": ["xfs_irele", "iput"],
+      "out_resource_arg": 5,
+      "out_arg_requires_address": true
+    },
+    "xfs_qm_dqget": {
+      "resource_type": "xfs_dquot_ref",
+      "release": ["xfs_qm_dqrele", "xfs_qm_dqput"],
+      "out_resource_arg": 4,
+      "out_arg_requires_address": true
+    },
+    "xfs_qm_dqget_inode": {
+      "resource_type": "xfs_dquot_ref",
+      "release": ["xfs_qm_dqrele", "xfs_qm_dqput"],
+      "out_resource_arg": 3,
+      "out_arg_requires_address": true
+    },
+    "xfs_ilock": {
+      "resource_type": "xfs_inode_lock",
+      "release": ["xfs_iunlock"],
+      "direct_resource_arg": 0
+    },
+    "xfs_buf_lock": {
+      "resource_type": "xfs_buf_lock",
+      "release": ["xfs_buf_unlock", "xfs_buf_relse"],
+      "direct_resource_arg": 0
+    },
+    "xfs_dqlock": {
+      "resource_type": "xfs_dquot_lock",
+      "release": ["xfs_dqunlock"],
+      "direct_resource_arg": 0
+    },
+    "mutex_lock": {
+      "resource_type": "mutex",
+      "release": ["mutex_unlock"],
+      "direct_resource_arg": 0
+    },
+    "spin_lock": {
+      "resource_type": "spinlock",
+      "release": ["spin_unlock"],
+      "direct_resource_arg": 0
+    },
+    "spin_lock_irq": {
+      "resource_type": "spinlock",
+      "release": ["spin_unlock_irq"],
+      "direct_resource_arg": 0
+    },
+    "spin_lock_irqsave": {
+      "resource_type": "spinlock",
+      "release": ["spin_unlock_irqrestore"],
+      "direct_resource_arg": 0
+    },
+    "down_read": {
+      "resource_type": "rwsem",
+      "release": ["up_read"],
+      "direct_resource_arg": 0
+    },
+    "down_write": {
+      "resource_type": "rwsem",
+      "release": ["up_write"],
+      "direct_resource_arg": 0
+    }
+  }
+}

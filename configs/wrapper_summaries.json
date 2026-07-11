@@ -80,6 +80,14 @@
     "description": "Frees ext4 fs_context private allocations such as fc->fs_private"
   },
   {
+    "function": "ext4_bread_batch",
+    "releases": ["brelse"],
+    "resource_kinds": ["buffer_head"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "With wait=false, transfers successfully acquired buffer heads in bhs[] to the caller for asynchronous completion."
+  },
+  {
     "function": "kobject_put",
     "releases": ["kfree"],
     "resource_kinds": ["memory"],

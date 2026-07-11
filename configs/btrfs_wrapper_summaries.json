@@ -2,10 +2,10 @@
   {
     "function": "btrfs_free_path",
     "releases": ["btrfs_free_path"],
-    "resource_kinds": ["btrfs_path"],
+    "resource_kinds": ["btrfs_path", "btrfs_tree_lock", "btrfs_tree_read_lock"],
     "aliases": [],
     "confidence": "high",
-    "description": "Releases path-held nodes and locks, then frees the btrfs_path object."
+    "description": "Releases path-held nodes and tree locks, then frees the btrfs_path object."
   },
   {
     "function": "btrfs_end_transaction",
@@ -62,6 +62,54 @@
     "aliases": [],
     "confidence": "high",
     "description": "Releases and frees a dynamically allocated ulist."
+  },
+  {
+    "function": "free_leaf_list",
+    "releases": ["ulist_free"],
+    "resource_kinds": ["ulist"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Frees per-leaf auxiliary data and then releases the containing ulist."
+  },
+  {
+    "function": "btrfs_free_fs_info",
+    "releases": ["kfree"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "Releases fs_info-owned mount allocations, including subpage_info."
+  },
+  {
+    "function": "btrfs_release_file",
+    "releases": ["kfree"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "Releases file-private allocations transferred to file->private_data."
+  },
+  {
+    "function": "insert_into_bitmap",
+    "releases": ["kmem_cache_free"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "Consumes a free-space info object; its failure cleanup frees the object before returning."
+  },
+  {
+    "function": "add_qgroup_rb",
+    "releases": ["kfree"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "Consumes a preallocated qgroup object and takes responsibility for its lifetime."
+  },
+  {
+    "function": "add_relation_rb",
+    "releases": ["kfree"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "medium",
+    "description": "Consumes or frees a preallocated qgroup relation object on all return paths."
   },
   {
     "function": "kfree",

@@ -62,7 +62,7 @@
     },
     "ulist_alloc": {
       "resource_type": "ulist",
-      "release": ["ulist_free"]
+      "release": ["ulist_free", "free_leaf_list"]
     },
     "btrfs_start_transaction": {
       "resource_type": "btrfs_transaction",

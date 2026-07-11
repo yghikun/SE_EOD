@@ -2,7 +2,7 @@
 
 Date: 2026-07-11
 
-This file records the ext4 and btrfs issues that we have checked beyond raw
+This file records the ext4, btrfs, and XFS issues that we have checked beyond raw
 static ranking.  "Confirmed" here means source-level confirmation plus either a
 submitted patch, reproduction evidence, or targeted fault-injection evidence.
 It does not mean upstream acceptance unless explicitly stated.
@@ -18,6 +18,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
 | 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/btrfs/recover_relocation_qemu_report.md` |
+| 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
 
 ## ext4
 
@@ -268,6 +269,51 @@ references on errors before `clean_dirty_subvols()`, independent of
 
 Status: confirmed cleanup-defect candidate under the tested fault-injection
 condition.  Not yet upstream-submitted in the checked workspace.
+
+## XFS
+
+### 8. `fs/xfs/xfs_rtalloc.c::xfs_rtcopy_summary`
+
+Bug type: swallowed error while copying realtime summary metadata.
+
+In Linux v6.8, `xfs_rtcopy_summary()` records failures from all three summary
+operations and jumps to a shared cleanup label:
+
+```c
+error = xfs_rtget_summary(oargs, log, bbno, &sum);
+if (error)
+        goto out;
+...
+error = xfs_rtmodify_summary(oargs, log, bbno, -sum);
+if (error)
+        goto out;
+error = xfs_rtmodify_summary(nargs, log, bbno, sum);
+if (error)
+        goto out;
+...
+out:
+        xfs_rtbuf_cache_relse(oargs);
+        return 0;
+```
+
+The caller, `xfs_growfs_rt()`, checks the result of `xfs_rtcopy_summary()` and
+would cancel its transaction on an error.  The unconditional `return 0` makes
+that handling unreachable after a failed summary read or modification, so the
+grow operation can continue after a partially completed metadata copy.
+
+Evidence:
+
+- Linux v6.8 source: `linux-v6.8-fs/fs/xfs/xfs_rtalloc.c`, lines 101-118.
+- SE-EOD rediscovery: `candidate_343e5e0b9add`,
+  `candidate_cfcfe8b9d353`, and `candidate_40ab97ad7725` in
+  `outputs/xfs/deepseek_true_candidates.jsonl`.
+- Later mainline source changes the cleanup return to `return error;`, matching
+  the caller's existing `if (error) goto error_cancel;` handling.
+
+Status: source-level confirmed historical Linux v6.8 bug and already fixed in
+later upstream mainline.  The exact fixing commit has not been recorded in this
+workspace, so this is a validation/duplicate finding rather than a new patch
+submission.
 
 ## Not Included As Confirmed Bugs
 

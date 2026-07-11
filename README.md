@@ -1,5 +1,4 @@
 # se_eod
-sk-2ca00cef957c46edad2cc22ee6b7423c
 `se_eod` 是一个面向 Linux ext4 的 Python 3 静态分析原型。当前项目已经完成了一条从
 Linux v6.8 ext4 源码准备、函数内错误路径抽取、资源清理建模、可疑候选筛选，到
 LLM/DeepSeek 辅助复核任务生成的端到端流水线。
@@ -535,6 +534,7 @@ python scripts/validate_v1_2_review_feedback.py \
 - 覆盖 review feedback label 调分且不删除候选。
 - 覆盖 v1.2.2 false-positive rule backpropagation：字段别名、数组元素、`kmem_cache_free`
   第二参数、`put_bh`、`kobject_put`、`ext4_fc_free`、NULL acquire-failure 和嵌套 if 归因。
+- 覆盖 XFS out-parameter acquire 建模，以及 `xfs_trans_brelse(tp, bp)` 这类第二参数释放匹配。
 
 ## 项目目录说明
 
@@ -543,10 +543,13 @@ python scripts/validate_v1_2_review_feedback.py \
 ├── configs/
 │   ├── ext4_resource_map.json        # 资源获取/释放映射
 │   ├── btrfs_resource_map.json       # btrfs 资源获取/释放映射
+│   ├── xfs_resource_map.json         # xfs 资源获取/释放映射
 │   ├── wrapper_summaries.json        # cleanup wrapper / alias 摘要
 │   ├── btrfs_wrapper_summaries.json  # btrfs cleanup wrapper / alias 摘要
+│   ├── xfs_wrapper_summaries.json    # xfs cleanup wrapper / alias 摘要
 │   ├── resource_protocols/           # ext4 API lifecycle 协议
-│   └── btrfs_resource_protocols/     # btrfs API lifecycle 协议
+│   ├── btrfs_resource_protocols/     # btrfs API lifecycle 协议
+│   └── xfs_resource_protocols/       # xfs API lifecycle 协议
 ├── linux-v6.8-fs/                    # 稀疏 checkout 的 Linux v6.8 源码
 ├── outputs/
 │   ├── ext4_error_paths.csv          # 错误路径语料库
@@ -713,6 +716,33 @@ total_candidates=248
 E2_API_PROTOCOL_SUPPORTED_count=211
 llm_review_tasks=248
 pytest=9 passed
+```
+
+## 扫描 Linux v6.8 XFS
+
+XFS 配置覆盖内存分配、transaction handle、普通/transaction buffer、inode 引用、
+dquot 引用、XFS inode/buffer/dquot lock，以及常见内核锁协议。XFS 大量 API 使用
+`int` 返回值加 out-parameter 写回资源，例如 `xfs_trans_alloc(..., &tp)`、
+`xfs_buf_read(..., &bp)`；当前 resource tracker 已支持这类模式。
+
+完整 XFS 检查命令：
+
+```bash
+python -m src.main \
+  --linux linux-v6.8-fs \
+  --fs-subdir fs/xfs \
+  --resource-map configs/xfs_resource_map.json \
+  --out outputs/xfs/error_paths.csv \
+  --check-candidates \
+  --candidates-out outputs/xfs/suspicious_candidates.csv \
+  --rank-evidence \
+  --protocols-dir configs/xfs_resource_protocols \
+  --enable-ownership-transfer-hints \
+  --wrapper-summaries configs/xfs_wrapper_summaries.json \
+  --ranked-candidates-out outputs/xfs/ranked_candidates.jsonl \
+  --candidates-with-evidence-out outputs/xfs/candidates_with_evidence.csv \
+  --build-llm-tasks \
+  --llm-tasks-out outputs/xfs/llm_review_tasks.jsonl
 ```
 
 ## 生成可疑候选

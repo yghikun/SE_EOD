@@ -45,7 +45,7 @@
     "protocol_id": "btrfs.ulist.alloc.free",
     "resource_kind": "ulist",
     "acquire_functions": ["ulist_alloc"],
-    "release_functions": ["ulist_free"],
+    "release_functions": ["ulist_free", "free_leaf_list"],
     "success_condition": "return_value != NULL",
     "resource_expr": "lhs",
     "required_action": "ulist_free",
@@ -53,6 +53,6 @@
     "evidence_type": "api_lifecycle",
     "evidence_level": "E2_API_PROTOCOL",
     "confidence": "high",
-    "description": "Dynamically allocated ulists must be freed."
+    "description": "Dynamically allocated ulists must be freed directly or by free_leaf_list, which releases auxiliary leaf data and the ulist."
   }
 ]

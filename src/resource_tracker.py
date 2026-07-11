@@ -12,9 +12,7 @@ from .error_condition import ConditionInfo
 from .label_resolver import Statement
 from .parser import (
     call_name_and_args,
-    call_name_and_first_arg,
     extract_call_expressions,
-    split_args,
 )
 from .false_positive_model import (
     is_contract_restore_acquire,
@@ -31,9 +29,14 @@ class HeldResource:
     resource_type: str
     release_functions: list[str]
     acquire_line: int
+    out_resource_arg: int | None = None
+    release_arg_index: int = 0
+    release_suggestion_template: str = ""
 
     @property
     def release_suggestion(self) -> str:
+        if self.release_suggestion_template:
+            return self.release_suggestion_template.format(var=self.var)
         release = self.release_functions[0] if self.release_functions else "release"
         return f"{release}({self.var})"
 
@@ -55,8 +58,8 @@ def _assignment_lhs(text: str, eq_idx: int) -> str:
     return match.group(1) if match else ""
 
 
-def _assignment_calls(text: str) -> list[tuple[str, str]]:
-    found: list[tuple[str, str]] = []
+def _assignment_calls(text: str) -> list[tuple[str, str, list[str]]]:
+    found: list[tuple[str, str, list[str]]] = []
     idx = 0
     while idx < len(text):
         eq_idx = text.find("=", idx)
@@ -74,10 +77,26 @@ def _assignment_calls(text: str) -> list[tuple[str, str]]:
             rhs = rhs[:semi]
         calls = extract_call_expressions(rhs)
         if lhs and calls:
-            call_name, _ = call_name_and_first_arg(calls[0])
-            found.append((lhs, call_name))
+            call_name, args = call_name_and_args(calls[0])
+            found.append((lhs, call_name, args))
         idx = eq_idx + 1
     return found
+
+
+def _out_resource_var(args: list[str], cfg: dict[str, Any]) -> str:
+    if "out_resource_arg" not in cfg:
+        return ""
+    arg_idx = int(cfg.get("out_resource_arg", 0))
+    if arg_idx >= len(args):
+        return ""
+    raw = args[arg_idx].strip()
+    if cfg.get("out_arg_requires_address", False) and not raw.startswith("&"):
+        return ""
+    while raw.startswith("&"):
+        raw = raw[1:].strip()
+    while raw.startswith("(") and raw.endswith(")"):
+        raw = raw[1:-1].strip()
+    return raw
 
 
 class ResourceTracker:
@@ -102,26 +121,32 @@ class ResourceTracker:
                 name, args = call_name_and_args(call)
                 self._apply_release(held, name, args)
 
-            for var, call_name in _assignment_calls(stmt.text):
+            for lhs, call_name, args in _assignment_calls(stmt.text):
                 cfg = self.acquire_functions.get(call_name)
                 if not cfg:
                     continue
+                var = _out_resource_var(args, cfg) or lhs
                 if is_contract_restore_acquire(function_name, call_name, var):
                     continue
                 held = [res for res in held if not self._same_resource_arg(res.var, var)]
                 held.append(self._resource(var, call_name, cfg, stmt.line))
 
             for call in extract_call_expressions(stmt.text):
-                name, first_arg = call_name_and_first_arg(call)
+                name, args = call_name_and_args(call)
                 cfg = self.acquire_functions.get(name)
-                if not cfg or "direct_resource_arg" not in cfg:
+                if not cfg:
                     continue
-                args_text = call[call.find("(") + 1 : call.rfind(")")]
-                args = split_args(args_text)
-                arg_idx = int(cfg.get("direct_resource_arg", 0))
-                if arg_idx >= len(args):
+                if "out_resource_arg" in cfg:
+                    var = _out_resource_var(args, cfg)
+                elif "direct_resource_arg" in cfg:
+                    arg_idx = int(cfg.get("direct_resource_arg", 0))
+                    if arg_idx >= len(args):
+                        continue
+                    var = args[arg_idx].strip()
+                else:
                     continue
-                var = args[arg_idx].strip() or first_arg
+                if not var:
+                    continue
                 if is_contract_restore_acquire(function_name, name, var):
                     continue
                 held = [res for res in held if not self._same_resource_arg(res.var, var)]
@@ -162,6 +187,9 @@ class ResourceTracker:
             resource_type=cfg.get("resource_type", "unknown"),
             release_functions=list(releases),
             acquire_line=line,
+            out_resource_arg=cfg.get("out_resource_arg"),
+            release_arg_index=int(cfg.get("release_arg_index", 0)),
+            release_suggestion_template=str(cfg.get("release_suggestion", "")),
         )
 
     def _apply_release(self, held: list[HeldResource], name: str, args: list[str]) -> None:
@@ -179,6 +207,13 @@ class ResourceTracker:
             condition.condition
             and self._condition_mentions_null_resource(condition.condition, res.var)
         ):
+            if (
+                res.out_resource_arg is not None
+                and error_source_expr.startswith(f"{res.acquire_func}(")
+                and condition.condition_type
+                in {"ret_nonzero", "negative_error", "specific_error_code"}
+            ):
+                return True
             return False
         null_failure = condition.condition_type in {
             "null_pointer",
