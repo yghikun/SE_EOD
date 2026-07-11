@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_V1 = "outputs/ranked_candidates_v1_no_exceptions.jsonl"
-DEFAULT_V11 = "outputs/ranked_candidates_v1_1.jsonl"
-DEFAULT_REPORT = "outputs/v1_1_validation_report.md"
+DEFAULT_V1 = "outputs/ext4/ranked_candidates_v1_no_exceptions.jsonl"
+DEFAULT_V11 = "outputs/ext4/ranked_candidates_v1_1.jsonl"
+DEFAULT_REPORT = "outputs/ext4/v1_1_validation_report.md"
 
 
 def load_ranked(path: str | Path) -> list[dict[str, Any]]:

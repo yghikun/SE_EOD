@@ -90,7 +90,7 @@ def ensure_sparse_checkout(
     print(f"linux_git_commit={commit}")
     print(f"linux_git_tag={tag}")
     print(f"linux_path={target}")
-    print(f"scan_command=python -m src.main --linux {target} --out outputs/ext4_error_paths.csv")
+    print(f"scan_command=python -m src.main --linux {target} --out outputs/ext4/error_paths.csv")
 
 
 def main(argv: list[str] | None = None) -> int:

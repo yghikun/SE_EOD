@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_RANKED = "outputs/ranked_candidates.jsonl"
-DEFAULT_TASKS = "outputs/llm_review_tasks.jsonl"
-DEFAULT_QUEUE_JSONL = "outputs/manual_review_queue.jsonl"
-DEFAULT_QUEUE_MD = "outputs/manual_review_queue.md"
-DEFAULT_LABEL_TEMPLATE = "outputs/manual_review_labels_todo.jsonl"
+DEFAULT_RANKED = "outputs/ext4/ranked_candidates.jsonl"
+DEFAULT_TASKS = "outputs/ext4/llm_review_tasks.jsonl"
+DEFAULT_QUEUE_JSONL = "outputs/ext4/manual_review_queue.jsonl"
+DEFAULT_QUEUE_MD = "outputs/ext4/manual_review_queue.md"
+DEFAULT_LABEL_TEMPLATE = "outputs/ext4/manual_review_labels_todo.jsonl"
 
 
 def load_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -130,7 +130,7 @@ def write_label_template(items: list[dict[str, Any]], path: str | Path) -> None:
                 {
                     "_comment": (
                         "Fill these TODO labels, then copy reviewed JSON objects "
-                        "to outputs/manual_review_labels.jsonl."
+                        "to outputs/ext4/manual_review_labels.jsonl."
                     )
                 },
                 ensure_ascii=False,
@@ -153,7 +153,7 @@ def write_queue_md(items: list[dict[str, Any]], path: str | Path) -> None:
         "# SE-EOD Review Feedback Queue",
         "",
         "Review top-ranked candidates plus top exception-hint candidates.",
-        "Copy completed labels into `outputs/manual_review_labels.jsonl`.",
+        "Copy completed labels into `outputs/ext4/manual_review_labels.jsonl`.",
         "",
         f"- total queue items: {len(items)}",
         "",

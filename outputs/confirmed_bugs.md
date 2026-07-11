@@ -1,4 +1,4 @@
-# Confirmed ext4 and btrfs Bugs
+# Confirmed Bugs
 
 Date: 2026-07-11
 
@@ -17,7 +17,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 4 | ext4 | `ext4_expand_extra_isize_ea()` | stale error after successful retry | patch submitted / under review | `/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch` |
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
-| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/btrfs_recover_relocation_qemu_report.md` |
+| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/btrfs/recover_relocation_qemu_report.md` |
 
 ## ext4
 
@@ -143,10 +143,10 @@ reported as successful replay.
 
 Evidence from our scan:
 
-- `outputs/manual_bug_candidates_to_verify.md` listed `FC-INODE` as a strong
+- `outputs/ext4/manual_bug_candidates_to_verify.md` listed `FC-INODE` as a strong
   v6.8 candidate and then marked it as fixed/duplicate after latest-tree
   review.
-- `outputs/ranked_candidates.jsonl` and v1.2 reports contain five
+- `outputs/ext4/ranked_candidates.jsonl` and v1.2 reports contain five
   `ext4_fc_replay_inode` `error_swallowed` candidates from the v6.8 scan.
 
 Upstream fix:
@@ -240,7 +240,7 @@ not set that flag can leave the relocation-root reference attached.
 Evidence:
 
 - QEMU/fault-injection report:
-  `outputs/btrfs_recover_relocation_qemu_report.md`
+  `outputs/btrfs/recover_relocation_qemu_report.md`
 - Test target: Linux 6.8 Btrfs recovery.
 - Pending relocation image contained 25 `TREE_RELOC ROOT_ITEM` records.
 - Normal recovery succeeded.
