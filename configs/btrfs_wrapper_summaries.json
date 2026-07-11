@@ -1,0 +1,90 @@
+[
+  {
+    "function": "btrfs_free_path",
+    "releases": ["btrfs_free_path"],
+    "resource_kinds": ["btrfs_path"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Releases path-held nodes and locks, then frees the btrfs_path object."
+  },
+  {
+    "function": "btrfs_end_transaction",
+    "releases": ["btrfs_end_transaction"],
+    "resource_kinds": ["btrfs_transaction"],
+    "aliases": ["btrfs_end_transaction_throttle"],
+    "confidence": "high",
+    "description": "Ends and releases a Btrfs transaction handle."
+  },
+  {
+    "function": "btrfs_commit_transaction",
+    "releases": ["btrfs_commit_transaction"],
+    "resource_kinds": ["btrfs_transaction"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Commits a transaction and consumes its handle."
+  },
+  {
+    "function": "btrfs_put_root",
+    "releases": ["btrfs_put_root"],
+    "resource_kinds": ["btrfs_root_ref"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Drops a Btrfs root reference."
+  },
+  {
+    "function": "btrfs_put_block_group",
+    "releases": ["btrfs_put_block_group"],
+    "resource_kinds": ["btrfs_block_group_ref"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Drops a Btrfs block-group reference."
+  },
+  {
+    "function": "fs_path_free",
+    "releases": ["fs_path_free"],
+    "resource_kinds": ["fs_path"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Frees a Btrfs send fs_path and any external path buffer."
+  },
+  {
+    "function": "extent_changeset_free",
+    "releases": ["extent_changeset_free"],
+    "resource_kinds": ["extent_changeset"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Releases and frees an extent_changeset."
+  },
+  {
+    "function": "ulist_free",
+    "releases": ["ulist_free"],
+    "resource_kinds": ["ulist"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Releases and frees a dynamically allocated ulist."
+  },
+  {
+    "function": "kfree",
+    "releases": ["kfree"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Frees kernel heap memory."
+  },
+  {
+    "function": "kvfree",
+    "releases": ["kvfree"],
+    "resource_kinds": ["memory"],
+    "aliases": ["vfree"],
+    "confidence": "high",
+    "description": "Frees kv/vmalloc-family memory."
+  },
+  {
+    "function": "kmem_cache_free",
+    "releases": ["kmem_cache_free"],
+    "resource_kinds": ["memory"],
+    "aliases": [],
+    "confidence": "high",
+    "description": "Frees the second argument back to its slab cache."
+  }
+]

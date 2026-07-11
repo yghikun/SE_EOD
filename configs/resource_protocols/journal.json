@@ -1,0 +1,25 @@
+[
+  {
+    "protocol_id": "journal.ext4_journal_start.stop",
+    "resource_kind": "journal_handle",
+    "acquire_functions": [
+      "ext4_journal_start",
+      "ext4_journal_start_sb",
+      "__ext4_journal_start_sb"
+    ],
+    "release_functions": ["ext4_journal_stop"],
+    "success_condition": "!IS_ERR(return_value)",
+    "resource_expr": "lhs",
+    "required_action": "ext4_journal_stop",
+    "exceptions": [
+      "ownership_transferred",
+      "released_by_wrapper",
+      "resource_not_successfully_acquired",
+      "resource_stored_for_later_cleanup"
+    ],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "ext4 journal handles should be stopped with ext4_journal_stop after a successful journal start"
+  }
+]

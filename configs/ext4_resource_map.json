@@ -1,0 +1,83 @@
+{
+  "acquire_functions": {
+    "kmalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kzalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "kcalloc": {
+      "resource_type": "memory",
+      "release": ["kfree"]
+    },
+    "vmalloc": {
+      "resource_type": "memory",
+      "release": ["vfree", "kvfree"]
+    },
+    "kvzalloc": {
+      "resource_type": "memory",
+      "release": ["kvfree", "kfree"]
+    },
+    "kmem_cache_alloc": {
+      "resource_type": "memory",
+      "release": ["kmem_cache_free", "kfree"]
+    },
+    "posix_acl_alloc": {
+      "resource_type": "posix_acl",
+      "release": ["posix_acl_release", "kfree"]
+    },
+    "sb_bread": {
+      "resource_type": "buffer_head",
+      "release": ["brelse"]
+    },
+    "bread": {
+      "resource_type": "buffer_head",
+      "release": ["brelse"]
+    },
+    "ext4_bread": {
+      "resource_type": "buffer_head",
+      "release": ["brelse"]
+    },
+    "ext4_getblk": {
+      "resource_type": "buffer_head",
+      "release": ["brelse"]
+    },
+    "ext4_journal_start": {
+      "resource_type": "journal_handle",
+      "release": ["ext4_journal_stop"],
+      "failed_check": "IS_ERR"
+    },
+    "ext4_journal_start_sb": {
+      "resource_type": "journal_handle",
+      "release": ["ext4_journal_stop"],
+      "failed_check": "IS_ERR"
+    },
+    "__ext4_journal_start_sb": {
+      "resource_type": "journal_handle",
+      "release": ["ext4_journal_stop"],
+      "failed_check": "IS_ERR"
+    },
+    "mutex_lock": {
+      "resource_type": "mutex",
+      "release": ["mutex_unlock"],
+      "direct_resource_arg": 0
+    },
+    "spin_lock": {
+      "resource_type": "spinlock",
+      "release": ["spin_unlock"],
+      "direct_resource_arg": 0
+    },
+    "down_read": {
+      "resource_type": "rwsem",
+      "release": ["up_read"],
+      "direct_resource_arg": 0
+    },
+    "down_write": {
+      "resource_type": "rwsem",
+      "release": ["up_write"],
+      "direct_resource_arg": 0
+    }
+  }
+}

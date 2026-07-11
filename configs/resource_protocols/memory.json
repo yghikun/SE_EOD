@@ -1,0 +1,40 @@
+[
+  {
+    "protocol_id": "memory.kmalloc.kzalloc.kcalloc.kmem_cache_alloc.kfree",
+    "resource_kind": "memory",
+    "acquire_functions": ["kmalloc", "kzalloc", "kcalloc", "kmem_cache_alloc"],
+    "release_functions": ["kfree"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "kfree",
+    "exceptions": [
+      "ownership_transferred",
+      "released_by_wrapper",
+      "resource_not_successfully_acquired",
+      "resource_stored_for_later_cleanup"
+    ],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "memory allocated by kmalloc/kzalloc/kcalloc/kmem_cache_alloc should be released by kfree unless ownership escapes"
+  },
+  {
+    "protocol_id": "memory.vmalloc.kvzalloc.vfree.kvfree",
+    "resource_kind": "memory",
+    "acquire_functions": ["vmalloc", "kvzalloc"],
+    "release_functions": ["vfree", "kvfree"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "vfree",
+    "exceptions": [
+      "ownership_transferred",
+      "released_by_wrapper",
+      "resource_not_successfully_acquired",
+      "resource_stored_for_later_cleanup"
+    ],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "vmalloc/kvzalloc allocations should be released by vfree or kvfree unless ownership escapes"
+  }
+]

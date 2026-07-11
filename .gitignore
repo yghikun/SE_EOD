@@ -1,0 +1,30 @@
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Editor and OS noise
+.DS_Store
+*.swp
+*.swo
+
+# Local secrets
+.env
+.env.*
+
+# Downloaded Linux source snapshot keeps its own Git metadata locally.
+/linux-v6.8-fs/
+
+# Large/generated runtime artifacts that should not be committed if created.
+*.img
+*.qcow2
+*.cpio
+*.cpio.gz
+*.iso
+*.vmlinux
+*.bzImage

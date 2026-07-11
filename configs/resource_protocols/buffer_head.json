@@ -1,0 +1,21 @@
+[
+  {
+    "protocol_id": "buffer_head.sb_bread.bread.ext4_bread.ext4_getblk.brelse",
+    "resource_kind": "buffer_head",
+    "acquire_functions": ["sb_bread", "bread", "ext4_bread", "ext4_getblk"],
+    "release_functions": ["brelse"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "brelse",
+    "exceptions": [
+      "ownership_transferred",
+      "released_by_wrapper",
+      "resource_not_successfully_acquired",
+      "resource_stored_for_later_cleanup"
+    ],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "buffer_head acquired by read/getblk helpers should be released by brelse unless ownership escapes"
+  }
+]
