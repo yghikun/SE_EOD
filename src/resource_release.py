@@ -43,6 +43,12 @@ def release_arg_index(resource: Any) -> int:
         return 0
 
 
+def release_arg_requires_address(resource: Any) -> bool:
+    if isinstance(resource, dict):
+        return bool(resource.get("release_arg_requires_address", False))
+    return bool(getattr(resource, "release_arg_requires_address", False))
+
+
 def cleanup_call_releases_resource(call_expr: str, resource: Any) -> bool:
     name, args = call_name_and_args(call_expr)
     return call_releases_resource(name, args, resource)
@@ -65,16 +71,23 @@ def _action_releases_resource(name: str, args: list[str], resource: Any) -> bool
     first_arg = args[0] if args else ""
     arg_index = release_arg_index(resource)
 
+    def matches(target: str) -> bool:
+        if release_arg_requires_address(resource):
+            target = target.strip()
+            while target.startswith("&"):
+                target = target[1:].strip()
+        return same_resource_expr(target, var)
+
     if name == "kmem_cache_free" and "kmem_cache_free" in releases:
         target = args[1] if len(args) >= 2 else first_arg
-        return same_resource_expr(target, var)
+        return matches(target)
 
     if name in releases:
         target = args[arg_index] if len(args) > arg_index else first_arg
-        if same_resource_expr(target, var):
+        if matches(target):
             return True
 
-    if name in releases and same_resource_expr(first_arg, var):
+    if name in releases and matches(first_arg):
         return True
 
     if name == "put_bh" and "brelse" in releases:

@@ -1,0 +1,30 @@
+[
+  {
+    "protocol_id": "f2fs.dnode.get.put",
+    "resource_kind": "f2fs_dnode",
+    "acquire_functions": ["f2fs_get_dnode_of_data"],
+    "release_functions": ["f2fs_put_dnode"],
+    "success_condition": "return_value == 0 and dnode initialized",
+    "resource_expr": "out_parameter",
+    "required_action": "f2fs_put_dnode",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "callee_cleans_partial_state_on_error"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "A successfully populated dnode owns page references that must be released by f2fs_put_dnode."
+  },
+  {
+    "protocol_id": "f2fs.nid.alloc.done_or_failed",
+    "resource_kind": "f2fs_nid_reservation",
+    "acquire_functions": ["f2fs_alloc_nid"],
+    "release_functions": ["f2fs_alloc_nid_done", "f2fs_alloc_nid_failed"],
+    "success_condition": "return_value == true and nid assigned",
+    "resource_expr": "out_parameter",
+    "required_action": "f2fs_alloc_nid_failed",
+    "exceptions": ["reservation_committed", "ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "Every successful NID reservation ends in done on commit or failed on rollback."
+  }
+]

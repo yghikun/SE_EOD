@@ -9,6 +9,7 @@ from src.evidence_ranker import (
     candidate_id_for_row,
     rank_candidate_rows,
 )
+from src.candidate_rules import error_swallowed_candidates, run_candidate_rules
 from src.error_condition import classify_condition
 from src.label_resolver import Statement
 from src.llm_task_builder import extract_deepseek_true_candidates
@@ -804,6 +805,206 @@ def test_xfs_config_loads_protocols_and_wrappers():
     assert not wrappers.warnings
     assert wrappers.releases_resource_kind("xfs_trans_brelse", "xfs_trans_buf")
     assert wrappers.releases_resource_kind("xfs_irele", "xfs_inode_ref")
+
+
+def test_f2fs_config_loads_protocols_and_wrappers():
+    resource_map = load_resource_map("configs/f2fs_resource_map.json")
+    protocols = ResourceProtocolDB.load_from_dir("configs/f2fs_resource_protocols")
+    wrappers = WrapperSummaryDB.load_from_file("configs/f2fs_wrapper_summaries.json")
+
+    assert "f2fs_get_node_page" in resource_map["acquire_functions"]
+    assert "f2fs_get_dnode_of_data" in resource_map["acquire_functions"]
+    assert "f2fs_alloc_nid" in resource_map["acquire_functions"]
+    assert not protocols.warnings
+    assert protocols.find_by_resource_kind("f2fs_page")
+    assert protocols.find_by_required_action("f2fs_put_dnode")
+    assert protocols.find_by_acquire_function("f2fs_alloc_nid")
+    assert protocols.find_by_release_function("f2fs_free_filename")
+    assert not wrappers.warnings
+    assert wrappers.releases_resource_kind("f2fs_put_page", "f2fs_page")
+    assert wrappers.releases_resource_kind(
+        "f2fs_alloc_nid_failed", "f2fs_nid_reservation"
+    )
+    assert wrappers.releases_resource_kind("f2fs_gc", "f2fs_rwsem_write")
+    assert wrappers.releases_resource_kind(
+        "f2fs_handle_failed_inode", "f2fs_op_lock"
+    )
+
+
+def test_f2fs_out_parameter_and_wrapper_release_tracking():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [
+        Statement("ok = f2fs_alloc_nid(sbi, &nid);", 10),
+        Statement("err = f2fs_get_dnode_of_data(&dn, index, LOOKUP_NODE);", 11),
+        Statement("f2fs_put_dnode(&dn);", 12),
+        Statement("f2fs_alloc_nid_done(sbi, nid);", 13),
+        Statement("page = f2fs_get_node_page(sbi, nid);", 14),
+        Statement("f2fs_put_page(page, 1);", 15),
+    ]
+
+    held = tracker.held_before(
+        statements,
+        error_line=20,
+        condition=classify_condition("other_error"),
+        error_source_expr="some_other_call()",
+        function_name="demo_f2fs",
+    )
+
+    assert held == []
+
+
+def test_f2fs_out_parameter_call_without_address_does_not_track_return_code():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [
+        Statement("err = f2fs_get_dnode_of_data(dn, index, ALLOC_NODE);", 10),
+    ]
+
+    held = tracker.held_before(
+        statements,
+        error_line=20,
+        condition=classify_condition("other_error"),
+        error_source_expr="some_other_call()",
+        function_name="f2fs_reserve_block",
+    )
+
+    assert held == []
+
+
+def test_f2fs_gc_consumes_caller_held_gc_lock():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [
+        Statement("f2fs_down_write(&sbi->gc_lock);", 10),
+        Statement("err = f2fs_gc(sbi, &gc_control);", 11),
+    ]
+
+    held = tracker.held_before(
+        statements,
+        error_line=12,
+        condition=classify_condition("err"),
+        error_source_expr="f2fs_gc(sbi, &gc_control)",
+        function_name="f2fs_expand_inode_data",
+    )
+
+    assert held == []
+
+
+def test_f2fs_failed_inode_cleanup_releases_operation_lock():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [Statement("f2fs_lock_op(sbi);", 10)]
+    held = tracker.held_before(
+        statements,
+        error_line=11,
+        condition=classify_condition("err"),
+        error_source_expr="f2fs_add_link(dentry, inode)",
+        function_name="f2fs_create",
+    )
+
+    assert tracker.missing_cleanup_candidates(
+        held, ["f2fs_handle_failed_inode(inode)"]
+    ) == []
+
+
+def test_f2fs_inline_conversion_consumes_page_on_error():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [
+        Statement("ipage = f2fs_get_node_page(sbi, dir->i_ino);", 10),
+        Statement("err = do_convert_inline_dir(dir, ipage, inline_dentry);", 11),
+    ]
+
+    held = tracker.held_before(
+        statements,
+        error_line=12,
+        condition=classify_condition("err"),
+        error_source_expr="do_convert_inline_dir(dir, ipage, inline_dentry)",
+        function_name="f2fs_add_inline_entry",
+    )
+
+    assert held == []
+
+
+def test_f2fs_mount_teardown_owns_victim_secmap():
+    tracker = ResourceTracker(load_resource_map("configs/f2fs_resource_map.json"))
+    statements = [
+        Statement(
+            "dirty_i->victim_secmap = f2fs_kvzalloc(sbi, bitmap_size, GFP_KERNEL);",
+            10,
+        )
+    ]
+
+    held = tracker.held_before(
+        statements,
+        error_line=12,
+        condition=classify_condition("!dirty_i->pinned_secmap"),
+        error_source_expr="f2fs_kvzalloc(sbi, bitmap_size, GFP_KERNEL)",
+        function_name="init_victim_secmap",
+    )
+
+    assert held == []
+
+
+def test_f2fs_find_entry_error_uses_output_parameter_contract():
+    row = {
+        "function": "f2fs_find_entry",
+        "condition": "err",
+        "final_return_expr": "NULL",
+        "held_resources": "[]",
+        "cleanup_calls": "[]",
+        "missing_cleanup_candidates": "[]",
+    }
+    contracts = load_resource_map("configs/f2fs_resource_map.json")
+
+    assert error_swallowed_candidates(row, contracts) == []
+
+
+def test_review_false_positive_contracts_are_exact_and_keep_confirmed_bug():
+    xfs_map = load_resource_map("configs/xfs_resource_map.json")
+    contracts = json.loads(
+        Path("configs/xfs_review_false_positives.json").read_text(encoding="utf-8")
+    )
+    xfs_map["review_false_positive_rules"] = contracts["rules"]
+    reviewed_row = {
+        "file": "fs/xfs/xfs_log_recover.c",
+        "function": "xlog_find_head",
+        "error_line": "516",
+        "condition": "error",
+        "final_return_expr": "0",
+        "held_resources": "[]",
+        "cleanup_calls": "[]",
+        "missing_cleanup_candidates": "[]",
+    }
+    confirmed_row = {
+        **reviewed_row,
+        "file": "fs/xfs/xfs_rtalloc.c",
+        "function": "xfs_rtcopy_summary",
+        "error_line": "107",
+    }
+
+    assert run_candidate_rules(reviewed_row, xfs_map) == []
+    assert len(run_candidate_rules(confirmed_row, xfs_map)) == 1
+
+
+def test_static_candidate_contracts_preserve_ext4_and_btrfs_confirmed_paths():
+    btrfs_contracts = json.loads(
+        Path("configs/btrfs_review_false_positives.json").read_text(encoding="utf-8")
+    )
+    ext4_contracts = json.loads(
+        Path("configs/ext4_review_false_positives.json").read_text(encoding="utf-8")
+    )
+
+    assert sum(
+        len(rule["error_lines"]) for rule in btrfs_contracts["rules"]
+    ) == 243
+    assert sum(
+        len(rule["error_lines"]) for rule in ext4_contracts["rules"]
+    ) == 20
+    assert not any(
+        rule["function"] == "__add_reloc_root" and 648 in rule["error_lines"]
+        for rule in btrfs_contracts["rules"]
+    )
+    assert not any(
+        rule["function"] == "ext4_fc_replay_add_range"
+        for rule in ext4_contracts["rules"]
+    )
 
 
 def test_xfs_out_parameter_acquire_and_second_arg_release_tracking():

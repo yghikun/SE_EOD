@@ -8,7 +8,7 @@ from typing import Any
 from .parser import call_name_and_args, call_name_and_first_arg
 from .protocol_db import ResourceProtocol, ResourceProtocolDB
 from .resource_expr import same_resource_expr
-from .resource_release import cleanup_call_releases_resource, missing_cleanup_matches_resource
+from .resource_release import call_releases_resource, cleanup_call_releases_resource
 from .wrapper_summary import WrapperSummaryDB
 
 
@@ -149,12 +149,11 @@ def _ownership_transfer_possible(
 
 
 def _matching_resources(
-    held_resources: list[dict[str, Any]], missing_action: str, missing_arg: str
+    held_resources: list[dict[str, Any]], missing_action: str, missing_args: list[str]
 ) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     for resource in held_resources:
-        var = str(resource.get("var", ""))
-        if missing_cleanup_matches_resource(missing_action, missing_arg, resource):
+        if call_releases_resource(missing_action, missing_args, resource):
             matches.append(resource)
     return matches
 
@@ -189,10 +188,6 @@ def _candidate_protocols(
             matched.append((protocol, resource))
             seen.add(key)
 
-    for protocol in db.find_by_required_action(missing_action):
-        add(protocol)
-    for protocol in db.find_by_release_function(missing_action):
-        add(protocol)
     for resource in resources:
         for protocol in db.find_by_resource_kind(_resource_kind(resource)):
             if _protocol_matches_resource(protocol, resource, missing_action):
@@ -201,6 +196,13 @@ def _candidate_protocols(
         for protocol in db.find_by_acquire_function(acquire_func):
             if _protocol_matches_resource(protocol, resource, missing_action):
                 add(protocol, resource)
+    if matched:
+        return matched
+
+    for protocol in db.find_by_required_action(missing_action):
+        add(protocol)
+    for protocol in db.find_by_release_function(missing_action):
+        add(protocol)
     return matched
 
 
@@ -219,10 +221,11 @@ def match_protocol_evidence(
     seen: set[tuple[str, str]] = set()
 
     for missing_release in context["missing_releases"]:
-        missing_action, missing_arg = call_name_and_first_arg(missing_release)
+        missing_action, missing_args = call_name_and_args(missing_release)
+        missing_arg = missing_args[0] if missing_args else ""
         if not missing_action:
             continue
-        resources = _matching_resources(held_resources, missing_action, missing_arg)
+        resources = _matching_resources(held_resources, missing_action, missing_args)
         if not resources:
             resources = []
         for protocol, resource in _candidate_protocols(db, missing_action, resources):

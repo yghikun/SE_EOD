@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,27 @@ DEFAULT_RESOURCE_MAP = "configs/ext4_resource_map.json"
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def _load_review_false_positive_contracts(
+    resource_map: dict, resource_map_path: Path
+) -> None:
+    configured = resource_map.get("review_false_positive_contracts_file")
+    if not configured:
+        return
+    source = Path(str(configured))
+    if not source.is_absolute():
+        source = resource_map_path.parent / source
+    try:
+        raw = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"warning: unable to load review contracts {source}: {exc}", file=sys.stderr)
+        return
+    rules = raw.get("rules", []) if isinstance(raw, dict) else []
+    if not isinstance(rules, list):
+        print(f"warning: invalid review contracts {source}: rules must be a list", file=sys.stderr)
+        return
+    resource_map["review_false_positive_rules"] = rules
 
 
 def _git_value(linux_path: Path, args: list[str]) -> str:
@@ -364,7 +386,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     commit, tag = linux_version(linux_path)
-    resource_tracker = ResourceTracker(load_resource_map(resource_map_path))
+    resource_map = load_resource_map(resource_map_path)
+    _load_review_false_positive_contracts(resource_map, resource_map_path)
+    resource_tracker = ResourceTracker(resource_map)
     extractor = ErrorPathExtractor(resource_tracker)
 
     scanned_files = 0
@@ -423,7 +447,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"suspicious_missing_cleanup_candidates={suspicious}")
 
     if args.check_candidates:
-        candidate_stats = check_candidates(out_path, Path(args.candidates_out))
+        candidate_stats = check_candidates(
+            out_path, Path(args.candidates_out), resource_map
+        )
         for key in [
             "total_error_paths",
             "total_candidates",

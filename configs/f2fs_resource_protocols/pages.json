@@ -1,0 +1,16 @@
+[
+  {
+    "protocol_id": "f2fs.page.get.put",
+    "resource_kind": "f2fs_page",
+    "acquire_functions": ["f2fs_get_node_page", "f2fs_get_node_page_ra", "f2fs_new_inode_page", "f2fs_new_node_page", "f2fs_grab_meta_page", "f2fs_get_meta_page", "f2fs_get_meta_page_retry", "f2fs_get_tmp_page", "f2fs_get_sum_page", "f2fs_get_read_data_page", "f2fs_find_data_page", "f2fs_get_lock_data_page", "f2fs_get_new_data_page", "f2fs_grab_cache_page", "f2fs_pagecache_get_page"],
+    "release_functions": ["f2fs_put_page", "put_page"],
+    "success_condition": "return_value is a valid page and not ERR_PTR/NULL",
+    "resource_expr": "lhs",
+    "required_action": "f2fs_put_page",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "page_stored_for_later_cleanup", "page_consumed_by_io", "callee_consumes_page_on_error"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "Pages obtained through F2FS page helpers must have their reference dropped; f2fs_put_page optionally unlocks first."
+  }
+]

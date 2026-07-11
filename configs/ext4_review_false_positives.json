@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "review_source": "outputs/ext4/suspicious_candidates.csv",
+  "classification": "human_directive_false_positive",
+  "confirmed_bug_exceptions": [
+    {
+      "function": "ext4_fc_replay_inode",
+      "confirmed_in": "outputs/confirmed_bugs.md"
+    },
+    {
+      "function": "ext4_fc_replay_add_range",
+      "confirmed_in": "outputs/confirmed_bugs.md"
+    },
+    {
+      "function": "ext4_fc_replay_del_range",
+      "confirmed_in": "outputs/confirmed_bugs.md"
+    },
+    {
+      "function": "ext4_init_orphan_info",
+      "error_lines": [
+        601,
+        605,
+        610,
+        615
+      ],
+      "confirmed_in": "outputs/confirmed_bugs.md"
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "ext4.reviewed.ext4_ext_replay_set_iblocks.error_swallowed",
+      "file": "fs/ext4/extents.c",
+      "function": "ext4_ext_replay_set_iblocks",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        6032
+      ],
+      "path_ids": [
+        "ext4_ext_replay_set_iblocks#003"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_fill_es_cache_info.error_swallowed",
+      "file": "fs/ext4/extents.c",
+      "function": "ext4_fill_es_cache_info",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        2224
+      ],
+      "path_ids": [
+        "ext4_fill_es_cache_info#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.skip_hole.error_swallowed",
+      "file": "fs/ext4/extents.c",
+      "function": "skip_hole",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        5981
+      ],
+      "path_ids": [
+        "skip_hole#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_fc_reserve_space.error_swallowed",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_reserve_space",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        708,
+        738
+      ],
+      "path_ids": [
+        "ext4_fc_reserve_space#002",
+        "ext4_fc_reserve_space#004"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.find_group_orlov.error_swallowed",
+      "file": "fs/ext4/ialloc.c",
+      "function": "find_group_orlov",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        484
+      ],
+      "path_ids": [
+        "find_group_orlov#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_get_first_inline_block.error_swallowed",
+      "file": "fs/ext4/inline.c",
+      "function": "ext4_get_first_inline_block",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        1612
+      ],
+      "path_ids": [
+        "ext4_get_first_inline_block#001"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_get_max_inline_size.error_swallowed",
+      "file": "fs/ext4/inline.c",
+      "function": "ext4_get_max_inline_size",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        115
+      ],
+      "path_ids": [
+        "ext4_get_max_inline_size#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_da_write_begin.error_swallowed",
+      "file": "fs/ext4/inode.c",
+      "function": "ext4_da_write_begin",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        2880
+      ],
+      "path_ids": [
+        "ext4_da_write_begin#004"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_iomap_begin.error_swallowed",
+      "file": "fs/ext4/inode.c",
+      "function": "ext4_iomap_begin",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        3365
+      ],
+      "path_ids": [
+        "ext4_iomap_begin#003"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_truncate.missing_cleanup",
+      "file": "fs/ext4/inode.c",
+      "function": "ext4_truncate",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        4151
+      ],
+      "path_ids": [
+        "ext4_truncate#006"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_truncate.partial_cleanup",
+      "file": "fs/ext4/inode.c",
+      "function": "ext4_truncate",
+      "candidate_type": "partial_cleanup",
+      "error_lines": [
+        4151
+      ],
+      "path_ids": [
+        "ext4_truncate#006"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_write_begin.error_swallowed",
+      "file": "fs/ext4/inode.c",
+      "function": "ext4_write_begin",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        1147
+      ],
+      "path_ids": [
+        "ext4_write_begin#003"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_mb_add_groupinfo.missing_cleanup",
+      "file": "fs/ext4/mballoc.c",
+      "function": "ext4_mb_add_groupinfo",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        3341
+      ],
+      "path_ids": [
+        "ext4_mb_add_groupinfo#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_mb_seq_groups_show.error_swallowed",
+      "file": "fs/ext4/mballoc.c",
+      "function": "ext4_mb_seq_groups_show",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        3045
+      ],
+      "path_ids": [
+        "ext4_mb_seq_groups_show#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.__ext4_read_dirblock.missing_cleanup",
+      "file": "fs/ext4/namei.c",
+      "function": "__ext4_read_dirblock",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        154
+      ],
+      "path_ids": [
+        "__ext4_read_dirblock#003"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_find_entry.error_swallowed",
+      "file": "fs/ext4/namei.c",
+      "function": "ext4_find_entry",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        1745
+      ],
+      "path_ids": [
+        "ext4_find_entry#001"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_lookup_entry.error_swallowed",
+      "file": "fs/ext4/namei.c",
+      "function": "ext4_lookup_entry",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        1766
+      ],
+      "path_ids": [
+        "ext4_lookup_entry#001"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_fill_flex_info.error_swallowed",
+      "file": "fs/ext4/super.c",
+      "function": "ext4_fill_flex_info",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        3205
+      ],
+      "path_ids": [
+        "ext4_fill_flex_info#002"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_get_link.missing_cleanup",
+      "file": "fs/ext4/symlink.c",
+      "function": "ext4_get_link",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        95
+      ],
+      "path_ids": [
+        "ext4_get_link#003"
+      ],
+      "reason_code": "user_classified_false_positive",
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+    }
+  ]
+}

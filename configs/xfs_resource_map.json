@@ -179,5 +179,6 @@
       "release": ["up_write"],
       "direct_resource_arg": 0
     }
-  }
+  },
+  "review_false_positive_contracts_file": "xfs_review_false_positives.json"
 }

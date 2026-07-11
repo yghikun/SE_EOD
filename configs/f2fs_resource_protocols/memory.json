@@ -1,0 +1,44 @@
+[
+  {
+    "protocol_id": "f2fs.memory.kmalloc.family.free",
+    "resource_kind": "memory",
+    "acquire_functions": ["kmalloc", "kzalloc", "kcalloc", "kmalloc_array", "f2fs_kmalloc", "f2fs_kzalloc"],
+    "release_functions": ["kfree"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "kfree",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS and generic heap allocations must be freed unless ownership escapes."
+  },
+  {
+    "protocol_id": "f2fs.memory.kv.family.kvfree",
+    "resource_kind": "memory",
+    "acquire_functions": ["kvmalloc", "kvzalloc", "kvcalloc", "vmalloc", "f2fs_kvmalloc", "f2fs_kvzalloc"],
+    "release_functions": ["kvfree", "vfree", "kfree"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "kvfree",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS kvalloc-family allocations require a compatible free helper."
+  },
+  {
+    "protocol_id": "f2fs.memory.slab.alloc.free",
+    "resource_kind": "memory",
+    "acquire_functions": ["kmem_cache_alloc", "kmem_cache_zalloc", "f2fs_kmem_cache_alloc"],
+    "release_functions": ["kmem_cache_free", "kfree"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "kmem_cache_free",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS slab objects must be returned to their cache unless ownership escapes."
+  }
+]

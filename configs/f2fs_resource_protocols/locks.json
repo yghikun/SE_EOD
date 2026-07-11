@@ -1,0 +1,58 @@
+[
+  {
+    "protocol_id": "f2fs.operation.lock.unlock",
+    "resource_kind": "f2fs_op_lock",
+    "acquire_functions": ["f2fs_lock_op", "f2fs_lock_all"],
+    "release_functions": ["f2fs_unlock_op", "f2fs_unlock_all"],
+    "success_condition": "lock acquired after call returns",
+    "resource_expr": "argument0",
+    "required_action": "f2fs_unlock_op",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "caller_owned_lock", "callee_consumes_lock"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS checkpoint operation locks must use the matching operation unlock helper."
+  },
+  {
+    "protocol_id": "f2fs.rwsem.read",
+    "resource_kind": "f2fs_rwsem_read",
+    "acquire_functions": ["f2fs_down_read", "f2fs_down_read_nested"],
+    "release_functions": ["f2fs_up_read"],
+    "success_condition": "read lock acquired after call returns",
+    "resource_expr": "argument0",
+    "required_action": "f2fs_up_read",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "caller_owned_lock", "callee_consumes_lock"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS read semaphores must be released with f2fs_up_read."
+  },
+  {
+    "protocol_id": "f2fs.rwsem.write",
+    "resource_kind": "f2fs_rwsem_write",
+    "acquire_functions": ["f2fs_down_write", "f2fs_down_write_nested"],
+    "release_functions": ["f2fs_up_write"],
+    "success_condition": "write lock acquired after call returns",
+    "resource_expr": "argument0",
+    "required_action": "f2fs_up_write",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "caller_owned_lock", "callee_consumes_lock"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "F2FS write semaphores must be released with f2fs_up_write."
+  },
+  {
+    "protocol_id": "f2fs.generic.locks",
+    "resource_kind": "lock",
+    "acquire_functions": ["mutex_lock", "spin_lock", "spin_lock_irq", "spin_lock_irqsave", "down_read", "down_write"],
+    "release_functions": ["mutex_unlock", "spin_unlock", "spin_unlock_irq", "spin_unlock_irqrestore", "up_read", "up_write"],
+    "success_condition": "lock acquired after call returns",
+    "resource_expr": "argument0",
+    "required_action": "unlock",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "caller_owned_lock"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "Generic kernel lock acquisitions used by F2FS require a matching unlock."
+  }
+]

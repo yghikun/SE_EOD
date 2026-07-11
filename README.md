@@ -535,6 +535,7 @@ python scripts/validate_v1_2_review_feedback.py \
 - 覆盖 v1.2.2 false-positive rule backpropagation：字段别名、数组元素、`kmem_cache_free`
   第二参数、`put_bh`、`kobject_put`、`ext4_fc_free`、NULL acquire-failure 和嵌套 if 归因。
 - 覆盖 XFS out-parameter acquire 建模，以及 `xfs_trans_brelse(tp, bp)` 这类第二参数释放匹配。
+- 覆盖 F2FS page、dnode、NID reservation、filename、inode reference 和 operation/rwsem 协议。
 
 ## 项目目录说明
 
@@ -544,12 +545,15 @@ python scripts/validate_v1_2_review_feedback.py \
 │   ├── ext4_resource_map.json        # 资源获取/释放映射
 │   ├── btrfs_resource_map.json       # btrfs 资源获取/释放映射
 │   ├── xfs_resource_map.json         # xfs 资源获取/释放映射
+│   ├── f2fs_resource_map.json        # f2fs 资源获取/释放映射
 │   ├── wrapper_summaries.json        # cleanup wrapper / alias 摘要
 │   ├── btrfs_wrapper_summaries.json  # btrfs cleanup wrapper / alias 摘要
 │   ├── xfs_wrapper_summaries.json    # xfs cleanup wrapper / alias 摘要
+│   ├── f2fs_wrapper_summaries.json   # f2fs cleanup wrapper / alias 摘要
 │   ├── resource_protocols/           # ext4 API lifecycle 协议
 │   ├── btrfs_resource_protocols/     # btrfs API lifecycle 协议
-│   └── xfs_resource_protocols/       # xfs API lifecycle 协议
+│   ├── xfs_resource_protocols/       # xfs API lifecycle 协议
+│   └── f2fs_resource_protocols/      # f2fs API lifecycle 协议
 ├── linux-v6.8-fs/                    # 稀疏 checkout 的 Linux v6.8 源码
 ├── outputs/
 │   ├── ext4_error_paths.csv          # 错误路径语料库
@@ -743,6 +747,50 @@ python -m src.main \
   --candidates-with-evidence-out outputs/xfs/candidates_with_evidence.csv \
   --build-llm-tasks \
   --llm-tasks-out outputs/xfs/llm_review_tasks.jsonl
+```
+
+## 扫描 Linux v6.8 F2FS
+
+F2FS 配置覆盖内存与 slab 分配、页面引用、dnode、NID reservation、filename、inode
+引用、checkpoint operation lock、F2FS rwsem 和常见内核锁。NID 使用
+`f2fs_alloc_nid(..., &nid)` 的 out-parameter 模式，并以
+`f2fs_alloc_nid_done()` 或 `f2fs_alloc_nid_failed()` 结束生命周期。
+
+F2FS resource map 还记录跨函数资源契约：`callee_resource_consumers` 区分无条件消费和
+仅错误返回时消费，`resource_ownership_transfers` 描述交给外层 teardown 的资源，
+`error_output_contracts` 描述通过输出参数携带错误的 sentinel 返回接口。当前已覆盖
+`f2fs_gc()` 消费 `gc_lock`、`f2fs_handle_failed_inode()` 释放 operation lock、inline-dir
+转换失败释放 page、dnode 获取失败清理部分状态、victim secmap 的 mount-failure teardown，
+以及 `f2fs_find_entry()` 通过 `res_page` 返回 `ERR_PTR` 的契约。
+
+## Review False-Positive Contracts
+
+对已人工复核为误报的 LLM review，可以在各文件系统 resource map 的
+`review_false_positive_contracts_file` 引用一个 JSON 归档。每条规则以
+`file`、`function`、`candidate_type` 和 `error_lines` 精确匹配，因此不会抑制同一函数
+的未审查新路径。当前归档为 `configs/ext4_review_false_positives.json`、
+`configs/btrfs_review_false_positives.json`、`configs/f2fs_review_false_positives.json`
+和 `configs/xfs_review_false_positives.json`。每个归档都列出
+`outputs/confirmed_bugs.md` 中的例外；例如 `xfs_rtcopy_summary()` 不会被规则过滤。
+
+完整 F2FS 检查命令：
+
+```bash
+python -m src.main \
+  --linux linux-v6.8-fs \
+  --fs-subdir fs/f2fs \
+  --resource-map configs/f2fs_resource_map.json \
+  --out outputs/f2fs/error_paths.csv \
+  --check-candidates \
+  --candidates-out outputs/f2fs/suspicious_candidates.csv \
+  --rank-evidence \
+  --protocols-dir configs/f2fs_resource_protocols \
+  --enable-ownership-transfer-hints \
+  --wrapper-summaries configs/f2fs_wrapper_summaries.json \
+  --ranked-candidates-out outputs/f2fs/ranked_candidates.jsonl \
+  --candidates-with-evidence-out outputs/f2fs/candidates_with_evidence.csv \
+  --build-llm-tasks \
+  --llm-tasks-out outputs/f2fs/llm_review_tasks.jsonl
 ```
 
 ## 生成可疑候选

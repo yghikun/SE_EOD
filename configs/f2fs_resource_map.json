@@ -1,0 +1,132 @@
+{
+  "acquire_functions": {
+    "kmalloc": {"resource_type": "memory", "release": ["kfree"]},
+    "kzalloc": {"resource_type": "memory", "release": ["kfree"]},
+    "kcalloc": {"resource_type": "memory", "release": ["kfree"]},
+    "kmalloc_array": {"resource_type": "memory", "release": ["kfree"]},
+    "kvmalloc": {"resource_type": "memory", "release": ["kvfree", "kfree"]},
+    "kvzalloc": {"resource_type": "memory", "release": ["kvfree", "kfree"]},
+    "kvcalloc": {"resource_type": "memory", "release": ["kvfree", "kfree"]},
+    "vmalloc": {"resource_type": "memory", "release": ["vfree", "kvfree"]},
+    "kmem_cache_alloc": {"resource_type": "memory", "release": ["kmem_cache_free", "kfree"]},
+    "kmem_cache_zalloc": {"resource_type": "memory", "release": ["kmem_cache_free", "kfree"]},
+    "f2fs_kmalloc": {"resource_type": "memory", "release": ["kfree"]},
+    "f2fs_kzalloc": {"resource_type": "memory", "release": ["kfree"]},
+    "f2fs_kvmalloc": {"resource_type": "memory", "release": ["kvfree", "kfree"]},
+    "f2fs_kvzalloc": {"resource_type": "memory", "release": ["kvfree", "kfree"]},
+    "f2fs_kmem_cache_alloc": {"resource_type": "memory", "release": ["kmem_cache_free", "kfree"]},
+
+    "f2fs_get_node_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_node_page_ra": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_new_inode_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_new_node_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_grab_meta_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_meta_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_meta_page_retry": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_tmp_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_sum_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_read_data_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_find_data_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_lock_data_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_get_new_data_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_grab_cache_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+    "f2fs_pagecache_get_page": {"resource_type": "f2fs_page", "release": ["f2fs_put_page", "put_page"]},
+
+    "f2fs_get_dnode_of_data": {
+      "resource_type": "f2fs_dnode",
+      "release": ["f2fs_put_dnode"],
+      "out_resource_arg": 0,
+      "out_arg_requires_address": true,
+      "release_arg_requires_address": true
+    },
+    "f2fs_alloc_nid": {
+      "resource_type": "f2fs_nid_reservation",
+      "release": ["f2fs_alloc_nid_failed", "f2fs_alloc_nid_done"],
+      "out_resource_arg": 1,
+      "out_arg_requires_address": true,
+      "release_arg_index": 1,
+      "release_suggestion": "f2fs_alloc_nid_failed(sbi, {var})"
+    },
+    "f2fs_setup_filename": {
+      "resource_type": "f2fs_filename",
+      "release": ["f2fs_free_filename"],
+      "out_resource_arg": 3,
+      "out_arg_requires_address": true,
+      "release_arg_requires_address": true
+    },
+    "f2fs_prepare_lookup": {
+      "resource_type": "f2fs_filename",
+      "release": ["f2fs_free_filename"],
+      "out_resource_arg": 2,
+      "out_arg_requires_address": true,
+      "release_arg_requires_address": true
+    },
+    "f2fs_iget": {"resource_type": "f2fs_inode_ref", "release": ["iput"]},
+    "f2fs_iget_retry": {"resource_type": "f2fs_inode_ref", "release": ["iput"]},
+
+    "f2fs_lock_op": {"resource_type": "f2fs_op_lock", "release": ["f2fs_unlock_op"], "direct_resource_arg": 0},
+    "f2fs_lock_all": {"resource_type": "f2fs_op_lock", "release": ["f2fs_unlock_all"], "direct_resource_arg": 0},
+    "f2fs_down_read": {"resource_type": "f2fs_rwsem_read", "release": ["f2fs_up_read"], "direct_resource_arg": 0},
+    "f2fs_down_write": {"resource_type": "f2fs_rwsem_write", "release": ["f2fs_up_write"], "direct_resource_arg": 0},
+    "mutex_lock": {"resource_type": "mutex", "release": ["mutex_unlock"], "direct_resource_arg": 0},
+    "spin_lock": {"resource_type": "spinlock", "release": ["spin_unlock"], "direct_resource_arg": 0},
+    "spin_lock_irq": {"resource_type": "spinlock", "release": ["spin_unlock_irq"], "direct_resource_arg": 0},
+    "spin_lock_irqsave": {"resource_type": "spinlock", "release": ["spin_unlock_irqrestore"], "direct_resource_arg": 0},
+    "down_read": {"resource_type": "rwsem_read", "release": ["up_read"], "direct_resource_arg": 0},
+    "down_write": {"resource_type": "rwsem_write", "release": ["up_write"], "direct_resource_arg": 0}
+  },
+  "callee_resource_consumers": {
+    "f2fs_gc": [
+      {
+        "resource_type": "f2fs_rwsem_write",
+        "resource_expr": "&{arg0}->gc_lock",
+        "when": "always",
+        "description": "f2fs_gc unconditionally releases the caller-held gc_lock before returning."
+      }
+    ],
+    "f2fs_handle_failed_inode": [
+      {
+        "resource_type": "f2fs_op_lock",
+        "match": "resource_type",
+        "when": "always",
+        "description": "The failed-inode cleanup contract requires and releases the caller-held operation lock."
+      }
+    ],
+    "do_convert_inline_dir": [
+      {
+        "resource_type": "f2fs_page",
+        "resource_arg": 1,
+        "when": "error_return",
+        "description": "Both inline-directory conversion implementations release ipage on failure."
+      }
+    ],
+    "f2fs_get_dnode_of_data": [
+      {
+        "resource_type": "f2fs_dnode",
+        "resource_arg": 0,
+        "when": "error_return",
+        "description": "Failure paths release acquired pages and clear the dnode page fields."
+      }
+    ]
+  },
+  "resource_ownership_transfers": [
+    {
+      "function": "init_victim_secmap",
+      "resource_type": "memory",
+      "resource_expr": "dirty_i->victim_secmap",
+      "owner": "SM_I(sbi)->dirty_info",
+      "cleanup_function": "f2fs_destroy_segment_manager",
+      "description": "The first bitmap remains attached to dirty_info and is freed by mount-failure teardown."
+    }
+  ],
+  "error_output_contracts": [
+    {
+      "function": "f2fs_find_entry",
+      "sentinel_return": "NULL",
+      "error_output_arg": 2,
+      "error_encoding": "ERR_PTR",
+      "description": "NULL means inspect res_page: ERR_PTR carries errors other than ENOENT."
+    }
+  ],
+  "review_false_positive_contracts_file": "f2fs_review_false_positives.json"
+}

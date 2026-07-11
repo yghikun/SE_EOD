@@ -51,12 +51,14 @@ def write_candidates_csv(
 
 
 def check_candidates(
-    error_paths_csv: str | Path, candidates_csv: str | Path
+    error_paths_csv: str | Path,
+    candidates_csv: str | Path,
+    analysis_contracts: dict | None = None,
 ) -> dict[str, int]:
     rows = read_error_paths(error_paths_csv)
     candidates: list[dict[str, str]] = []
     for row in rows:
-        candidates.extend(run_candidate_rules(row))
+        candidates.extend(run_candidate_rules(row, analysis_contracts))
 
     write_candidates_csv(candidates, candidates_csv)
 

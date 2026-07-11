@@ -1,0 +1,728 @@
+{
+  "schema_version": 1,
+  "review_source": "outputs/f2fs/deepseek_reviews.jsonl",
+  "classification": "human_directive_false_positive",
+  "rules": [
+    {
+      "rule_id": "f2fs.reviewed.__get_meta_page.missing_cleanup",
+      "file": "fs/f2fs/checkpoint.c",
+      "function": "__get_meta_page",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        82
+      ],
+      "task_ids": [
+        "llm_review_54ae655e8095"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.get_checkpoint_version.missing_cleanup",
+      "file": "fs/f2fs/checkpoint.c",
+      "function": "get_checkpoint_version",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        852,
+        858,
+        866
+      ],
+      "task_ids": [
+        "llm_review_32fe8deb4c84",
+        "llm_review_acb595eddd35",
+        "llm_review_4ee7a26e66b9"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.validate_checkpoint.error_swallowed",
+      "file": "fs/f2fs/checkpoint.c",
+      "function": "validate_checkpoint",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        887,
+        902
+      ],
+      "task_ids": [
+        "llm_review_e5593c3285eb",
+        "llm_review_25f4e3b7043c"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_write_compressed_pages.missing_cleanup",
+      "file": "fs/f2fs/compress.c",
+      "function": "f2fs_write_compressed_pages",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        1263,
+        1333
+      ],
+      "task_ids": [
+        "llm_review_7e0b0ae39cb5",
+        "llm_review_ba88ecac7a0b"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_write_compressed_pages.partial_cleanup",
+      "file": "fs/f2fs/compress.c",
+      "function": "f2fs_write_compressed_pages",
+      "candidate_type": "partial_cleanup",
+      "error_lines": [
+        1333
+      ],
+      "task_ids": [
+        "llm_review_38a4b2352295"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_write_multi_pages.error_swallowed",
+      "file": "fs/f2fs/compress.c",
+      "function": "f2fs_write_multi_pages",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        1538
+      ],
+      "task_ids": [
+        "llm_review_67c6238e4121"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_bmap_compress.error_swallowed",
+      "file": "fs/f2fs/data.c",
+      "function": "f2fs_bmap_compress",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        3848
+      ],
+      "task_ids": [
+        "llm_review_60c7468bc067"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_write_begin.error_swallowed",
+      "file": "fs/f2fs/data.c",
+      "function": "f2fs_write_begin",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        3646
+      ],
+      "task_ids": [
+        "llm_review_4a212cb4c532"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_write_single_data_page.error_swallowed",
+      "file": "fs/f2fs/data.c",
+      "function": "f2fs_write_single_data_page",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        2915
+      ],
+      "task_ids": [
+        "llm_review_2f54892a43bc"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.prepare_write_begin.missing_cleanup",
+      "file": "fs/f2fs/data.c",
+      "function": "prepare_write_begin",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        3460,
+        3468,
+        3472,
+        3474,
+        3481
+      ],
+      "task_ids": [
+        "llm_review_977fa8444e9a",
+        "llm_review_69dfbf9bc324",
+        "llm_review_ef589036e5b0",
+        "llm_review_993ff7df82e6",
+        "llm_review_613b0156bbf1"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.prepare_write_begin.partial_cleanup",
+      "file": "fs/f2fs/data.c",
+      "function": "prepare_write_begin",
+      "candidate_type": "partial_cleanup",
+      "error_lines": [
+        3481
+      ],
+      "task_ids": [
+        "llm_review_5cb04448be79"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_find_entry.error_swallowed",
+      "file": "fs/f2fs/dir.c",
+      "function": "f2fs_find_entry",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        413
+      ],
+      "task_ids": [
+        "llm_review_c2043e8ad00e"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_readdir.missing_cleanup",
+      "file": "fs/f2fs/dir.c",
+      "function": "f2fs_readdir",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        1103
+      ],
+      "task_ids": [
+        "llm_review_d0148a3fca6f"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.__f2fs_ioc_gc_range.missing_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "__f2fs_ioc_gc_range",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        2521,
+        2527
+      ],
+      "task_ids": [
+        "llm_review_2d8567318819",
+        "llm_review_8bd39856a373"
+      ],
+      "original_model_verdicts": [
+        "false_positive",
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.__read_out_blkaddrs.missing_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "__read_out_blkaddrs",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        1174,
+        1176,
+        1177
+      ],
+      "task_ids": [
+        "llm_review_c12d689ce1e2",
+        "llm_review_9f687a81b81c",
+        "llm_review_be56c8af4c2c"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_do_truncate_blocks.missing_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "f2fs_do_truncate_blocks",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        697
+      ],
+      "task_ids": [
+        "llm_review_937b56f13c5b"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_do_truncate_blocks.partial_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "f2fs_do_truncate_blocks",
+      "candidate_type": "partial_cleanup",
+      "error_lines": [
+        697
+      ],
+      "task_ids": [
+        "llm_review_212bc1f4d849"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_expand_inode_data.missing_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "f2fs_expand_inode_data",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        1728,
+        1747,
+        1759
+      ],
+      "task_ids": [
+        "llm_review_261decbbd5f6",
+        "llm_review_e050c082b60e",
+        "llm_review_2c4304d52c29"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_seek_block.missing_cleanup",
+      "file": "fs/f2fs/file.c",
+      "function": "f2fs_seek_block",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        448
+      ],
+      "task_ids": [
+        "llm_review_f004905ce4d3"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_add_inline_entry.missing_cleanup",
+      "file": "fs/f2fs/inline.c",
+      "function": "f2fs_add_inline_entry",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        637
+      ],
+      "task_ids": [
+        "llm_review_59661f1c0e95"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.__f2fs_tmpfile.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "__f2fs_tmpfile",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        880,
+        884
+      ],
+      "task_ids": [
+        "llm_review_8e07a0250c29",
+        "llm_review_7610746ad4f0"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_create.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_create",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        378
+      ],
+      "task_ids": [
+        "llm_review_bba5f8c22400"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_lookup.error_swallowed",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_lookup",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        535
+      ],
+      "task_ids": [
+        "llm_review_526273ff4d26"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_lookup.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_lookup",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        535,
+        581
+      ],
+      "task_ids": [
+        "llm_review_420fd2d6ad97",
+        "llm_review_fe7926432ab6"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_mkdir.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_mkdir",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        781
+      ],
+      "task_ids": [
+        "llm_review_5a76e6a97425"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_mknod.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_mknod",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        835
+      ],
+      "task_ids": [
+        "llm_review_708c46e1ae7e"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_new_inode.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_new_inode",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        254,
+        267,
+        271
+      ],
+      "task_ids": [
+        "llm_review_0d9447b7443a",
+        "llm_review_29a5cf712423",
+        "llm_review_d890a89560ae"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_symlink.missing_cleanup",
+      "file": "fs/f2fs/namei.c",
+      "function": "f2fs_symlink",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        711
+      ],
+      "task_ids": [
+        "llm_review_44877a33d1b0"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.__flush_nat_entry_set.missing_cleanup",
+      "file": "fs/f2fs/node.c",
+      "function": "__flush_nat_entry_set",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        3026
+      ],
+      "task_ids": [
+        "llm_review_aad1adf29ba2"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.__f2fs_commit_atomic_write.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "__f2fs_commit_atomic_write",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        316,
+        318,
+        320
+      ],
+      "task_ids": [
+        "llm_review_69170af23db5",
+        "llm_review_e0b74e733947",
+        "llm_review_f7495fdea144"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.build_curseg.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "build_curseg",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        4523,
+        4528
+      ],
+      "task_ids": [
+        "llm_review_4d3478bedbd5",
+        "llm_review_57aa8821c6c5"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.build_free_segmap.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "build_free_segmap",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        4488,
+        4493
+      ],
+      "task_ids": [
+        "llm_review_f4499354a325",
+        "llm_review_03bb73a78e28"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.build_sit_info.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "build_sit_info",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        4388,
+        4394,
+        4403,
+        4427,
+        4435,
+        4447,
+        4453,
+        4458
+      ],
+      "task_ids": [
+        "llm_review_d76b7fd87b28",
+        "llm_review_5e692e00b1d8",
+        "llm_review_fbcbad4541c1",
+        "llm_review_04c5918e585a",
+        "llm_review_f855b449153c",
+        "llm_review_9be1b2598826",
+        "llm_review_d008099e8675",
+        "llm_review_7f274c462207"
+      ],
+      "original_model_verdicts": [
+        "false_positive",
+        "uncertain"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_build_segment_manager.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "f2fs_build_segment_manager",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        5245,
+        5249,
+        5253,
+        5256,
+        5259,
+        5264,
+        5269,
+        5273
+      ],
+      "task_ids": [
+        "llm_review_76a9e68ba238",
+        "llm_review_671a0d319e19",
+        "llm_review_875b9b6e2f31",
+        "llm_review_3024a7dede23",
+        "llm_review_0400cc914bbb",
+        "llm_review_2574d6b4d1bf",
+        "llm_review_90852a488259",
+        "llm_review_30a7a6800830"
+      ],
+      "original_model_verdicts": [
+        "false_positive",
+        "uncertain"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_create_flush_cmd_control.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "f2fs_create_flush_cmd_control",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        681
+      ],
+      "task_ids": [
+        "llm_review_ee699d3a5f06"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.init_victim_secmap.missing_cleanup",
+      "file": "fs/f2fs/segment.c",
+      "function": "init_victim_secmap",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        4767
+      ],
+      "task_ids": [
+        "llm_review_7310e1e4abff"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_disable_checkpoint.missing_cleanup",
+      "file": "fs/f2fs/super.c",
+      "function": "f2fs_disable_checkpoint",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        2264,
+        2270
+      ],
+      "task_ids": [
+        "llm_review_767371155c51",
+        "llm_review_5f821c904c23"
+      ],
+      "original_model_verdicts": [
+        "true_candidate"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    },
+    {
+      "rule_id": "f2fs.reviewed.f2fs_enable_quota_files.error_swallowed",
+      "file": "fs/f2fs/super.c",
+      "function": "f2fs_enable_quota_files",
+      "candidate_type": "error_swallowed",
+      "error_lines": [
+        2799
+      ],
+      "task_ids": [
+        "llm_review_beeb7d19e7d4"
+      ],
+      "original_model_verdicts": [
+        "false_positive"
+      ],
+      "reason_code": "reviewed_false_positive",
+      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+    }
+  ]
+}

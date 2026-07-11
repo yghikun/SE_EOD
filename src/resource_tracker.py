@@ -31,6 +31,7 @@ class HeldResource:
     acquire_line: int
     out_resource_arg: int | None = None
     release_arg_index: int = 0
+    release_arg_requires_address: bool = False
     release_suggestion_template: str = ""
 
     @property
@@ -102,6 +103,12 @@ def _out_resource_var(args: list[str], cfg: dict[str, Any]) -> str:
 class ResourceTracker:
     def __init__(self, resource_map: dict[str, Any]):
         self.acquire_functions = resource_map.get("acquire_functions", {})
+        self.callee_resource_consumers = resource_map.get(
+            "callee_resource_consumers", {}
+        )
+        self.resource_ownership_transfers = resource_map.get(
+            "resource_ownership_transfers", []
+        )
 
     def held_before(
         self,
@@ -125,7 +132,12 @@ class ResourceTracker:
                 cfg = self.acquire_functions.get(call_name)
                 if not cfg:
                     continue
-                var = _out_resource_var(args, cfg) or lhs
+                if "out_resource_arg" in cfg:
+                    var = _out_resource_var(args, cfg)
+                    if not var:
+                        continue
+                else:
+                    var = lhs
                 if is_contract_restore_acquire(function_name, call_name, var):
                     continue
                 held = [res for res in held if not self._same_resource_arg(res.var, var)]
@@ -156,6 +168,8 @@ class ResourceTracker:
             res
             for res in held
             if not self._condition_is_acquire_failure(res, condition, error_source_expr)
+            and not self._error_source_consumes_resource(res, error_source_expr)
+            and not self._resource_ownership_transferred(function_name, res)
             and not resource_exempt_by_function_contract(
                 function_name, condition.condition, error_source_expr, res
             )
@@ -168,7 +182,10 @@ class ResourceTracker:
         for res in held:
             released = False
             for call in cleanup_calls:
-                if cleanup_call_releases_resource(call, res):
+                name, args = call_name_and_args(call)
+                if cleanup_call_releases_resource(call, res) or self._consumer_releases(
+                    name, args, res, "always"
+                ):
                     released = True
                     break
             if not released:
@@ -189,16 +206,78 @@ class ResourceTracker:
             acquire_line=line,
             out_resource_arg=cfg.get("out_resource_arg"),
             release_arg_index=int(cfg.get("release_arg_index", 0)),
+            release_arg_requires_address=bool(
+                cfg.get("release_arg_requires_address", False)
+            ),
             release_suggestion_template=str(cfg.get("release_suggestion", "")),
         )
 
     def _apply_release(self, held: list[HeldResource], name: str, args: list[str]) -> None:
         kept: list[HeldResource] = []
         for res in held:
-            if call_releases_resource(name, args, res):
+            if call_releases_resource(name, args, res) or self._consumer_releases(
+                name, args, res, "always"
+            ):
                 continue
             kept.append(res)
         held[:] = kept
+
+    def _consumer_releases(
+        self,
+        name: str,
+        args: list[str],
+        resource: HeldResource,
+        when: str,
+    ) -> bool:
+        consumers = self.callee_resource_consumers.get(name, [])
+        if isinstance(consumers, dict):
+            consumers = [consumers]
+        for consumer in consumers:
+            if not isinstance(consumer, dict) or consumer.get("when", "always") != when:
+                continue
+            if consumer.get("resource_type") not in {None, "", resource.resource_type}:
+                continue
+            if consumer.get("match") == "resource_type":
+                return True
+            if "resource_arg" in consumer:
+                index = int(consumer["resource_arg"])
+                if index >= len(args):
+                    continue
+                target = args[index].strip()
+                while target.startswith("&"):
+                    target = target[1:].strip()
+                if same_resource_expr(target, resource.var):
+                    return True
+            template = str(consumer.get("resource_expr", ""))
+            if template:
+                target = template
+                for index, arg in enumerate(args):
+                    target = target.replace(f"{{arg{index}}}", arg.strip())
+                if same_resource_expr(target, resource.var):
+                    return True
+        return False
+
+    def _error_source_consumes_resource(
+        self, resource: HeldResource, error_source_expr: str
+    ) -> bool:
+        name, args = call_name_and_args(error_source_expr)
+        return self._consumer_releases(name, args, resource, "error_return")
+
+    def _resource_ownership_transferred(
+        self, function_name: str, resource: HeldResource
+    ) -> bool:
+        for transfer in self.resource_ownership_transfers:
+            if not isinstance(transfer, dict):
+                continue
+            if transfer.get("function") != function_name:
+                continue
+            if transfer.get("resource_type") not in {None, "", resource.resource_type}:
+                continue
+            if same_resource_expr(
+                str(transfer.get("resource_expr", "")), resource.var
+            ):
+                return True
+        return False
 
     def _condition_is_acquire_failure(
         self, res: HeldResource, condition: ConditionInfo, error_source_expr: str

@@ -239,7 +239,11 @@ def _row_context(row: dict[str, str]) -> tuple[list[dict[str, Any]], list[str], 
     return held_resources, cleanup_calls, missing_releases, row.get("final_return_expr", "")
 
 
-def missing_cleanup_candidates(row: dict[str, str]) -> list[dict[str, str]]:
+def missing_cleanup_candidates(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
+    if _suppressed_by_review_contract(row, "missing_cleanup", analysis_contracts):
+        return []
     held_resources, cleanup_calls, missing_releases, final_return_expr = _row_context(row)
     if row.get("confidence") == "low":
         return []
@@ -261,7 +265,11 @@ def missing_cleanup_candidates(row: dict[str, str]) -> list[dict[str, str]]:
     ]
 
 
-def partial_cleanup_candidates(row: dict[str, str]) -> list[dict[str, str]]:
+def partial_cleanup_candidates(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
+    if _suppressed_by_review_contract(row, "partial_cleanup", analysis_contracts):
+        return []
     held_resources, cleanup_calls, missing_releases, final_return_expr = _row_context(row)
     if row.get("confidence") == "low":
         return []
@@ -282,7 +290,50 @@ def partial_cleanup_candidates(row: dict[str, str]) -> list[dict[str, str]]:
     ]
 
 
-def error_swallowed_candidates(row: dict[str, str]) -> list[dict[str, str]]:
+def _error_returned_via_output_contract(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None
+) -> bool:
+    if not analysis_contracts:
+        return False
+    for contract in analysis_contracts.get("error_output_contracts", []):
+        if not isinstance(contract, dict):
+            continue
+        if contract.get("function") != row.get("function"):
+            continue
+        expected_return = contract.get("sentinel_return")
+        if expected_return and _norm_expr(str(expected_return)) != _norm_expr(
+            row.get("final_return_expr", "")
+        ):
+            continue
+        return True
+    return False
+
+
+def _suppressed_by_review_contract(
+    row: dict[str, str], candidate_type: str, analysis_contracts: dict[str, Any] | None
+) -> bool:
+    if not analysis_contracts:
+        return False
+    error_line = str(row.get("error_line", "")).strip()
+    for contract in analysis_contracts.get("review_false_positive_rules", []):
+        if not isinstance(contract, dict):
+            continue
+        if contract.get("file") != row.get("file"):
+            continue
+        if contract.get("function") != row.get("function"):
+            continue
+        if contract.get("candidate_type") != candidate_type:
+            continue
+        if error_line in {str(line) for line in contract.get("error_lines", [])}:
+            return True
+    return False
+
+
+def error_swallowed_candidates(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
+    if _suppressed_by_review_contract(row, "error_swallowed", analysis_contracts):
+        return []
     condition = row.get("condition", "")
     if not re.search(r"\b(?:ret|err|error|retval|status)\b", condition):
         return []
@@ -295,6 +346,8 @@ def error_swallowed_candidates(row: dict[str, str]) -> list[dict[str, str]]:
         and re.search(r"\b(?:ret|err|error|retval|status)\b", condition)
     )
     if not returns_success and not returns_null_after_error:
+        return []
+    if _error_returned_via_output_contract(row, analysis_contracts):
         return []
 
     held_resources, cleanup_calls, missing_releases, _ = _row_context(row)
@@ -311,9 +364,11 @@ def error_swallowed_candidates(row: dict[str, str]) -> list[dict[str, str]]:
     ]
 
 
-def run_candidate_rules(row: dict[str, str]) -> list[dict[str, str]]:
+def run_candidate_rules(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
     candidates: list[dict[str, str]] = []
-    candidates.extend(partial_cleanup_candidates(row))
-    candidates.extend(missing_cleanup_candidates(row))
-    candidates.extend(error_swallowed_candidates(row))
+    candidates.extend(partial_cleanup_candidates(row, analysis_contracts))
+    candidates.extend(missing_cleanup_candidates(row, analysis_contracts))
+    candidates.extend(error_swallowed_candidates(row, analysis_contracts))
     return candidates
