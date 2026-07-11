@@ -1,6 +1,6 @@
 # Btrfs DeepSeek True-Candidate Static Audit
 
-Input: `outputs/btrfs/deepseek_true_candidates.jsonl` (`32` records).
+Input: `outputs/linux-v6.8/btrfs/deepseek_true_candidates.jsonl` (`32` records).
 
 This is a source-level triage pass, not upstream confirmation. I classify a record as:
 

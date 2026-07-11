@@ -1,13 +1,18 @@
 # Output Layout
 
-`outputs/` keeps final or currently useful SE-EOD artifacts.  Files are grouped
-by filesystem so new filesystem targets can be added without mixing results.
+`outputs/` keeps final or currently useful SE-EOD artifacts. Results are grouped
+first by Linux version and then by filesystem, so scans from different source
+snapshots cannot overwrite or mix with each other.
 
 ## Root
 
 - `confirmed_bugs.md`: all confirmed bugs across filesystems.
+- `linux-v6.8/`: results produced from `linux-sources/linux-v6.8-fs`.
+- `linux-v7.1/`: results produced from `linux-sources/linux-v7.1-fs`.
 
-## ext4
+## Linux v6.8
+
+### ext4
 
 - `error_paths.csv`: extracted ext4 error paths.
 - `suspicious_candidates.csv`: ext4 static candidates.
@@ -16,7 +21,7 @@ by filesystem so new filesystem targets can be added without mixing results.
 - `manual_review_labels.jsonl`: ext4 review-feedback labels.
 - `manual_bug_candidates_to_verify.md`: ext4 promoted candidates and review notes.
 
-## btrfs
+### btrfs
 
 - `error_paths.csv`: extracted btrfs error paths.
 - `suspicious_candidates.csv`: btrfs static candidates.
@@ -25,3 +30,28 @@ by filesystem so new filesystem targets can be added without mixing results.
 - `deepseek_true_candidates.jsonl`: btrfs LLM true-candidate subset.
 - `deepseek_true_candidate_audit.md`: btrfs source-level audit notes.
 - `recover_relocation_qemu_report.md`: btrfs relocation recovery fault-injection report.
+
+### XFS
+
+- `error_paths.csv`: extracted XFS error paths.
+- `suspicious_candidates.csv`: XFS static candidates.
+- `ranked_candidates.jsonl`: XFS ranked candidates with evidence.
+- `candidates_with_evidence.csv`: XFS CSV evidence summary.
+- `llm_review_tasks.jsonl`: XFS LLM review tasks.
+- `deepseek_reviews.jsonl`: XFS DeepSeek review responses.
+- `deepseek_true_candidates.jsonl`: XFS LLM true-candidate subset.
+
+### F2FS
+
+- `error_paths.csv`: extracted F2FS error paths.
+- `suspicious_candidates.csv`: F2FS static candidates.
+- `ranked_candidates.jsonl`: F2FS ranked candidates with evidence.
+- `candidates_with_evidence.csv`: F2FS CSV evidence summary.
+- `llm_review_tasks.jsonl`: F2FS LLM review tasks.
+- `deepseek_reviews.jsonl`: F2FS DeepSeek review responses.
+- `deepseek_true_candidates.jsonl`: F2FS LLM true-candidate subset.
+
+## Linux v7.1
+
+Use the same per-filesystem filenames under `outputs/linux-v7.1/<filesystem>/`.
+Always pass explicit output paths when scanning this source version.

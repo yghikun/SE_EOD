@@ -1,7 +1,7 @@
 """Sparse-download Linux filesystem sources needed by se_eod.
 
 Default result:
-  linux-v6.8-fs/
+  linux-sources/linux-v6.8-fs/
     fs/ext4/*.c
 
 The directory is still a Git checkout, so src.main can record the real Linux
@@ -17,7 +17,7 @@ from pathlib import Path
 
 DEFAULT_REPO = "https://github.com/torvalds/linux.git"
 DEFAULT_REF = "v6.8"
-DEFAULT_TARGET = "linux-v6.8-fs"
+DEFAULT_TARGET = "linux-sources/linux-v6.8-fs"
 DEFAULT_SPARSE_PATH = "fs/ext4"
 
 
@@ -55,6 +55,7 @@ def ensure_sparse_checkout(
     target = target.resolve()
 
     if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
         run(
             [
                 "git",
@@ -90,7 +91,7 @@ def ensure_sparse_checkout(
     print(f"linux_git_commit={commit}")
     print(f"linux_git_tag={tag}")
     print(f"linux_path={target}")
-    print(f"scan_command=python -m src.main --linux {target} --out outputs/ext4/error_paths.csv")
+    print(f"scan_command=python -m src.main --linux {target} --out outputs/linux-v6.8/ext4/error_paths.csv")
 
 
 def main(argv: list[str] | None = None) -> int:

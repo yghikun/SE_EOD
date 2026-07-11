@@ -17,8 +17,8 @@ env/
 .env
 .env.*
 
-# Downloaded Linux source snapshot keeps its own Git metadata locally.
-/linux-v6.8-fs/
+# Downloaded Linux source snapshots keep their own Git metadata locally.
+/linux-sources/
 
 # Large/generated runtime artifacts that should not be committed if created.
 *.img

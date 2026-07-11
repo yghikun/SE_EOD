@@ -27,11 +27,11 @@ from .resource_tracker import ResourceTracker, load_resource_map
 from .wrapper_summary import WrapperSummaryDB
 
 
-DEFAULT_CANDIDATES_IN = "outputs/ext4/suspicious_candidates.csv"
-DEFAULT_DEEPSEEK_TRUE_CANDIDATES_OUT = "outputs/ext4/deepseek_true_candidates.jsonl"
+DEFAULT_CANDIDATES_IN = "outputs/linux-v6.8/ext4/suspicious_candidates.csv"
+DEFAULT_DEEPSEEK_TRUE_CANDIDATES_OUT = "outputs/linux-v6.8/ext4/deepseek_true_candidates.jsonl"
 DEFAULT_PROTOCOLS_DIR = "configs/resource_protocols"
-DEFAULT_RANKED_CANDIDATES_OUT = "outputs/ext4/ranked_candidates.jsonl"
-DEFAULT_CANDIDATES_WITH_EVIDENCE_OUT = "outputs/ext4/candidates_with_evidence.csv"
+DEFAULT_RANKED_CANDIDATES_OUT = "outputs/linux-v6.8/ext4/ranked_candidates.jsonl"
+DEFAULT_CANDIDATES_WITH_EVIDENCE_OUT = "outputs/linux-v6.8/ext4/candidates_with_evidence.csv"
 DEFAULT_WRAPPER_SUMMARIES = "configs/wrapper_summaries.json"
 DEFAULT_MANUAL_REVIEW_LABELS = None
 DEFAULT_RESOURCE_MAP = "configs/ext4_resource_map.json"
@@ -170,7 +170,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--out",
-        default="outputs/ext4/error_paths.csv",
+        default="outputs/linux-v6.8/ext4/error_paths.csv",
         help="Output CSV path.",
     )
     parser.add_argument(
@@ -185,7 +185,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--candidates-out",
-        default="outputs/ext4/suspicious_candidates.csv",
+        default="outputs/linux-v6.8/ext4/suspicious_candidates.csv",
         help="Output CSV path for suspicious candidates.",
     )
     parser.add_argument(
@@ -243,7 +243,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--llm-tasks-out",
-        default="outputs/ext4/llm_review_tasks.jsonl",
+        default="outputs/linux-v6.8/ext4/llm_review_tasks.jsonl",
         help="Output JSONL path for LLM review tasks.",
     )
     parser.add_argument(
@@ -259,7 +259,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--deepseek-reviews-out",
-        default="outputs/ext4/deepseek_reviews.jsonl",
+        default="outputs/linux-v6.8/ext4/deepseek_reviews.jsonl",
         help="Output JSONL path for optional DeepSeek responses.",
     )
     parser.add_argument(

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "review_source": "outputs/xfs/deepseek_reviews.jsonl",
+  "review_source": "outputs/linux-v6.8/xfs/deepseek_reviews.jsonl",
   "classification": "human_directive_false_positive",
   "confirmed_bug_exceptions": [
     {

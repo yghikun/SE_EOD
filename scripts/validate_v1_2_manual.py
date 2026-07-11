@@ -17,10 +17,10 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.manual_review import review_source_for
 
 
-DEFAULT_BASELINE = "outputs/ext4/ranked_candidates_v1_2_no_manual.jsonl"
-DEFAULT_FEEDBACK = "outputs/ext4/ranked_candidates.jsonl"
-DEFAULT_LABELS = "outputs/ext4/manual_review_labels.jsonl"
-DEFAULT_REPORT = "outputs/ext4/v1_2_review_feedback_report.md"
+DEFAULT_BASELINE = "outputs/linux-v6.8/ext4/ranked_candidates_v1_2_no_manual.jsonl"
+DEFAULT_FEEDBACK = "outputs/linux-v6.8/ext4/ranked_candidates.jsonl"
+DEFAULT_LABELS = "outputs/linux-v6.8/ext4/manual_review_labels.jsonl"
+DEFAULT_REPORT = "outputs/linux-v6.8/ext4/v1_2_review_feedback_report.md"
 
 
 def load_jsonl(path: str | Path) -> list[dict[str, Any]]:

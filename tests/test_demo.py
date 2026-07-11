@@ -698,7 +698,7 @@ def test_manual_review_loader_ignores_todo_placeholder_labels(tmp_path):
                     {
                         "_comment": (
                             "Fill these TODO labels, then copy reviewed JSON objects "
-                            "to outputs/ext4/manual_review_labels.jsonl."
+                            "to outputs/linux-v6.8/ext4/manual_review_labels.jsonl."
                         )
                     }
                 ),

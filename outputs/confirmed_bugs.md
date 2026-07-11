@@ -17,7 +17,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 4 | ext4 | `ext4_expand_extra_isize_ea()` | stale error after successful retry | patch submitted / under review | `/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch` |
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
-| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/btrfs/recover_relocation_qemu_report.md` |
+| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md` |
 | 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
 
 ## ext4
@@ -144,10 +144,10 @@ reported as successful replay.
 
 Evidence from our scan:
 
-- `outputs/ext4/manual_bug_candidates_to_verify.md` listed `FC-INODE` as a strong
+- `outputs/linux-v6.8/ext4/manual_bug_candidates_to_verify.md` listed `FC-INODE` as a strong
   v6.8 candidate and then marked it as fixed/duplicate after latest-tree
   review.
-- `outputs/ext4/ranked_candidates.jsonl` and v1.2 reports contain five
+- `outputs/linux-v6.8/ext4/ranked_candidates.jsonl` and v1.2 reports contain five
   `ext4_fc_replay_inode` `error_swallowed` candidates from the v6.8 scan.
 
 Upstream fix:
@@ -206,7 +206,7 @@ missing the local cleanup.
 Evidence:
 
 - Source-level confirmed in Linux 6.8 sparse tree:
-  `linux-v6.8-fs/fs/btrfs/relocation.c`
+  `linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c`
 - Source-level confirmed in the newer local tree:
   `/root/bug_submit/linux/fs/btrfs/relocation.c`
 - The newer local tree still has the same duplicate-return shape in
@@ -241,7 +241,7 @@ not set that flag can leave the relocation-root reference attached.
 Evidence:
 
 - QEMU/fault-injection report:
-  `outputs/btrfs/recover_relocation_qemu_report.md`
+  `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`
 - Test target: Linux 6.8 Btrfs recovery.
 - Pending relocation image contained 25 `TREE_RELOC ROOT_ITEM` records.
 - Normal recovery succeeded.
@@ -303,10 +303,10 @@ grow operation can continue after a partially completed metadata copy.
 
 Evidence:
 
-- Linux v6.8 source: `linux-v6.8-fs/fs/xfs/xfs_rtalloc.c`, lines 101-118.
+- Linux v6.8 source: `linux-sources/linux-v6.8-fs/fs/xfs/xfs_rtalloc.c`, lines 101-118.
 - SE-EOD rediscovery: `candidate_343e5e0b9add`,
   `candidate_cfcfe8b9d353`, and `candidate_40ab97ad7725` in
-  `outputs/xfs/deepseek_true_candidates.jsonl`.
+  `outputs/linux-v6.8/xfs/deepseek_true_candidates.jsonl`.
 - Later mainline source changes the cleanup return to `return error;`, matching
   the caller's existing `if (error) goto error_cancel;` handling.
 
