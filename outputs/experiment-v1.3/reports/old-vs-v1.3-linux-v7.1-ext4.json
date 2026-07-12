@@ -1,0 +1,73 @@
+{
+  "old": {
+    "total": 15,
+    "by_candidate_type": {
+      "error_swallowed": 9,
+      "missing_cleanup": 5,
+      "stale_error_after_retry": 1
+    },
+    "by_evidence_level": {
+      "E0_STATIC_RULE_ONLY": 10,
+      "E2_API_PROTOCOL_SUPPORTED": 5
+    }
+  },
+  "v1_3": {
+    "total": 13,
+    "by_candidate_type": {
+      "error_swallowed": 8,
+      "missing_cleanup": 4,
+      "stale_error_after_retry": 1
+    },
+    "by_evidence_level": {
+      "E0_STATIC_RULE_ONLY": 9,
+      "E2_API_PROTOCOL_SUPPORTED": 4
+    }
+  },
+  "retained": 13,
+  "removed_count": 2,
+  "added_count": 0,
+  "candidate_reduction": 0.1333,
+  "removed_by_type": {
+    "error_swallowed": 1,
+    "missing_cleanup": 1
+  },
+  "added_by_type": {},
+  "top_removed_functions": [
+    {
+      "function": "ext4_init_orphan_info",
+      "count": 1
+    },
+    {
+      "function": "ext4_fc_replay_add_range",
+      "count": 1
+    }
+  ],
+  "top_added_functions": [],
+  "removed": [
+    {
+      "candidate_id": "candidate_35fa112afbe8",
+      "file": "fs/ext4/orphan.c",
+      "function": "ext4_init_orphan_info",
+      "path_id": "ext4_init_orphan_info#005",
+      "candidate_type": "missing_cleanup",
+      "error_line": 608,
+      "condition": "IS_ERR(oi->of_binfo[i].ob_bh)",
+      "final_return_expr": "ret",
+      "evidence_level": "E2_API_PROTOCOL_SUPPORTED",
+      "evidence_score": 60
+    },
+    {
+      "candidate_id": "candidate_be57b8cafb39",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_add_range",
+      "path_id": "ext4_fc_replay_add_range#004",
+      "candidate_type": "error_swallowed",
+      "error_line": 1771,
+      "condition": "ret == 0",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    }
+  ],
+  "added": []
+}

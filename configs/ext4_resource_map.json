@@ -80,6 +80,14 @@
       "direct_resource_arg": 0
     }
   },
+  "interprocedural_effect_seeds": {
+    "set_delayed_call": {
+      "resource": "arg2",
+      "action": "transfer",
+      "condition": "always",
+      "evidence": "set_delayed_call registers arg2 for callback-owned cleanup"
+    }
+  },
   "review_false_positive_contracts_file": "ext4_review_false_positives.json",
   "stale_error_retry_contracts": [
     {

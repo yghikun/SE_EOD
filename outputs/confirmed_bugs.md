@@ -319,6 +319,26 @@ later upstream mainline.  The exact fixing commit has not been recorded in this
 workspace, so this is a validation/duplicate finding rather than a new patch
 submission.
 
+## ext4
+
+### 9. `fs/ext4/namei.c::ext4_dx_add_entry`
+
+Bug type: missing `buffer_head` release on three journal error paths.
+
+Linux v6.8 acquires `bh2` through `ext4_append()` and can jump to
+`journal_error` at lines 2570, 2582, and 2602 without calling `brelse(bh2)`.
+The first two paths occur before `bh2` can be swapped into `frame->bh`; the
+third path also leaks on the branch where the swap condition is false.
+
+Linux v7.1 adds `brelse(bh2)` immediately before the corresponding jumps at
+lines 2559, 2573, and 2595. SE-EOD records these mappings in
+`configs/ext4_historical_fixes.json`; all three candidates are ranked as
+`E3_HISTORICAL_FIX_CONFIRMED` and retain only dynamic validation as missing
+evidence.
+
+Status: source-level confirmed historical Linux v6.8 bug, fixed in the Linux
+v7.1 source snapshot. The exact fixing commit has not yet been identified.
+
 ## Not Included As Confirmed Bugs
 
 The following candidates should not be presented as confirmed bugs yet:

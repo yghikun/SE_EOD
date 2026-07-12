@@ -1,0 +1,25 @@
+{
+  "before": 16,
+  "after": 19,
+  "retained": 16,
+  "removed": 0,
+  "added": 3,
+  "reduction": -0.1875,
+  "removed_by_type": {},
+  "pilot": {
+    "eligible": 11,
+    "not_in_baseline": 19,
+    "by_verdict": {
+      "true_bug": 11
+    },
+    "retained_by_verdict": {
+      "true_bug": 11
+    },
+    "true_positive_retention": 1.0,
+    "labeled_false_positives_removed": 0
+  },
+  "schema_version": 1,
+  "generated_at": "2026-07-12T15:07:27.929055+00:00",
+  "before_path": "outputs\\experiment-v1.4-baseline\\linux-v6.8\\ext4\\ranked_candidates.jsonl",
+  "after_path": "outputs\\experiment-v1.4\\linux-v6.8\\ext4\\ranked_candidates.jsonl"
+}

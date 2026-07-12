@@ -76,32 +76,47 @@ class ResourceProtocolDB:
     def load_from_dir(cls, protocols_dir: str | Path) -> "ResourceProtocolDB":
         root = Path(protocols_dir)
         db = cls()
-        if not root.exists() or not root.is_dir():
+        roots: list[Path]
+        if root.exists() and root.is_dir():
+            roots = [root]
+        elif root.name == "resource_protocols":
+            # Older callers use one aggregate directory. Keep that API working
+            # after protocol files were split by filesystem.
+            roots = sorted(
+                path
+                for path in root.parent.glob("*_resource_protocols")
+                if path.is_dir()
+            )
+            if not roots:
+                db.warnings.append(f"protocols_dir_missing: {root}")
+                return db
+        else:
             db.warnings.append(f"protocols_dir_missing: {root}")
             return db
 
-        for path in sorted(root.glob("*.json")):
-            try:
-                raw = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as exc:
-                db.warnings.append(f"{path}: {type(exc).__name__}: {exc}")
-                continue
-            if not isinstance(raw, list):
-                db.warnings.append(f"{path}: expected a JSON list of protocols")
-                continue
-            for index, item in enumerate(raw):
-                if not isinstance(item, dict):
-                    db.warnings.append(f"{path}:{index}: expected protocol object")
-                    continue
+        for protocol_root in roots:
+            for path in sorted(protocol_root.glob("*.json")):
                 try:
-                    protocol = ResourceProtocol.from_dict(item)
-                except Exception as exc:
-                    db.warnings.append(f"{path}:{index}: {type(exc).__name__}: {exc}")
+                    raw = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    db.warnings.append(f"{path}: {type(exc).__name__}: {exc}")
                     continue
-                if not protocol.protocol_id:
-                    db.warnings.append(f"{path}:{index}: missing protocol_id")
+                if not isinstance(raw, list):
+                    db.warnings.append(f"{path}: expected a JSON list of protocols")
                     continue
-                db.protocols.append(protocol)
+                for index, item in enumerate(raw):
+                    if not isinstance(item, dict):
+                        db.warnings.append(f"{path}:{index}: expected protocol object")
+                        continue
+                    try:
+                        protocol = ResourceProtocol.from_dict(item)
+                    except Exception as exc:
+                        db.warnings.append(f"{path}:{index}: {type(exc).__name__}: {exc}")
+                        continue
+                    if not protocol.protocol_id:
+                        db.warnings.append(f"{path}:{index}: missing protocol_id")
+                        continue
+                    db.protocols.append(protocol)
         return db
 
     def find_by_resource_kind(self, kind: str) -> list[ResourceProtocol]:

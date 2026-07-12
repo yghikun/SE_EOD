@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .manual_review import ManualReviewDB, manual_score_adjustment
+from .historical_fix import HistoricalFixDB
 from .ownership_transfer import ownership_transfer_hints_for_candidate
 from .protocol_db import ResourceProtocolDB
 from .protocol_matcher import match_protocol_evidence
@@ -20,6 +21,7 @@ E0_STATIC_RULE_ONLY = "E0_STATIC_RULE_ONLY"
 E1_LLM_TRUE_CANDIDATE = "E1_LLM_TRUE_CANDIDATE"
 E2_API_PROTOCOL_SUPPORTED = "E2_API_PROTOCOL_SUPPORTED"
 E3_REPAIR_PATCH_SUPPORTED = "E3_REPAIR_PATCH_SUPPORTED"
+E3_HISTORICAL_FIX_CONFIRMED = "E3_HISTORICAL_FIX_CONFIRMED"
 E4_DYNAMICALLY_REPRODUCED = "E4_DYNAMICALLY_REPRODUCED"
 E5_UPSTREAM_CONFIRMED = "E5_UPSTREAM_CONFIRMED"
 
@@ -38,6 +40,8 @@ SUMMARY_COLUMNS = [
     "severity",
     "evidence_level",
     "evidence_score",
+    "historical_fix_ids",
+    "fixed_versions",
     "matched_protocol_ids",
     "required_actions",
     "has_exception_hints",
@@ -167,8 +171,12 @@ def load_deepseek_true_candidates(path: str | Path | None) -> dict[str, dict[str
 
 
 def _evidence_level(
-    protocol_evidence: list[dict[str, Any]], llm_evidence: dict[str, Any] | None
+    protocol_evidence: list[dict[str, Any]],
+    llm_evidence: dict[str, Any] | None,
+    historical_fix_evidence: list[dict[str, Any]],
 ) -> str:
+    if historical_fix_evidence:
+        return E3_HISTORICAL_FIX_CONFIRMED
     if protocol_evidence:
         return E2_API_PROTOCOL_SUPPORTED
     if llm_evidence:
@@ -260,6 +268,7 @@ def _score(
     row: dict[str, str],
     protocol_evidence: list[dict[str, Any]],
     llm_evidence: dict[str, Any] | None,
+    historical_fix_evidence: list[dict[str, Any]],
 ) -> tuple[int, list[str]]:
     score = 10
     explanation = ["E0 static rule base +10"]
@@ -273,6 +282,9 @@ def _score(
         else:
             score += 30
             explanation.append("E2 API protocol support without exception hints +30")
+    if historical_fix_evidence:
+        score += 40
+        explanation.append("E3 later-version source fix confirmation +40")
     severity = row.get("severity", "")
     if severity == "P1":
         score += 20
@@ -351,6 +363,7 @@ def rank_candidate_rows(
     linux_path: str | Path | None = None,
     enable_ownership_transfer_hints: bool = False,
     manual_reviews: ManualReviewDB | None = None,
+    historical_fixes: HistoricalFixDB | None = None,
 ) -> list[dict[str, Any]]:
     llm_records = deepseek_true_candidates or {}
     ranked: list[dict[str, Any]] = []
@@ -373,14 +386,19 @@ def rank_candidate_rows(
         )
         task_id = llm_task_id_for_row(row)
         candidate_id = candidate_id_for_row(row)
+        historical_fix_evidence = historical_fixes.match(row) if historical_fixes else []
         manual_review = (
             manual_reviews.find_any([candidate_id, task_id, row.get("path_id", "")])
             if manual_reviews
             else None
         )
         llm_record = llm_records.get(task_id)
-        level = _evidence_level(protocol_evidence, llm_record)
-        score, score_explanation = _score(row, protocol_evidence, llm_record)
+        level = _evidence_level(
+            protocol_evidence, llm_record, historical_fix_evidence
+        )
+        score, score_explanation = _score(
+            row, protocol_evidence, llm_record, historical_fix_evidence
+        )
         manual_adjustment, manual_explanation = manual_score_adjustment(manual_review)
         score += manual_adjustment
         score_explanation.extend(manual_explanation)
@@ -398,13 +416,19 @@ def rank_candidate_rows(
                 "manual_score_adjustment": manual_adjustment,
                 "static_evidence": static_evidence,
                 "protocol_evidence": protocol_evidence,
+                "historical_fix_evidence": historical_fix_evidence,
                 "wrapper_evidence": wrapper_evidence,
                 "ownership_transfer_hints": ownership_hints,
                 "has_exception_hints": has_exception_hints,
                 "exception_hints": exception_hints,
                 "score_explanation": score_explanation,
                 "llm_evidence": llm_record or {},
-                "missing_evidence": list(MISSING_EVIDENCE_V1),
+                "missing_evidence": [
+                    item
+                    for item in MISSING_EVIDENCE_V1
+                    if not historical_fix_evidence
+                    or item not in {"repair_patch", "upstream_confirmation"}
+                ],
                 "file": row.get("file", ""),
                 "function": row.get("function", ""),
                 "path_id": row.get("path_id", ""),
@@ -487,6 +511,22 @@ def write_candidates_with_evidence_csv(
                     "severity": item.get("severity", ""),
                     "evidence_level": item.get("evidence_level", ""),
                     "evidence_score": item.get("evidence_score", ""),
+                    "historical_fix_ids": ",".join(
+                        str(evidence.get("fix_id", ""))
+                        for evidence in item.get("historical_fix_evidence", [])
+                        if evidence.get("fix_id")
+                    ),
+                    "fixed_versions": ",".join(
+                        sorted(
+                            {
+                                str(evidence.get("fixed_version", ""))
+                                for evidence in item.get(
+                                    "historical_fix_evidence", []
+                                )
+                                if evidence.get("fixed_version")
+                            }
+                        )
+                    ),
                     "matched_protocol_ids": json.dumps(
                         matched_protocol_ids, ensure_ascii=False
                     ),
@@ -587,10 +627,12 @@ def rank_candidates_from_csv(
     linux_path: str | Path | None = None,
     enable_ownership_transfer_hints: bool = False,
     manual_review_labels_in: str | Path | None = None,
+    historical_fixes_in: str | Path | None = None,
 ) -> dict[str, int]:
     rows = read_candidate_rows(candidates_csv)
     llm_records = load_deepseek_true_candidates(deepseek_true_candidates_in)
     manual_reviews = ManualReviewDB.load_from_file(manual_review_labels_in)
+    historical_fixes = HistoricalFixDB.load_from_file(historical_fixes_in)
     ranked = rank_candidate_rows(
         rows,
         protocols,
@@ -599,6 +641,7 @@ def rank_candidates_from_csv(
         linux_path=linux_path,
         enable_ownership_transfer_hints=enable_ownership_transfer_hints,
         manual_reviews=manual_reviews,
+        historical_fixes=historical_fixes,
     )
     jsonl_count = write_ranked_candidates_jsonl(ranked, ranked_candidates_out)
     csv_count = write_candidates_with_evidence_csv(
@@ -619,6 +662,11 @@ def rank_candidates_from_csv(
             1
             for item in ranked
             if item["evidence_level"] == E2_API_PROTOCOL_SUPPORTED
+        ),
+        "E3_HISTORICAL_FIX_CONFIRMED_count": sum(
+            1
+            for item in ranked
+            if item["evidence_level"] == E3_HISTORICAL_FIX_CONFIRMED
         ),
         "exception_hints_count": sum(
             1 for item in ranked if item.get("has_exception_hints")

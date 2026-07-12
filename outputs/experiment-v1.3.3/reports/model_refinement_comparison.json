@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-12T13:18:55.587221+00:00",
+  "before": "E:\\yanjiusheng\\阅读论文\\file_system\\SE_EOD\\outputs\\experiment-v1.3",
+  "after": "E:\\yanjiusheng\\阅读论文\\file_system\\SE_EOD\\outputs\\experiment-v1.3.3",
+  "matrix": {
+    "linux-v6.8": {
+      "ext4": {
+        "before": 16,
+        "after": 16,
+        "retained": 16,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "error_swallowed": 13,
+          "missing_cleanup": 2,
+          "stale_error_after_retry": 1
+        },
+        "after_by_type": {
+          "error_swallowed": 13,
+          "missing_cleanup": 2,
+          "stale_error_after_retry": 1
+        }
+      },
+      "btrfs": {
+        "before": 5,
+        "after": 5,
+        "retained": 5,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "missing_cleanup": 3,
+          "partial_cleanup": 2
+        },
+        "after_by_type": {
+          "missing_cleanup": 3,
+          "partial_cleanup": 2
+        }
+      },
+      "xfs": {
+        "before": 6,
+        "after": 6,
+        "retained": 6,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "error_swallowed": 3,
+          "partial_cleanup": 3
+        },
+        "after_by_type": {
+          "error_swallowed": 3,
+          "partial_cleanup": 3
+        }
+      },
+      "f2fs": {
+        "before": 0,
+        "after": 0,
+        "retained": 0,
+        "removed": 0,
+        "added": 0,
+        "reduction": null,
+        "before_by_type": {},
+        "after_by_type": {}
+      }
+    },
+    "linux-v7.1": {
+      "ext4": {
+        "before": 13,
+        "after": 13,
+        "retained": 13,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "error_swallowed": 8,
+          "missing_cleanup": 4,
+          "stale_error_after_retry": 1
+        },
+        "after_by_type": {
+          "error_swallowed": 8,
+          "missing_cleanup": 4,
+          "stale_error_after_retry": 1
+        }
+      },
+      "btrfs": {
+        "before": 543,
+        "after": 4,
+        "retained": 4,
+        "removed": 539,
+        "added": 0,
+        "reduction": 0.9926,
+        "before_by_type": {
+          "error_swallowed": 11,
+          "missing_cleanup": 470,
+          "partial_cleanup": 62
+        },
+        "after_by_type": {
+          "missing_cleanup": 2,
+          "partial_cleanup": 2
+        }
+      },
+      "xfs": {
+        "before": 8,
+        "after": 8,
+        "retained": 8,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "error_swallowed": 4,
+          "missing_cleanup": 4
+        },
+        "after_by_type": {
+          "error_swallowed": 4,
+          "missing_cleanup": 4
+        }
+      },
+      "f2fs": {
+        "before": 4,
+        "after": 4,
+        "retained": 4,
+        "removed": 0,
+        "added": 0,
+        "reduction": 0.0,
+        "before_by_type": {
+          "missing_cleanup": 4
+        },
+        "after_by_type": {
+          "missing_cleanup": 4
+        }
+      }
+    }
+  },
+  "known_btrfs_positive_retention": {
+    "linux-v6.8": {
+      "baseline": 5,
+      "retained": 5,
+      "retention": 1.0
+    },
+    "linux-v7.1": {
+      "baseline": 4,
+      "retained": 4,
+      "retention": 1.0
+    }
+  }
+}

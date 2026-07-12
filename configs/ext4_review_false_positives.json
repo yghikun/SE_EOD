@@ -14,6 +14,15 @@
     },
     {
       "function": "ext4_fc_replay_add_range",
+      "candidate_type": "error_swallowed",
+      "path_ids": [
+        "ext4_fc_replay_add_range#002",
+        "ext4_fc_replay_add_range#003",
+        "ext4_fc_replay_add_range#006",
+        "ext4_fc_replay_add_range#008",
+        "ext4_fc_replay_add_range#009"
+      ],
+      "match_path_ids": true,
       "confirmed_in": "outputs/confirmed_bugs.md"
     },
     {
@@ -22,13 +31,46 @@
     },
     {
       "function": "ext4_init_orphan_info",
+      "candidate_type": "missing_cleanup",
+      "path_ids": [
+        "ext4_init_orphan_info#006",
+        "ext4_init_orphan_info#007"
+      ],
+      "match_path_ids": true,
       "error_lines": [
-        601,
-        605,
         610,
         615
       ],
       "confirmed_in": "outputs/confirmed_bugs.md"
+    }
+  ],
+  "path_rules": [
+    {
+      "rule_id": "ext4.reviewed.ext4_init_orphan_info.acquire_failure.missing_cleanup",
+      "file": "fs/ext4/orphan.c",
+      "function": "ext4_init_orphan_info",
+      "candidate_type": "missing_cleanup",
+      "path_ids": [
+        "ext4_init_orphan_info#004",
+        "ext4_init_orphan_info#005"
+      ],
+      "match_path_ids": true,
+      "error_lines": [],
+      "reason_code": "acquire_failure_no_resource",
+      "description": "ERR_PTR and NULL returns from ext4_bread do not create a releasable buffer_head for the current iteration."
+    },
+    {
+      "rule_id": "ext4.reviewed.ext4_fc_replay_add_range.normal_zero.error_swallowed",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_add_range",
+      "candidate_type": "error_swallowed",
+      "path_ids": [
+        "ext4_fc_replay_add_range#004"
+      ],
+      "match_path_ids": true,
+      "error_lines": [],
+      "reason_code": "intentional_api_sentinel",
+      "description": "ret == 0 from ext4_map_blocks means the range is unmapped and enters the normal insertion branch."
     }
   ],
   "rules": [

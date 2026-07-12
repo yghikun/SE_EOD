@@ -324,6 +324,12 @@ def _suppressed_by_review_contract(
         configured_type = str(contract.get("candidate_type", "")).strip()
         if configured_type and configured_type != candidate_type:
             return False
+        configured_path_ids = contract.get("path_ids")
+        if contract.get("match_path_ids") and configured_path_ids:
+            if not isinstance(configured_path_ids, list):
+                return False
+            if row.get("path_id") not in {str(path_id) for path_id in configured_path_ids}:
+                return False
         return True
 
     # Confirmed bugs take precedence across kernel versions.  Their archived

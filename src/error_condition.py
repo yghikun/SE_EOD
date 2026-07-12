@@ -40,6 +40,19 @@ def strip_outer_parens(expr: str) -> str:
     return compact_ws(expr)
 
 
+def strip_condition_wrappers(expr: str) -> str:
+    """Remove branch-prediction wrappers that do not change C truth semantics."""
+
+    expr = strip_outer_parens(expr)
+    while True:
+        match = re.fullmatch(
+            r"(?:likely|unlikely|WARN_ON|WARN_ON_ONCE)\s*\((.*)\)", expr
+        )
+        if not match:
+            return expr
+        expr = strip_outer_parens(match.group(1))
+
+
 def _first_identifier(expr: str) -> str:
     match = re.search(r"\b([A-Za-z_]\w*)\b", expr)
     return match.group(1) if match else "unknown"
@@ -91,7 +104,7 @@ def classify_condition(
     final_return_expr: str = "",
     target_label: str = "",
 ) -> ConditionInfo:
-    cond = strip_outer_parens(condition)
+    cond = strip_condition_wrappers(condition)
 
     match = re.match(rf"^IS_ERR_OR_NULL\s*\(\s*({RESOURCE_EXPR_RE})\s*\)$", cond)
     if match:

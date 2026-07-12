@@ -261,10 +261,10 @@ def test_demo_extracts_required_error_paths(tmp_path):
         and row["candidate_type"] == "missing_cleanup"
         for row in candidates
     )
-    assert any(
+    assert not any(
         row["function"] == "demo_ownership_transfer_hint"
-        and "brelse(bh)" in _json(row, "missing_cleanup_candidates")
-        for row in missing_candidates
+        and row["candidate_type"] == "missing_cleanup"
+        for row in candidates
     )
     assert not any(
         row["function"] == "demo_goto_brelse"
@@ -384,24 +384,6 @@ def test_demo_extracts_required_error_paths(tmp_path):
     assert ranked_missing_brelse["has_exception_hints"] is False
     assert ranked_missing_brelse["score_explanation"]
 
-    ranked_transfer = next(
-        item
-        for item in ranked
-        if item["function"] == "demo_ownership_transfer_hint"
-        and item["candidate_type"] == "missing_cleanup"
-    )
-    assert ranked_transfer["evidence_level"] == E2_API_PROTOCOL_SUPPORTED
-    assert ranked_transfer["has_exception_hints"] is True
-    assert ranked_transfer["ownership_transfer_hints"]
-    assert any(
-        evidence["ownership_transfer_possible"] is True
-        for evidence in ranked_transfer["protocol_evidence"]
-    )
-    assert any(
-        hint["type"] == "ownership_transferred"
-        for hint in ranked_transfer["exception_hints"]
-    )
-
     ranked_missing_journal = next(
         item
         for item in ranked
@@ -465,14 +447,6 @@ def test_demo_extracts_required_error_paths(tmp_path):
     ]:
         assert column in summary_brelse
 
-    transfer_task = next(
-        task
-        for task in llm_tasks
-        if task["function"] == "demo_ownership_transfer_hint"
-        and task["candidate_type"] == "missing_cleanup"
-    )
-    assert transfer_task["ownership_transfer_hints"]
-
 
 def test_protocol_db_loads_default_protocols():
     db = ResourceProtocolDB.load_from_dir("configs/resource_protocols")
@@ -504,6 +478,9 @@ def test_resource_expression_aliases_keep_indexed_fields_conservative():
     assert same_resource_expr("s->base", "base")
     assert same_resource_expr("bhs[i]", "bhs")
     assert not same_resource_expr("oi->of_binfo[i].ob_bh", "ob_bh")
+    assert not same_resource_expr(
+        "oi->of_binfo[i].ob_bh", "oi->of_binfo[i--].ob_bh"
+    )
 
 
 def test_ownership_transfer_hint_from_struct_assignment(tmp_path):

@@ -1670,5 +1670,115 @@
       "reason_code": "user_classified_false_positive",
       "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     }
+  ],
+  "path_rules": [
+    {
+      "rule_id": "btrfs.audit95.btrfs_init_dev_replace.recovery_policy",
+      "file": "fs/btrfs/dev-replace.c",
+      "function": "btrfs_init_dev_replace",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["btrfs_init_dev_replace#003"],
+      "match_path_ids": true,
+      "reason_code": "documented_recovery_policy"
+    },
+    {
+      "rule_id": "btrfs.audit95.btrfs_free_tree_block.boolean_result",
+      "file": "fs/btrfs/extent-tree.c",
+      "function": "btrfs_free_tree_block",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["btrfs_free_tree_block#004"],
+      "match_path_ids": true,
+      "reason_code": "boolean_helper_result"
+    },
+    {
+      "rule_id": "btrfs.audit95.extent_writepage.handled_sentinel",
+      "file": "fs/btrfs/extent_io.c",
+      "function": "extent_writepage",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["extent_writepage#004", "extent_writepage#006"],
+      "match_path_ids": true,
+      "reason_code": "handled_page_sentinel"
+    },
+    {
+      "rule_id": "btrfs.audit95.can_nocow_extent.safe_fallback",
+      "file": "fs/btrfs/inode.c",
+      "function": "can_nocow_extent",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["can_nocow_extent#007"],
+      "match_path_ids": true,
+      "reason_code": "fail_safe_fallback"
+    },
+    {
+      "rule_id": "btrfs.audit95.qgroup_trace.best_effort",
+      "file": "fs/btrfs/qgroup.c",
+      "function": "btrfs_qgroup_trace_extent",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["btrfs_qgroup_trace_extent#004"],
+      "match_path_ids": true,
+      "reason_code": "best_effort_duplicate_or_insert_failure"
+    },
+    {
+      "rule_id": "btrfs.audit95.bio_add_paddrs.short_add",
+      "file": "fs/btrfs/raid56.c",
+      "function": "bio_add_paddrs",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["bio_add_paddrs#001"],
+      "match_path_ids": true,
+      "reason_code": "short_add_sentinel"
+    },
+    {
+      "rule_id": "btrfs.audit95.is_extent_unchanged.not_found",
+      "file": "fs/btrfs/send.c",
+      "function": "is_extent_unchanged",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["is_extent_unchanged#004"],
+      "match_path_ids": true,
+      "reason_code": "not_found_sentinel"
+    },
+    {
+      "rule_id": "btrfs.audit95.backref_in_log.not_found",
+      "file": "fs/btrfs/tree-log.c",
+      "function": "backref_in_log",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["backref_in_log#003"],
+      "match_path_ids": true,
+      "reason_code": "not_found_sentinel"
+    },
+    {
+      "rule_id": "btrfs.audit95.alloc_dummy_extent_buffer.null_error",
+      "file": "fs/btrfs/extent_io.c",
+      "function": "alloc_dummy_extent_buffer",
+      "candidate_type": "error_swallowed",
+      "path_ids": ["alloc_dummy_extent_buffer#002", "alloc_dummy_extent_buffer#003"],
+      "match_path_ids": true,
+      "reason_code": "pointer_error_sentinel"
+    },
+    {
+      "rule_id": "btrfs.audit95.find_orphan_roots.error_pointer_branch",
+      "file": "fs/btrfs/root-tree.c",
+      "function": "btrfs_find_orphan_roots",
+      "candidate_type": "missing_cleanup",
+      "path_ids": ["btrfs_find_orphan_roots#007", "btrfs_find_orphan_roots#008"],
+      "match_path_ids": true,
+      "reason_code": "path_sensitive_failed_acquisition"
+    },
+    {
+      "rule_id": "btrfs.audit95.recover_log_trees.error_pointer_branch.missing",
+      "file": "fs/btrfs/tree-log.c",
+      "function": "btrfs_recover_log_trees",
+      "candidate_type": "missing_cleanup",
+      "path_ids": ["btrfs_recover_log_trees#007", "btrfs_recover_log_trees#008"],
+      "match_path_ids": true,
+      "reason_code": "path_sensitive_failed_acquisition"
+    },
+    {
+      "rule_id": "btrfs.audit95.recover_log_trees.error_pointer_branch.partial",
+      "file": "fs/btrfs/tree-log.c",
+      "function": "btrfs_recover_log_trees",
+      "candidate_type": "partial_cleanup",
+      "path_ids": ["btrfs_recover_log_trees#007", "btrfs_recover_log_trees#008"],
+      "match_path_ids": true,
+      "reason_code": "path_sensitive_failed_acquisition"
+    }
   ]
 }

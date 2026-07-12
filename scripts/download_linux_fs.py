@@ -11,6 +11,7 @@ commit and tag via git rev-parse / git describe.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 from pathlib import Path
 
@@ -73,7 +74,19 @@ def ensure_sparse_checkout(
         )
 
     if not (target / ".git").exists():
-        raise SystemExit(f"target exists but is not a git checkout: {target}")
+        manifest_path = target / "SOURCE_MANIFEST.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+        if isinstance(manifest, dict) and manifest.get("git_tag") == ref:
+            print(f"source_manifest={manifest_path}")
+            print(f"downloaded_ref={manifest.get('git_tag', ref)}")
+            print(f"linux_git_commit={manifest.get('git_commit', 'unknown')}")
+            print(f"linux_git_tag={manifest.get('git_tag', ref)}")
+            print(f"linux_path={target}")
+            return
+        raise SystemExit(f"target exists but is not a git checkout or matching source snapshot: {target}")
 
     run(["git", "remote", "set-url", "origin", repo], cwd=target)
     run(["git", "fetch", "--depth", "1", "origin", ref], cwd=target)

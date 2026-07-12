@@ -150,6 +150,59 @@ def _merge_confidence(base: str, final_return_expr: str, condition: ConditionInf
     return base
 
 
+def _condition_implies_cycle(condition: str, cycle_condition: str) -> bool:
+    cycle = compact_ws(strip_outer_parens(cycle_condition))
+    original = compact_ws(strip_outer_parens(condition))
+    if cycle == "always" or original == cycle:
+        return True
+
+    conjunction = _split_top_level(cycle, "&&")
+    if len(conjunction) > 1:
+        return all(_condition_implies_cycle(original, term) for term in conjunction)
+    disjunction = _split_top_level(cycle, "||")
+    if len(disjunction) > 1:
+        return any(_condition_implies_cycle(original, term) for term in disjunction)
+
+    match = re.fullmatch(r"([A-Za-z_]\w*)\s*(?:!=\s*0)?", original)
+    if not match:
+        return False
+    variable = match.group(1)
+    return bool(
+        re.fullmatch(rf"{re.escape(variable)}\s*(?:!=\s*0)?", cycle)
+    )
+
+
+def _goto_targets_prior_label(
+    statements: list[Statement], labels: dict[str, int], branch_exit: BranchExit
+) -> bool:
+    if branch_exit.exit_type != "goto" or not branch_exit.exit_line:
+        return False
+    label_index = labels.get(branch_exit.target_label)
+    if label_index is None:
+        return False
+    return statements[label_index].line <= branch_exit.exit_line
+
+
+def _split_top_level(expression: str, operator: str) -> list[str]:
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    index = 0
+    while index < len(expression):
+        char = expression[index]
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+        elif depth == 0 and expression.startswith(operator, index):
+            parts.append(expression[start:index].strip())
+            start = index + len(operator)
+            index += len(operator) - 1
+        index += 1
+    parts.append(expression[start:].strip())
+    return parts
+
+
 def _node_text(function: Function, node: Any) -> str:
     return function.file_bytes[node.start_byte : node.end_byte].decode(
         "utf-8", errors="replace"
@@ -445,7 +498,13 @@ class ErrorPathExtractor:
             final_return_expr = branch_exit.return_expr
             label_reason = ""
             if branch_exit.exit_type == "goto":
+                if _goto_targets_prior_label(statements, labels, branch_exit):
+                    continue
                 resolution = resolve_label(statements, labels, branch_exit.target_label)
+                if resolution.cycles and _condition_implies_cycle(
+                    condition_text, resolution.cycle_condition
+                ):
+                    continue
                 label_cleanup = resolution.cleanup_calls
                 final_return_expr = resolution.final_return_expr
                 label_reason = resolution.reason
@@ -541,9 +600,15 @@ class ErrorPathExtractor:
                     final_return_expr = branch_exit.return_expr
                     label_reason = ""
                     if branch_exit.exit_type == "goto":
+                        if _goto_targets_prior_label(statements, labels, branch_exit):
+                            continue
                         resolution = resolve_label(
                             statements, labels, branch_exit.target_label
                         )
+                        if resolution.cycles and _condition_implies_cycle(
+                            condition_text, resolution.cycle_condition
+                        ):
+                            continue
                         label_cleanup = resolution.cleanup_calls
                         final_return_expr = resolution.final_return_expr
                         label_reason = resolution.reason
@@ -643,9 +708,13 @@ class ErrorPathExtractor:
         error_source = find_error_source(
             statements, condition.error_var, error_line, function.parameters
         )
-        held = self.resource_tracker.held_before(
-            statements, error_line, condition, error_source, function.name
+        held = self.resource_tracker.held_before_cfg(
+            function, error_line, condition, error_source
         )
+        if held is None:
+            held = self.resource_tracker.held_before(
+                statements, error_line, condition, error_source, function.name
+            )
         missing = self.resource_tracker.missing_cleanup_candidates(held, cleanup_calls)
         if missing:
             reason = f"{reason}; suspicious missing cleanup candidates"

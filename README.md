@@ -1,4 +1,28 @@
 # se_eod
+
+## Current reproducible experiment
+
+The current refined matrix is `experiment-v1.3.3`. Run and compare it with the
+frozen v1.3 baseline using:
+
+```bash
+python scripts/run_experiment_v1_3.py \
+  --output-root outputs/experiment-v1.3.3 \
+  --experiment-name experiment-v1.3.3 --force
+python scripts/compare_experiment_v1_3_3.py
+```
+
+The btrfs cleanup-model audit chain is reproducible with:
+
+```bash
+python scripts/compare_scope_cleanup_ablation.py
+python scripts/audit_btrfs_v7_1_candidates.py
+```
+
+The main refinement report is
+`outputs/experiment-v1.3.3/reports/model_refinement_comparison.md`. Configuration
+layer ownership and naming rules are documented in `configs/README.md`.
+
 `se_eod` 是一个面向 Linux 文件系统错误路径分析的 Python 3 原型。
 当前仓库已经扩展到 ext4、btrfs、xfs 和 f2fs，并整理了 Linux v6.8 / v7.1 两套
 源码、候选和确认结果。
@@ -15,6 +39,8 @@ export DEEPSEEK_API_KEY="..."
 不要把 key 写进 README、脚本或提交里。
 
 ## 快速入口
+
+论文投稿与项目升级的完整任务路线图：[`PAPER_ROADMAP.md`](PAPER_ROADMAP.md)
 
 准备 Linux 源码：
 
@@ -40,6 +66,17 @@ BTRFS_MIN_EVIDENCE_SCORE=40 ./scripts/check_linux_v7_1_filesystems.sh btrfs f2fs
 ```bash
 ./scripts/check_linux_v7_1_filesystems.sh --no-deepseek
 ```
+
+重跑不调用 LLM 的 v1.3 静态实验矩阵（Linux v6.8/v7.1 × ext4/btrfs/XFS/F2FS）：
+
+```bash
+python scripts/run_experiment_v1_3.py
+python scripts/compare_experiment_v1_3.py
+```
+
+结果写入 `outputs/experiment-v1.3/`，旧版 `outputs/linux-v6.8/` 和
+`outputs/linux-v7.1/` 不会被覆盖。主比较报告位于
+`outputs/experiment-v1.3/reports/comparison.md`。
 
 ## 当前已经完成的具体工作
 

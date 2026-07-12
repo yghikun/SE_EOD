@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-12T12:32:02.646959+00:00",
+  "versions": {
+    "linux-v6.8": {
+      "before": 5,
+      "after": 5,
+      "retained": 5,
+      "removed": 0,
+      "added": 0,
+      "reduction": 0.0,
+      "before_by_type": {
+        "missing_cleanup": 3,
+        "partial_cleanup": 2
+      },
+      "after_by_type": {
+        "missing_cleanup": 3,
+        "partial_cleanup": 2
+      },
+      "removed_by_type": {},
+      "retained_functions": {
+        "btrfs_recover_relocation": 4,
+        "__add_reloc_root": 1
+      }
+    },
+    "linux-v7.1": {
+      "before": 543,
+      "after": 95,
+      "retained": 95,
+      "removed": 448,
+      "added": 0,
+      "reduction": 0.825,
+      "before_by_type": {
+        "error_swallowed": 11,
+        "missing_cleanup": 470,
+        "partial_cleanup": 62
+      },
+      "after_by_type": {
+        "error_swallowed": 11,
+        "missing_cleanup": 71,
+        "partial_cleanup": 13
+      },
+      "removed_by_type": {
+        "missing_cleanup": 399,
+        "partial_cleanup": 49
+      },
+      "retained_functions": {
+        "create_subvol": 21,
+        "btrfs_clone": 10,
+        "copy_items": 8,
+        "send_subvol_begin": 5,
+        "create_reloc_root": 5,
+        "btrfs_recover_relocation": 4,
+        "btrfs_recover_log_trees": 4,
+        "is_same_device": 3,
+        "btrfs_find_orphan_roots": 3,
+        "relocate_file_extent_cluster": 2,
+        "extent_writepage": 2,
+        "btrfs_quota_enable": 2,
+        "btrfs_symlink": 2,
+        "alloc_dummy_extent_buffer": 2,
+        "btrfs_drop_subtree": 2,
+        "do_walk_down": 1,
+        "is_extent_unchanged": 1,
+        "bio_add_paddrs": 1,
+        "btrfs_remove_block_group": 1,
+        "btrfs_remove_from_free_space_tree": 1,
+        "btrfs_partially_delete_raid_extent": 1,
+        "btrfs_init_dev_replace": 1,
+        "flush_dir_items_batch": 1,
+        "can_nocow_extent": 1,
+        "__add_block_group_free_space": 1,
+        "btrfs_add_to_free_space_tree": 1,
+        "backref_in_log": 1,
+        "btrfs_free_tree_block": 1,
+        "btrfs_insert_one_raid_extent": 1,
+        "unpin_extent_range": 1,
+        "describe_balance_start_or_resume": 1,
+        "btrfs_zone_finish_endio": 1,
+        "remove_range_from_remap_tree": 1,
+        "btrfs_ioctl_space_info": 1,
+        "btrfs_qgroup_trace_extent": 1
+      }
+    }
+  },
+  "auto_cleanup_diagnostic_before": {
+    "available": true,
+    "macro_files": 34,
+    "macro_occurrences_in_c": 154,
+    "macro_functions": 152,
+    "candidate_count": 543,
+    "candidates_in_macro_functions": 475,
+    "btrfs_free_path_candidates": 477,
+    "btrfs_free_path_candidates_in_macro_functions": 472,
+    "share_of_all_candidates": 0.8692,
+    "interpretation": "Most v7.1 btrfs_path candidates overlap compiler-managed __free cleanup and require scope-aware modeling before bug triage."
+  },
+  "auto_cleanup_diagnostic_after": {
+    "available": true,
+    "macro_files": 34,
+    "macro_occurrences_in_c": 154,
+    "macro_functions": 152,
+    "candidate_count": 95,
+    "candidates_in_macro_functions": 27,
+    "btrfs_free_path_candidates": 5,
+    "btrfs_free_path_candidates_in_macro_functions": 0,
+    "share_of_all_candidates": 0.0,
+    "interpretation": "Most v7.1 btrfs_path candidates overlap compiler-managed __free cleanup and require scope-aware modeling before bug triage."
+  }
+}

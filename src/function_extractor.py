@@ -288,6 +288,10 @@ def _extract_functions_from_ast(parsed: ParsedFile) -> list[Function]:
 
 
 def extract_functions(parsed: ParsedFile) -> list[Function]:
+    ast_functions = _extract_functions_from_ast(parsed)
+    if ast_functions:
+        return ast_functions
+
     text = parsed.text
     masked = mask_comments_and_strings(text)
     source_bytes = text.encode("utf-8", errors="replace")

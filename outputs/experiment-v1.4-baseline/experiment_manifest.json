@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "experiment": "experiment-v1.4-baseline",
+  "generated_at": "2026-07-12T14:53:31.174638+00:00",
+  "run_count": 1,
+  "runs": [
+    {
+      "version": "linux-v6.8",
+      "filesystem": "ext4",
+      "duration_seconds": 3.0354,
+      "stats": {
+        "scanned_files": 39,
+        "scanned_functions": 1269,
+        "extracted_error_paths": 2198,
+        "high_confidence_paths": 1323,
+        "medium_confidence_paths": 875,
+        "low_confidence_paths": 0,
+        "suspicious_missing_cleanup_candidates": 8,
+        "total_error_paths": 2198,
+        "total_candidates": 16,
+        "missing_cleanup_count": 2,
+        "error_swallowed_count": 13,
+        "partial_cleanup_count": 0,
+        "P1_count": 14,
+        "P2_count": 2,
+        "P3_count": 0,
+        "total_candidates_in": 16,
+        "ranked_candidates": 16,
+        "ranked_candidates_jsonl": 16,
+        "candidates_with_evidence_csv": 16,
+        "E0_STATIC_RULE_ONLY_count": 14,
+        "E1_LLM_TRUE_CANDIDATE_count": 0,
+        "E2_API_PROTOCOL_SUPPORTED_count": 2,
+        "exception_hints_count": 2,
+        "manual_review_labels_count": 0,
+        "manual_review_applied_count": 0,
+        "llm_review_tasks": 16,
+        "evidence_score_filtered_count": 0,
+        "source_unavailable_count": 0,
+        "llm_tasks_with_protocol_evidence": 2,
+        "error_paths_file_rows": 2198,
+        "candidates_file_rows": 16,
+        "ranked_file_rows": 16,
+        "llm_tasks_file_rows": 16
+      }
+    }
+  ]
+}

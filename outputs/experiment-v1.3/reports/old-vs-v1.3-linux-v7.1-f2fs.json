@@ -1,0 +1,30 @@
+{
+  "old": {
+    "total": 4,
+    "by_candidate_type": {
+      "missing_cleanup": 4
+    },
+    "by_evidence_level": {
+      "E2_API_PROTOCOL_SUPPORTED": 4
+    }
+  },
+  "v1_3": {
+    "total": 4,
+    "by_candidate_type": {
+      "missing_cleanup": 4
+    },
+    "by_evidence_level": {
+      "E2_API_PROTOCOL_SUPPORTED": 4
+    }
+  },
+  "retained": 4,
+  "removed_count": 0,
+  "added_count": 0,
+  "candidate_reduction": 0.0,
+  "removed_by_type": {},
+  "added_by_type": {},
+  "top_removed_functions": [],
+  "top_added_functions": [],
+  "removed": [],
+  "added": []
+}

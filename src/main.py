@@ -14,6 +14,7 @@ from .error_path_extractor import ErrorPathExtractor
 from .evidence_ranker import rank_candidates_from_csv
 from .file_walker import iter_c_files
 from .function_extractor import extract_functions
+from .function_summary import FunctionSummaryDB, infer_function_summaries
 from .llm_task_builder import (
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_DEEPSEEK_REASONING_EFFORT,
@@ -56,6 +57,10 @@ def _load_review_false_positive_contracts(
         print(f"warning: unable to load review contracts {source}: {exc}", file=sys.stderr)
         return
     rules = raw.get("rules", []) if isinstance(raw, dict) else []
+    if isinstance(raw, dict):
+        path_rules = raw.get("path_rules", [])
+        if isinstance(path_rules, list):
+            rules = list(rules) + path_rules
     if not isinstance(rules, list):
         print(f"warning: invalid review contracts {source}: rules must be a list", file=sys.stderr)
         return
@@ -87,8 +92,21 @@ def _git_value(linux_path: Path, args: list[str]) -> str:
 
 
 def linux_version(linux_path: Path) -> tuple[str, str]:
-    commit = _git_value(linux_path, ["rev-parse", "HEAD"])
-    tag = _git_value(linux_path, ["describe", "--tags", "--always"])
+    if (linux_path / ".git").exists():
+        commit = _git_value(linux_path, ["rev-parse", "HEAD"])
+        tag = _git_value(linux_path, ["describe", "--tags", "--always"])
+    else:
+        commit = "unknown"
+        tag = "unknown"
+    if commit == "unknown" or tag == "unknown":
+        manifest_path = linux_path / "SOURCE_MANIFEST.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+        if isinstance(manifest, dict):
+            commit = str(manifest.get("git_commit", commit))
+            tag = str(manifest.get("git_tag", tag))
     return commit, tag
 
 
@@ -141,6 +159,9 @@ def _rank_evidence(args: argparse.Namespace, candidates_in: Path) -> dict[str, i
         manual_review_labels_in=Path(args.manual_review_labels)
         if args.manual_review_labels
         else None,
+        historical_fixes_in=Path(args.historical_fixes)
+        if args.historical_fixes
+        else None,
     )
     for key in [
         "total_candidates_in",
@@ -150,6 +171,7 @@ def _rank_evidence(args: argparse.Namespace, candidates_in: Path) -> dict[str, i
         "E0_STATIC_RULE_ONLY_count",
         "E1_LLM_TRUE_CANDIDATE_count",
         "E2_API_PROTOCOL_SUPPORTED_count",
+        "E3_HISTORICAL_FIX_CONFIRMED_count",
         "exception_hints_count",
         "manual_review_labels_count",
         "manual_review_applied_count",
@@ -243,12 +265,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Enable conservative pattern-based ownership transfer hints during ranking.",
     )
     parser.add_argument(
+        "--enable-interprocedural",
+        action="store_true",
+        help="Infer local function summaries and apply propagated ownership effects.",
+    )
+    parser.add_argument(
+        "--function-summaries-out",
+        default="outputs/function_summaries.json",
+        help="Machine-readable summaries produced by --enable-interprocedural.",
+    )
+    parser.add_argument(
         "--manual-review-labels",
         default=DEFAULT_MANUAL_REVIEW_LABELS,
         help=(
             "Optional review feedback labels JSONL for score feedback. "
             "If omitted, ranking does not apply review labels."
         ),
+    )
+    parser.add_argument(
+        "--historical-fixes",
+        default=None,
+        help="Optional reviewed cross-version source-fix evidence JSON file.",
     )
     parser.add_argument(
         "--llm-tasks-out",
@@ -408,12 +445,8 @@ def main(argv: list[str] | None = None) -> int:
     commit, tag = linux_version(linux_path)
     resource_map = load_resource_map(resource_map_path)
     _load_review_false_positive_contracts(resource_map, resource_map_path)
-    resource_tracker = ResourceTracker(resource_map)
-    extractor = ErrorPathExtractor(resource_tracker)
-
     scanned_files = 0
-    scanned_functions = 0
-    all_paths = []
+    all_functions = []
     warnings: list[str] = []
 
     for c_file in iter_c_files(linux_path, args.fs_subdir):
@@ -426,27 +459,40 @@ def main(argv: list[str] | None = None) -> int:
             warnings.append(f"{c_file}: parse/extract failed: {exc}")
             continue
 
-        scanned_functions += len(functions)
-        for function in functions:
-            try:
-                paths = extractor.extract(function)
-            except Exception as exc:
-                warnings.append(f"{c_file}:{function.name}: analysis failed: {exc}")
-                continue
+        all_functions.extend(functions)
 
-            for path in paths:
-                if not args.include_low_confidence and path.confidence not in {
-                    "high",
-                    "medium",
-                }:
-                    continue
-                path.linux_git_commit = commit
-                path.linux_git_tag = tag
-                try:
-                    path.file = str(Path(path.file).resolve().relative_to(linux_path))
-                except ValueError:
-                    path.file = str(Path(path.file))
-                all_paths.append(path)
+    summary_db = FunctionSummaryDB()
+    if args.enable_interprocedural:
+        summary_db = infer_function_summaries(all_functions, resource_map)
+        summary_db.write_json(Path(args.function_summaries_out))
+        if not summary_db.converged:
+            warnings.append("interprocedural summaries did not converge")
+
+    resource_tracker = ResourceTracker(resource_map, summary_db)
+    extractor = ErrorPathExtractor(resource_tracker)
+    all_paths = []
+    for function in all_functions:
+        try:
+            paths = extractor.extract(function)
+        except Exception as exc:
+            warnings.append(f"{function.file}:{function.name}: analysis failed: {exc}")
+            continue
+
+        for path in paths:
+            if not args.include_low_confidence and path.confidence not in {
+                "high",
+                "medium",
+            }:
+                continue
+            path.linux_git_commit = commit
+            path.linux_git_tag = tag
+            try:
+                path.file = Path(path.file).resolve().relative_to(linux_path).as_posix()
+            except ValueError:
+                path.file = Path(path.file).as_posix()
+            all_paths.append(path)
+
+    scanned_functions = len(all_functions)
 
     write_error_paths_csv(all_paths, out_path)
 
@@ -465,6 +511,20 @@ def main(argv: list[str] | None = None) -> int:
     print(f"medium_confidence_paths={medium}")
     print(f"low_confidence_paths={low}")
     print(f"suspicious_missing_cleanup_candidates={suspicious}")
+    if args.enable_interprocedural:
+        print(f"function_summaries={len(summary_db.summaries)}")
+        print(f"summary_iterations={summary_db.iterations}")
+        print(f"summary_converged={str(summary_db.converged).lower()}")
+    cfg_diagnostics = resource_tracker.cfg_diagnostics()
+    print(f"cfg_functions={cfg_diagnostics['functions']}")
+    print(f"cfg_iterations={cfg_diagnostics['iterations']}")
+    print(f"cfg_truncated_functions={cfg_diagnostics['truncated_functions']}")
+    print(f"cfg_widened_blocks={cfg_diagnostics['widened_blocks']}")
+    print(f"cfg_max_states_per_block={cfg_diagnostics['max_states_per_block']}")
+    print(
+        "cfg_unresolved_indirect_calls="
+        f"{cfg_diagnostics['unresolved_indirect_calls']}"
+    )
 
     if args.check_candidates:
         candidate_stats = check_candidates(

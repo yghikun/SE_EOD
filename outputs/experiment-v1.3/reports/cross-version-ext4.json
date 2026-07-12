@@ -1,0 +1,173 @@
+{
+  "linux_v6_8": {
+    "total": 16,
+    "by_candidate_type": {
+      "error_swallowed": 13,
+      "missing_cleanup": 2,
+      "stale_error_after_retry": 1
+    },
+    "by_evidence_level": {
+      "E0_STATIC_RULE_ONLY": 14,
+      "E2_API_PROTOCOL_SUPPORTED": 2
+    }
+  },
+  "linux_v7_1": {
+    "total": 13,
+    "by_candidate_type": {
+      "error_swallowed": 8,
+      "missing_cleanup": 4,
+      "stale_error_after_retry": 1
+    },
+    "by_evidence_level": {
+      "E0_STATIC_RULE_ONLY": 9,
+      "E2_API_PROTOCOL_SUPPORTED": 4
+    }
+  },
+  "persisted": 10,
+  "only_v6_8_count": 6,
+  "only_v7_1_count": 3,
+  "candidate_delta": -3,
+  "v6_8_only_attribution": {
+    "candidate_changed_in_existing_function": 6
+  },
+  "v7_1_only_attribution": {
+    "candidate_changed_in_existing_function": 2,
+    "function_absent_from_other_error_corpus": 1
+  },
+  "top_v6_8_only_functions": [
+    {
+      "function": "ext4_fc_replay_inode",
+      "count": 5
+    },
+    {
+      "function": "ext4_fc_replay_add_range",
+      "count": 1
+    }
+  ],
+  "top_v7_1_only_functions": [
+    {
+      "function": "__track_dentry_update",
+      "count": 1
+    },
+    {
+      "function": "ext4_init_orphan_info",
+      "count": 1
+    },
+    {
+      "function": "check_buffer",
+      "count": 1
+    }
+  ],
+  "v6_8_only": [
+    {
+      "candidate_id": "candidate_aa38ec144be3",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_add_range",
+      "path_id": "ext4_fc_replay_add_range#006",
+      "candidate_type": "error_swallowed",
+      "error_line": 1784,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    },
+    {
+      "candidate_id": "candidate_e99672f2009b",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_inode",
+      "path_id": "ext4_fc_replay_inode#001",
+      "candidate_type": "error_swallowed",
+      "error_line": 1542,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    },
+    {
+      "candidate_id": "candidate_41b034187f74",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_inode",
+      "path_id": "ext4_fc_replay_inode#002",
+      "candidate_type": "error_swallowed",
+      "error_line": 1548,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    },
+    {
+      "candidate_id": "candidate_265190733128",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_inode",
+      "path_id": "ext4_fc_replay_inode#003",
+      "candidate_type": "error_swallowed",
+      "error_line": 1574,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    },
+    {
+      "candidate_id": "candidate_d50479b0e5bd",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_inode",
+      "path_id": "ext4_fc_replay_inode#004",
+      "candidate_type": "error_swallowed",
+      "error_line": 1577,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    },
+    {
+      "candidate_id": "candidate_60ab69805414",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "ext4_fc_replay_inode",
+      "path_id": "ext4_fc_replay_inode#005",
+      "candidate_type": "error_swallowed",
+      "error_line": 1580,
+      "condition": "ret",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    }
+  ],
+  "v7_1_only": [
+    {
+      "candidate_id": "candidate_3e909608ee6d",
+      "file": "fs/ext4/fast_commit.c",
+      "function": "__track_dentry_update",
+      "path_id": "__track_dentry_update#002",
+      "candidate_type": "missing_cleanup",
+      "error_line": 425,
+      "condition": "!node",
+      "final_return_expr": "-ENOMEM",
+      "evidence_level": "E2_API_PROTOCOL_SUPPORTED",
+      "evidence_score": 80
+    },
+    {
+      "candidate_id": "candidate_2ee617496ed8",
+      "file": "fs/ext4/orphan.c",
+      "function": "ext4_init_orphan_info",
+      "path_id": "ext4_init_orphan_info#006",
+      "candidate_type": "missing_cleanup",
+      "error_line": 612,
+      "condition": "!oi->of_binfo[i].ob_bh",
+      "final_return_expr": "ret",
+      "evidence_level": "E2_API_PROTOCOL_SUPPORTED",
+      "evidence_score": 60
+    },
+    {
+      "candidate_id": "candidate_421f9c404ca0",
+      "file": "fs/ext4/extents-test.c",
+      "function": "check_buffer",
+      "path_id": "check_buffer#001",
+      "candidate_type": "error_swallowed",
+      "error_line": 349,
+      "condition": "ret == NULL",
+      "final_return_expr": "0",
+      "evidence_level": "E0_STATIC_RULE_ONLY",
+      "evidence_score": 50
+    }
+  ]
+}
