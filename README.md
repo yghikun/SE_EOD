@@ -1,20 +1,56 @@
 # se_eod
-sk-2ca00cef957c46edad2cc22ee6b7423c
-`se_eod` 是一个面向 Linux ext4 的 Python 3 静态分析原型。当前项目已经完成了一条从
-Linux v6.8 ext4 源码准备、函数内错误路径抽取、资源清理建模、可疑候选筛选，到
-LLM/DeepSeek 辅助复核任务生成的端到端流水线。
+`se_eod` 是一个面向 Linux 文件系统错误路径分析的 Python 3 原型。
+当前仓库已经扩展到 ext4、btrfs、xfs 和 f2fs，并整理了 Linux v6.8 / v7.1 两套
+源码、候选和确认结果。
 
-项目的核心目标不是直接输出 confirmed bug，而是构建一个可复现的 ext4 错误路径语料库，
-并从中筛出值得人工继续验证的资源泄漏、部分清理和错误吞掉候选。
+项目的核心目标不是直接输出 confirmed bug，而是构建一个可复现的错误路径语料库，
+并从中筛出值得人工继续验证的资源泄漏、部分清理、错误吞掉和 cleanup 缺失候选。
+
+DeepSeek 只通过环境变量读取：
+
+```bash
+export DEEPSEEK_API_KEY="..."
+```
+
+不要把 key 写进 README、脚本或提交里。
+
+## 快速入口
+
+准备 Linux 源码：
+
+```bash
+python scripts/download_linux_fs.py
+python scripts/download_linux_fs.py --ref v7.1 --target linux-sources/linux-v7.1-fs --sparse-path fs
+```
+
+一键检查 Linux v7.1 的全部文件系统：
+
+```bash
+./scripts/check_linux_v7_1_filesystems.sh
+```
+
+只跑 btrfs / f2fs / xfs，并给 btrfs 设置最低 evidence 阈值：
+
+```bash
+BTRFS_MIN_EVIDENCE_SCORE=40 ./scripts/check_linux_v7_1_filesystems.sh btrfs f2fs xfs
+```
+
+如果暂时不跑 DeepSeek：
+
+```bash
+./scripts/check_linux_v7_1_filesystems.sh --no-deepseek
+```
 
 ## 当前已经完成的具体工作
 
-### 1. Linux v6.8 ext4 源码准备
+### 1. Linux 源码准备
 
 已经实现 `scripts/download_linux_fs.py`，用于稀疏下载 Linux 源码：
 
 - 默认下载 `torvalds/linux.git` 的 `v6.8`，并只 checkout `fs/ext4`。
 - 也支持通过 `--sparse-path fs` 下载整个 Linux `fs/` 树。
+- 也可以通过 `--ref v7.1 --target linux-sources/linux-v7.1-fs --sparse-path fs`
+  单独准备 Linux v7.1 的文件系统源码。
 - 下载目录仍然是 Git checkout，因此分析结果可以记录真实的 Linux commit 和 tag。
 - 默认仓库内已经准备了 `linux-sources/linux-v6.8-fs/`，当前输出中记录的版本为：
   - `linux_git_commit`: `e8f897f4afef0031fe618a8e94127a0934896aba`

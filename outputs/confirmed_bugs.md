@@ -17,7 +17,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 4 | ext4 | `ext4_expand_extra_isize_ea()` | stale error after successful retry | patch submitted / under review | `/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch` |
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
-| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition | `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md` |
+| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition; patch submitted | `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`, `/root/bug_submit/linux-btrfs-recover-relocation`, commit `08f1ccb98abb` |
 | 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
 
 ## ext4
@@ -227,14 +227,14 @@ During relocation recovery, the function assigns:
 fs_root->reloc_root = btrfs_grab_root(reloc_root);
 ```
 
-This happens before the first recovery `btrfs_commit_transaction(trans)`.  If
+This happens before the first recovery `btrfs_commit_transaction(trans)`. If
 that recovery path fails and jumps to `out_unset` before the normal
 `clean_dirty_subvols(rc)` path, `btrfs_recover_relocation()` itself does not
 locally clear `fs_root->reloc_root` or drop the grabbed relocation-root
 reference.
 
 The later root teardown path only drops `root->reloc_root` under the
-`BTRFS_FS_ERROR(fs_info)` branch.  That means cleanup currently depends on the
+`BTRFS_FS_ERROR(fs_info)` branch. That means cleanup currently depends on the
 failure setting `BTRFS_FS_ERROR`; a caller-visible recovery failure that does
 not set that flag can leave the relocation-root reference attached.
 
@@ -242,6 +242,10 @@ Evidence:
 
 - QEMU/fault-injection report:
   `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`
+- Follow-up fix patch:
+  `/root/bug_submit/linux-btrfs-recover-relocation`
+  - commit `08f1ccb98abb`
+  - patch file `/tmp/btrfs-recover-relocation-cleanup-v1/0001-btrfs-drop-recovered-reloc-root-refs-on-recovery-fai.patch`
 - Test target: Linux 6.8 Btrfs recovery.
 - Pending relocation image contained 25 `TREE_RELOC ROOT_ITEM` records.
 - Normal recovery succeeded.
@@ -268,7 +272,7 @@ references on errors before `clean_dirty_subvols()`, independent of
 `BTRFS_FS_ERROR`.
 
 Status: confirmed cleanup-defect candidate under the tested fault-injection
-condition.  Not yet upstream-submitted in the checked workspace.
+condition, with a follow-up fix patched and locally validated.
 
 ## XFS
 
