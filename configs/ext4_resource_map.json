@@ -80,5 +80,17 @@
       "direct_resource_arg": 0
     }
   },
-  "review_false_positive_contracts_file": "ext4_review_false_positives.json"
+  "review_false_positive_contracts_file": "ext4_review_false_positives.json",
+  "stale_error_retry_contracts": [
+    {
+      "file": "fs/ext4/xattr.c",
+      "function": "ext4_expand_extra_isize_ea",
+      "error_variable": "error",
+      "error_source_function": "ext4_xattr_make_inode_space",
+      "retry_label": "retry",
+      "success_label": "shift",
+      "severity": "P1",
+      "reason": "ext4_xattr_make_inode_space can set error before a fallback retry; a successful retry can reach shift and return the stale error value."
+    }
+  ]
 }

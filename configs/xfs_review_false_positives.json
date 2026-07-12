@@ -29,7 +29,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_buf_alloc_kmem.missing_cleanup",
@@ -46,7 +46,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_qm_dqget.error_swallowed",
@@ -63,7 +63,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_qm_dqget_inode.error_swallowed",
@@ -80,7 +80,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_qm_dqget_inode.missing_cleanup",
@@ -101,7 +101,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_file_write_checks.missing_cleanup",
@@ -118,7 +118,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_filestream_create_association.error_swallowed",
@@ -135,7 +135,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_filestream_create_association.missing_cleanup",
@@ -152,7 +152,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.__releases.missing_cleanup",
@@ -169,7 +169,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_inactive_ifree.missing_cleanup",
@@ -186,7 +186,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_inactive_ifree.partial_cleanup",
@@ -203,7 +203,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_lookup.missing_cleanup",
@@ -220,7 +220,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_rename.missing_cleanup",
@@ -237,7 +237,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_iflush_shutdown_abort.missing_cleanup",
@@ -254,7 +254,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_iflush_shutdown_abort.partial_cleanup",
@@ -271,7 +271,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_recover_inode_commit_pass2.missing_cleanup",
@@ -316,7 +316,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_ioc_attr_list.missing_cleanup",
@@ -333,7 +333,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_ioc_getbmap.missing_cleanup",
@@ -354,7 +354,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_ioc_getfsmap.missing_cleanup",
@@ -375,7 +375,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_vn_ci_lookup.error_swallowed",
@@ -392,7 +392,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_iwalk_run_callbacks.missing_cleanup",
@@ -409,7 +409,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.__acquires.missing_cleanup",
@@ -426,7 +426,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_force_lsn.missing_cleanup",
@@ -443,7 +443,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_do_recover.missing_cleanup",
@@ -463,7 +463,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_find_head.error_swallowed",
@@ -480,7 +480,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_recover_add_to_trans.missing_cleanup",
@@ -499,7 +499,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xlog_recover_iget.missing_cleanup",
@@ -518,7 +518,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_add_incompat_log_feature.missing_cleanup",
@@ -540,7 +540,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_dax_failure_fn.error_swallowed",
@@ -557,7 +557,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_qm_qino_alloc.missing_cleanup",
@@ -579,7 +579,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_qm_reset_dqcounts_buf.missing_cleanup",
@@ -596,7 +596,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_reflink_update_dest.missing_cleanup",
@@ -613,7 +613,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_bmap_rtalloc.missing_cleanup",
@@ -636,7 +636,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_growfs_rt.missing_cleanup",
@@ -655,7 +655,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_growfs_rt_alloc.missing_cleanup",
@@ -682,7 +682,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_readlink.missing_cleanup",
@@ -699,7 +699,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_trans_alloc.missing_cleanup",
@@ -720,7 +720,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_trans_alloc_dir.missing_cleanup",
@@ -737,7 +737,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_trans_alloc_ichange.missing_cleanup",
@@ -758,7 +758,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_trans_alloc_ichange.partial_cleanup",
@@ -777,7 +777,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "xfs.reviewed.xfs_trans_reserve_more_inode.error_swallowed",
@@ -794,7 +794,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     }
   ]
 }

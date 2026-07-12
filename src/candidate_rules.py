@@ -314,17 +314,28 @@ def _suppressed_by_review_contract(
 ) -> bool:
     if not analysis_contracts:
         return False
-    error_line = str(row.get("error_line", "")).strip()
+
+    def matches_identity(contract: dict[str, Any]) -> bool:
+        configured_file = str(contract.get("file", "")).strip()
+        if configured_file and configured_file != row.get("file"):
+            return False
+        if contract.get("function") != row.get("function"):
+            return False
+        configured_type = str(contract.get("candidate_type", "")).strip()
+        if configured_type and configured_type != candidate_type:
+            return False
+        return True
+
+    # Confirmed bugs take precedence across kernel versions.  Their archived
+    # line numbers are provenance, not part of the exception identity.
+    for exception in analysis_contracts.get("review_confirmed_bug_exceptions", []):
+        if isinstance(exception, dict) and matches_identity(exception):
+            return False
+
     for contract in analysis_contracts.get("review_false_positive_rules", []):
         if not isinstance(contract, dict):
             continue
-        if contract.get("file") != row.get("file"):
-            continue
-        if contract.get("function") != row.get("function"):
-            continue
-        if contract.get("candidate_type") != candidate_type:
-            continue
-        if error_line in {str(line) for line in contract.get("error_lines", [])}:
+        if matches_identity(contract):
             return True
     return False
 
@@ -364,6 +375,61 @@ def error_swallowed_candidates(
     ]
 
 
+def stale_error_after_retry_candidates(
+    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
+    if not analysis_contracts:
+        return []
+    candidate_type = "stale_error_after_retry"
+    if _suppressed_by_review_contract(row, candidate_type, analysis_contracts):
+        return []
+
+    for contract in analysis_contracts.get("stale_error_retry_contracts", []):
+        if not isinstance(contract, dict):
+            continue
+        configured_file = str(contract.get("file", "")).strip()
+        if configured_file and configured_file != row.get("file"):
+            continue
+        if contract.get("function") != row.get("function"):
+            continue
+        error_variable = str(contract.get("error_variable", "")).strip()
+        if error_variable and _norm_expr(row.get("final_return_expr", "")) != _norm_expr(
+            error_variable
+        ):
+            continue
+        error_source = str(contract.get("error_source_function", "")).strip()
+        if error_source and not row.get("error_source_expr", "").startswith(
+            f"{error_source}("
+        ):
+            continue
+
+        evidence = json.dumps(
+            {
+                "error_variable": error_variable,
+                "error_source_function": error_source,
+                "retry_label": contract.get("retry_label", "retry"),
+                "success_label": contract.get("success_label", ""),
+                "final_return_expr": row.get("final_return_expr", ""),
+            },
+            ensure_ascii=False,
+        )
+        return [
+            _base_candidate(
+                row,
+                candidate_type,
+                str(contract.get("severity", "P1")),
+                evidence,
+                str(
+                    contract.get(
+                        "reason",
+                        "an error value can survive a fallback retry and be returned after the retry succeeds.",
+                    )
+                ),
+            )
+        ]
+    return []
+
+
 def run_candidate_rules(
     row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
 ) -> list[dict[str, str]]:
@@ -371,4 +437,5 @@ def run_candidate_rules(
     candidates.extend(partial_cleanup_candidates(row, analysis_contracts))
     candidates.extend(missing_cleanup_candidates(row, analysis_contracts))
     candidates.extend(error_swallowed_candidates(row, analysis_contracts))
+    candidates.extend(stale_error_after_retry_candidates(row, analysis_contracts))
     return candidates

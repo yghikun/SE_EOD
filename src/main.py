@@ -60,6 +60,15 @@ def _load_review_false_positive_contracts(
         print(f"warning: invalid review contracts {source}: rules must be a list", file=sys.stderr)
         return
     resource_map["review_false_positive_rules"] = rules
+    exceptions = raw.get("confirmed_bug_exceptions", []) if isinstance(raw, dict) else []
+    if isinstance(exceptions, list):
+        resource_map["review_confirmed_bug_exceptions"] = exceptions
+    else:
+        print(
+            f"warning: invalid review contracts {source}: "
+            "confirmed_bug_exceptions must be a list",
+            file=sys.stderr,
+        )
 
 
 def _git_value(linux_path: Path, args: list[str]) -> str:
@@ -253,6 +262,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Source context lines before and after each candidate error line.",
     )
     parser.add_argument(
+        "--min-evidence-score",
+        type=int,
+        default=None,
+        help=(
+            "Only build and review LLM tasks whose ranked evidence score is at "
+            "least this value. Requires --rank-evidence."
+        ),
+    )
+    parser.add_argument(
         "--run-deepseek-review",
         action="store_true",
         help="Optionally call DeepSeek on llm_review_tasks.jsonl. Requires DEEPSEEK_API_KEY.",
@@ -351,10 +369,12 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.llm_tasks_out),
             args.context_lines,
             Path(args.ranked_candidates_out) if args.rank_evidence else None,
+            args.min_evidence_score,
         )
         for key in [
             "total_candidates_in",
             "llm_review_tasks",
+            "evidence_score_filtered_count",
             "source_unavailable_count",
             "llm_tasks_with_protocol_evidence",
         ]:
@@ -473,10 +493,12 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.llm_tasks_out),
             args.context_lines,
             Path(args.ranked_candidates_out) if args.rank_evidence else None,
+            args.min_evidence_score,
         )
         for key in [
             "total_candidates_in",
             "llm_review_tasks",
+            "evidence_score_filtered_count",
             "source_unavailable_count",
             "llm_tasks_with_protocol_evidence",
         ]:

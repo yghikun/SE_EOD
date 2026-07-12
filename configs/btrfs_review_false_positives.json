@@ -34,7 +34,7 @@
         "btrfs_alloc_ordered_workqueue#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_alloc_workqueue.error_swallowed",
@@ -50,7 +50,7 @@
         "btrfs_alloc_workqueue#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_backref_iter_alloc.error_swallowed",
@@ -66,7 +66,7 @@
         "btrfs_backref_iter_alloc#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_find_all_leafs.missing_cleanup",
@@ -80,7 +80,7 @@
         "btrfs_find_all_leafs#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_is_data_extent_shared.missing_cleanup",
@@ -94,7 +94,7 @@
         "btrfs_is_data_extent_shared#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.resolve_indirect_refs.missing_cleanup",
@@ -114,7 +114,7 @@
         "resolve_indirect_refs#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.load_extent_tree_free.missing_cleanup",
@@ -132,7 +132,7 @@
         "load_extent_tree_free#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.load_extent_tree_free.partial_cleanup",
@@ -150,7 +150,7 @@
         "load_extent_tree_free#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_block_rsv_refill.error_swallowed",
@@ -166,7 +166,7 @@
         "btrfs_block_rsv_refill#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.alloc_heuristic_ws.missing_cleanup",
@@ -184,7 +184,7 @@
         "alloc_heuristic_ws#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_next_old_leaf.missing_cleanup",
@@ -202,7 +202,7 @@
         "btrfs_next_old_leaf#014"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_next_old_leaf.partial_cleanup",
@@ -220,7 +220,7 @@
         "btrfs_next_old_leaf#014"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_search_old_slot.missing_cleanup",
@@ -234,7 +234,7 @@
         "btrfs_search_old_slot#008"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_search_slot.missing_cleanup",
@@ -248,7 +248,7 @@
         "btrfs_search_slot#014"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_search_slot.partial_cleanup",
@@ -262,7 +262,7 @@
         "btrfs_search_slot#014"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_search_slot_for_read.error_swallowed",
@@ -276,7 +276,7 @@
         "btrfs_search_slot_for_read#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.defrag_get_extent.error_swallowed",
@@ -292,7 +292,7 @@
         "defrag_get_extent#011"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_delayed_ref_lock.missing_cleanup",
@@ -306,7 +306,7 @@
         "btrfs_delayed_ref_lock#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_delayed_ref_lock.partial_cleanup",
@@ -320,7 +320,7 @@
         "btrfs_delayed_ref_lock#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.mark_block_group_to_copy.missing_cleanup",
@@ -334,7 +334,7 @@
         "mark_block_group_to_copy#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.mark_block_group_to_copy.partial_cleanup",
@@ -348,7 +348,7 @@
         "mark_block_group_to_copy#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.peek_discard_list.missing_cleanup",
@@ -362,7 +362,7 @@
         "peek_discard_list#001"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btree_writepages.error_swallowed",
@@ -376,7 +376,7 @@
         "btree_writepages#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_global_root_id.missing_cleanup",
@@ -390,7 +390,7 @@
         "btrfs_global_root_id#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.open_ctree.missing_cleanup",
@@ -450,7 +450,7 @@
         "open_ctree#037"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__clear_extent_bit.error_swallowed",
@@ -464,7 +464,7 @@
         "__clear_extent_bit#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__acquires.missing_cleanup",
@@ -480,7 +480,7 @@
         "__acquires#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__btrfs_run_delayed_refs.missing_cleanup",
@@ -496,7 +496,7 @@
         "__btrfs_run_delayed_refs#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_drop_snapshot.missing_cleanup",
@@ -524,7 +524,7 @@
         "btrfs_drop_snapshot#012"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_drop_snapshot.partial_cleanup",
@@ -552,7 +552,7 @@
         "btrfs_drop_snapshot#012"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.can_allocate_chunk_zoned.error_swallowed",
@@ -566,7 +566,7 @@
         "can_allocate_chunk_zoned#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.find_free_extent.missing_cleanup",
@@ -580,7 +580,7 @@
         "find_free_extent#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.lookup_extent_data_ref.error_swallowed",
@@ -594,7 +594,7 @@
         "lookup_extent_data_ref#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.walk_up_proc.missing_cleanup",
@@ -612,7 +612,7 @@
         "walk_up_proc#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__alloc_dummy_extent_buffer.error_swallowed",
@@ -628,7 +628,7 @@
         "__alloc_dummy_extent_buffer#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__extent_writepage.error_swallowed",
@@ -644,7 +644,7 @@
         "__extent_writepage#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.attach_eb_folio_to_filemap.error_swallowed",
@@ -658,7 +658,7 @@
         "attach_eb_folio_to_filemap#001"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_clone_extent_buffer.error_swallowed",
@@ -674,7 +674,7 @@
         "btrfs_clone_extent_buffer#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.submit_eb_page.error_swallowed",
@@ -688,7 +688,7 @@
         "submit_eb_page#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_drop_extents.missing_cleanup",
@@ -702,7 +702,7 @@
         "btrfs_drop_extents#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_replace_file_extents.missing_cleanup",
@@ -726,7 +726,7 @@
         "btrfs_replace_file_extents#009"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.find_desired_extent.missing_cleanup",
@@ -750,7 +750,7 @@
         "find_desired_extent#008"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.find_desired_extent.partial_cleanup",
@@ -768,7 +768,7 @@
         "find_desired_extent#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__btrfs_add_free_space.missing_cleanup",
@@ -784,7 +784,7 @@
         "__btrfs_add_free_space#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__btrfs_add_free_space.partial_cleanup",
@@ -800,7 +800,7 @@
         "__btrfs_add_free_space#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.__load_free_space_cache.error_swallowed",
@@ -814,7 +814,7 @@
         "__load_free_space_cache#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_alloc_from_bitmap.error_swallowed",
@@ -828,7 +828,7 @@
         "btrfs_alloc_from_bitmap#001"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_alloc_from_cluster.error_swallowed",
@@ -842,7 +842,7 @@
         "btrfs_alloc_from_cluster#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.insert_into_bitmap.missing_cleanup",
@@ -856,7 +856,7 @@
         "insert_into_bitmap#010"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.setup_cluster_bitmap.error_swallowed",
@@ -870,7 +870,7 @@
         "setup_cluster_bitmap#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.test_add_free_space_entry.missing_cleanup",
@@ -884,7 +884,7 @@
         "test_add_free_space_entry#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_lookup_inode_extref.error_swallowed",
@@ -898,7 +898,7 @@
         "btrfs_lookup_inode_extref#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_create_new_inode.missing_cleanup",
@@ -922,7 +922,7 @@
         "btrfs_create_new_inode#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_create_new_inode.partial_cleanup",
@@ -942,7 +942,7 @@
         "btrfs_create_new_inode#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_writepage_cow_fixup.missing_cleanup",
@@ -956,7 +956,7 @@
         "btrfs_writepage_cow_fixup#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed._btrfs_ioctl_send.missing_cleanup",
@@ -970,7 +970,7 @@
         "_btrfs_ioctl_send#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_fileattr_set.missing_cleanup",
@@ -984,7 +984,7 @@
         "btrfs_fileattr_set#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.key_in_sk.error_swallowed",
@@ -998,7 +998,7 @@
         "key_in_sk#001"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.lzo_alloc_workspace.missing_cleanup",
@@ -1012,7 +1012,7 @@
         "lzo_alloc_workspace#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.lzo_decompress_bio.error_swallowed",
@@ -1026,7 +1026,7 @@
         "lzo_decompress_bio#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_qgroup_rescan_worker.missing_cleanup",
@@ -1040,7 +1040,7 @@
         "btrfs_qgroup_rescan_worker#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_qgroup_trace_extent_post.error_swallowed",
@@ -1054,7 +1054,7 @@
         "btrfs_qgroup_trace_extent_post#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_qgroup_trace_subtree.missing_cleanup",
@@ -1072,7 +1072,7 @@
         "btrfs_qgroup_trace_subtree#009"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_qgroup_trace_subtree.partial_cleanup",
@@ -1090,7 +1090,7 @@
         "btrfs_qgroup_trace_subtree#009"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_read_qgroup_config.missing_cleanup",
@@ -1116,7 +1116,7 @@
         "btrfs_read_qgroup_config#017"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_read_qgroup_config.partial_cleanup",
@@ -1142,7 +1142,7 @@
         "btrfs_read_qgroup_config#017"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.qgroup_reserve_data.missing_cleanup",
@@ -1160,7 +1160,7 @@
         "qgroup_reserve_data#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.qgroup_trace_extent_swap.missing_cleanup",
@@ -1180,7 +1180,7 @@
         "qgroup_trace_extent_swap#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.qgroup_trace_extent_swap.partial_cleanup",
@@ -1200,7 +1200,7 @@
         "qgroup_trace_extent_swap#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.qgroup_trace_new_subtree_blocks.missing_cleanup",
@@ -1216,7 +1216,7 @@
         "qgroup_trace_new_subtree_blocks#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.alloc_rbio.missing_cleanup",
@@ -1230,7 +1230,7 @@
         "alloc_rbio#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.alloc_rbio.partial_cleanup",
@@ -1244,7 +1244,7 @@
         "alloc_rbio#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.add_block_entry.missing_cleanup",
@@ -1258,7 +1258,7 @@
         "add_block_entry#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.clone_backref_node.missing_cleanup",
@@ -1272,7 +1272,7 @@
         "clone_backref_node#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.merge_reloc_root.missing_cleanup",
@@ -1288,7 +1288,7 @@
         "merge_reloc_root#006"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.relocate_block_group.missing_cleanup",
@@ -1302,7 +1302,7 @@
         "relocate_block_group#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.select_reloc_root.missing_cleanup",
@@ -1316,7 +1316,7 @@
         "select_reloc_root#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.scrub_print_warning_inode.error_swallowed",
@@ -1332,7 +1332,7 @@
         "scrub_print_warning_inode#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.scrub_setup_ctx.missing_cleanup",
@@ -1346,7 +1346,7 @@
         "scrub_setup_ctx#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.changed_cb.error_swallowed",
@@ -1360,7 +1360,7 @@
         "changed_cb#001"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.fs_path_ensure_buf.missing_cleanup",
@@ -1374,7 +1374,7 @@
         "fs_path_ensure_buf#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.iterate_dir_item.missing_cleanup",
@@ -1392,7 +1392,7 @@
         "iterate_dir_item#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.create_space_info.missing_cleanup",
@@ -1406,7 +1406,7 @@
         "create_space_info#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_get_tree_subvol.missing_cleanup",
@@ -1426,7 +1426,7 @@
         "btrfs_get_tree_subvol#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_sysfs_add_block_group_type.missing_cleanup",
@@ -1440,7 +1440,7 @@
         "btrfs_sysfs_add_block_group_type#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_sysfs_add_qgroups.missing_cleanup",
@@ -1456,7 +1456,7 @@
         "btrfs_sysfs_add_qgroups#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.start_transaction.missing_cleanup",
@@ -1472,7 +1472,7 @@
         "start_transaction#009"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.overwrite_item.error_swallowed",
@@ -1486,7 +1486,7 @@
         "overwrite_item#005"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_alloc_device.missing_cleanup",
@@ -1502,7 +1502,7 @@
         "btrfs_alloc_device#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_get_dev_args_from_path.missing_cleanup",
@@ -1518,7 +1518,7 @@
         "btrfs_get_dev_args_from_path#004"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.zlib_alloc_workspace.missing_cleanup",
@@ -1532,7 +1532,7 @@
         "zlib_alloc_workspace#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_check_meta_write_pointer.missing_cleanup",
@@ -1550,7 +1550,7 @@
         "btrfs_check_meta_write_pointer#007"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_get_dev_zone_info.missing_cleanup",
@@ -1592,7 +1592,7 @@
         "btrfs_get_dev_zone_info#018"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_get_dev_zone_info.partial_cleanup",
@@ -1618,7 +1618,7 @@
         "btrfs_get_dev_zone_info#018"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_load_block_group_zone_info.missing_cleanup",
@@ -1640,7 +1640,7 @@
         "btrfs_load_block_group_zone_info#010"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.btrfs_load_zone_info.error_swallowed",
@@ -1654,7 +1654,7 @@
         "btrfs_load_zone_info#003"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "btrfs.reviewed.zstd_alloc_workspace.missing_cleanup",
@@ -1668,7 +1668,7 @@
         "zstd_alloc_workspace#002"
       ],
       "reason_code": "user_classified_false_positive",
-      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching is restricted to recorded source lines."
+      "description": "User-classified false-positive paths from suspicious_candidates.csv; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     }
   ]
 }

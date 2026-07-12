@@ -956,12 +956,37 @@ def test_f2fs_find_entry_error_uses_output_parameter_contract():
     assert error_swallowed_candidates(row, contracts) == []
 
 
-def test_review_false_positive_contracts_are_exact_and_keep_confirmed_bug():
+def test_ext4_stale_error_after_retry_contract_creates_candidate():
+    row = {
+        "file": "fs/ext4/xattr.c",
+        "function": "ext4_expand_extra_isize_ea",
+        "path_id": "ext4_expand_extra_isize_ea#007",
+        "error_line": "2837",
+        "condition": "error",
+        "error_source_expr": "ext4_xattr_make_inode_space(handle, inode, raw_inode,",
+        "final_return_expr": "error",
+        "held_resources": "[]",
+        "cleanup_calls": "[]",
+        "missing_cleanup_candidates": "[]",
+    }
+    contracts = load_resource_map("configs/ext4_resource_map.json")
+
+    candidates = run_candidate_rules(row, contracts)
+
+    assert len(candidates) == 1
+    assert candidates[0]["candidate_type"] == "stale_error_after_retry"
+    assert candidates[0]["severity"] == "P1"
+
+
+def test_review_false_positive_contracts_cross_versions_and_keep_confirmed_bug():
     xfs_map = load_resource_map("configs/xfs_resource_map.json")
     contracts = json.loads(
         Path("configs/xfs_review_false_positives.json").read_text(encoding="utf-8")
     )
     xfs_map["review_false_positive_rules"] = contracts["rules"]
+    xfs_map["review_confirmed_bug_exceptions"] = contracts[
+        "confirmed_bug_exceptions"
+    ]
     reviewed_row = {
         "file": "fs/xfs/xfs_log_recover.c",
         "function": "xlog_find_head",
@@ -978,8 +1003,17 @@ def test_review_false_positive_contracts_are_exact_and_keep_confirmed_bug():
         "function": "xfs_rtcopy_summary",
         "error_line": "107",
     }
+    xfs_map["review_false_positive_rules"].append(
+        {
+            "file": "fs/xfs/xfs_rtalloc.c",
+            "function": "xfs_rtcopy_summary",
+            "candidate_type": "error_swallowed",
+            "error_lines": [9999],
+        }
+    )
 
     assert run_candidate_rules(reviewed_row, xfs_map) == []
+    assert run_candidate_rules({**reviewed_row, "error_line": "9999"}, xfs_map) == []
     assert len(run_candidate_rules(confirmed_row, xfs_map)) == 1
 
 

@@ -216,6 +216,7 @@ def build_llm_review_tasks(
     tasks_out: str | Path,
     context_lines: int = 80,
     ranked_candidates_jsonl: str | Path | None = None,
+    min_evidence_score: int | None = None,
 ) -> dict[str, int]:
     candidates_path = Path(candidates_csv)
     tasks_path = Path(tasks_out)
@@ -224,6 +225,7 @@ def build_llm_review_tasks(
 
     total_candidates = 0
     total_tasks = 0
+    filtered_by_score = 0
     unavailable_contexts = 0
     tasks_with_protocols = 0
     with candidates_path.open(newline="", encoding="utf-8") as input_fh, tasks_path.open(
@@ -232,6 +234,13 @@ def build_llm_review_tasks(
         for row in csv.DictReader(input_fh):
             total_candidates += 1
             ranked_evidence = ranked_index.get(_task_id(row))
+            if min_evidence_score is not None:
+                score = _int_or_zero(
+                    ranked_evidence.get("evidence_score") if ranked_evidence else None
+                )
+                if score < min_evidence_score:
+                    filtered_by_score += 1
+                    continue
             task = task_from_candidate(
                 row, linux_path, context_lines, ranked_evidence=ranked_evidence
             )
@@ -245,15 +254,19 @@ def build_llm_review_tasks(
     return {
         "total_candidates_in": total_candidates,
         "llm_review_tasks": total_tasks,
+        "evidence_score_filtered_count": filtered_by_score,
         "source_unavailable_count": unavailable_contexts,
         "llm_tasks_with_protocol_evidence": tasks_with_protocols,
     }
 
 
 def _deepseek_prompt(task: dict[str, Any]) -> str:
+    file_value = str(task.get("file", ""))
+    path_parts = Path(file_value).parts
+    filesystem = path_parts[1] if len(path_parts) >= 2 and path_parts[0] == "fs" else "filesystem"
     return (
-        "请精检下面的 Linux ext4 静态分析候选。"
-        "候选不是 confirmed bug，请只根据代码证据判断。\n\n"
+        f"请精检下面的 Linux {filesystem} 静态分析候选。"
+        "请独立根据代码证据判断，不要预设它是否为 confirmed bug。\n\n"
         f"task_id: {task.get('task_id')}\n"
         f"file: {task.get('file')}\n"
         f"function: {task.get('function')}\n"

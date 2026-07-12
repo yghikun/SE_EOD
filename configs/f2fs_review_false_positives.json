@@ -18,7 +18,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.get_checkpoint_version.missing_cleanup",
@@ -39,7 +39,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.validate_checkpoint.error_swallowed",
@@ -58,7 +58,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_write_compressed_pages.missing_cleanup",
@@ -77,7 +77,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_write_compressed_pages.partial_cleanup",
@@ -94,7 +94,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_write_multi_pages.error_swallowed",
@@ -111,7 +111,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_bmap_compress.error_swallowed",
@@ -128,7 +128,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_write_begin.error_swallowed",
@@ -145,7 +145,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_write_single_data_page.error_swallowed",
@@ -162,7 +162,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.prepare_write_begin.missing_cleanup",
@@ -187,7 +187,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.prepare_write_begin.partial_cleanup",
@@ -204,7 +204,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_find_entry.error_swallowed",
@@ -221,7 +221,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_readdir.missing_cleanup",
@@ -238,7 +238,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.__f2fs_ioc_gc_range.missing_cleanup",
@@ -258,7 +258,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.__read_out_blkaddrs.missing_cleanup",
@@ -279,7 +279,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_do_truncate_blocks.missing_cleanup",
@@ -296,7 +296,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_do_truncate_blocks.partial_cleanup",
@@ -313,7 +313,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_expand_inode_data.missing_cleanup",
@@ -334,7 +334,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_seek_block.missing_cleanup",
@@ -351,7 +351,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_add_inline_entry.missing_cleanup",
@@ -368,7 +368,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.__f2fs_tmpfile.missing_cleanup",
@@ -387,7 +387,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_create.missing_cleanup",
@@ -404,7 +404,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_lookup.error_swallowed",
@@ -421,7 +421,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_lookup.missing_cleanup",
@@ -440,7 +440,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_mkdir.missing_cleanup",
@@ -457,7 +457,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_mknod.missing_cleanup",
@@ -474,7 +474,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_new_inode.missing_cleanup",
@@ -495,7 +495,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_symlink.missing_cleanup",
@@ -512,7 +512,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.__flush_nat_entry_set.missing_cleanup",
@@ -529,7 +529,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.__f2fs_commit_atomic_write.missing_cleanup",
@@ -550,7 +550,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.build_curseg.missing_cleanup",
@@ -569,7 +569,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.build_free_segmap.missing_cleanup",
@@ -588,7 +588,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.build_sit_info.missing_cleanup",
@@ -620,7 +620,7 @@
         "uncertain"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_build_segment_manager.missing_cleanup",
@@ -652,7 +652,7 @@
         "uncertain"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_create_flush_cmd_control.missing_cleanup",
@@ -669,7 +669,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.init_victim_secmap.missing_cleanup",
@@ -686,7 +686,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_disable_checkpoint.missing_cleanup",
@@ -705,7 +705,7 @@
         "true_candidate"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
       "rule_id": "f2fs.reviewed.f2fs_enable_quota_files.error_swallowed",
@@ -722,7 +722,7 @@
         "false_positive"
       ],
       "reason_code": "reviewed_false_positive",
-      "description": "Explicitly reviewed false-positive paths; matching is restricted to the recorded source lines."
+      "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     }
   ]
 }
