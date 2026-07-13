@@ -1,4 +1,4 @@
-# 已完成进度（2026-07-12）
+# 已完成进度（2026-07-13）
 
 以下任务已经完成并有仓库内产物；未列出的原路线图任务仍视为未完成。
 
@@ -31,6 +31,12 @@
 - [x] 增加跨版本历史修复证据层：将 v6.8 `ext4_dx_add_entry` 的 3 条 `bh2` 泄漏候选与 v7.1 新增的 `brelse(bh2)` 修复行精确映射，候选保留并升级为 `E3_HISTORICAL_FIX_CONFIRMED`，不使用后续版本反向影响候选生成（`src/historical_fix.py`、`configs/ext4_historical_fixes.json`）。
 - [x] 增加跨函数传播、状态转换、条件释放、条件返回获取、本地字段逃逸和摘要序列化回归测试（`tests/test_interprocedural.py`）。
 - [x] 完成 ext4 v6.8 开发集同版本跨过程消融：baseline 和 interprocedural 均抽取 2198 条路径，候选分别为 16 和 19，retained 16、added 3、removed 0；3 条 added 均被 v7.1 源码修复确认为 E3；pilot eligible 11、true-positive retention 100%；摘要 1247 个函数、618 个 effect（其中 8 个 conditional effect）、4 轮收敛，Full 运行约 4.76 秒（`outputs/experiment-v1.4-baseline/linux-v6.8/ext4/`、`outputs/experiment-v1.4/reports/ext4_v6_8_interprocedural_ablation.md`）。
+- [x] 建立 Linux v6.14 四文件系统检查脚本和测试（`scripts/check_linux_v6_14_filesystems.py`、`tests/test_linux_v6_14_checker.py`）。
+- [x] 完成 Linux v6.14 `ext4`、`btrfs`、`f2fs`、`xfs` 四文件系统扫描，并上传 artifact（`outputs/linux-v6.14-bug-check/`）：合计 520 条 LLM review task，其中 ext4 30、btrfs 366、f2fs 55、xfs 69。
+- [x] 完成 ext4 / XFS / F2FS 共 154 条候选的 DeepSeek 辅助 triage 和源码人工复核：人工复核真候选 43 条，归并为 11 个真 bug cluster。
+- [x] 将已确认、已修复、已提交补丁和不应重复提交的项目记录到 `outputs/confirmed_bugs.md`，当前共 16 条 confirmed / reviewed bug records。
+- [x] 已提交本轮关键 kernel patch：ext4 3 组、XFS `xfs_rtginode_ensure()` 1 组、F2FS 3 组；当前状态均为 submitted / under review，不应写成 upstream accepted。
+- [x] SE_EOD 仓库已同步到 GitHub `main`，临时 PR #1 已合并，临时分支已删除；交接文档同步提交为 `51b51c4`。
 - [ ] 仍需在开发 benchmark 上完成更细粒度的 B0--Full 消融、路径敏感 CFG、更复杂的条件返回/alias 关系和函数指针处理；当前实现是可验证的第一版方法闭环，不等同于最终论文版本，候选数变化不解释为最终 precision/recall。
 
 # SE-EOD 论文与项目完整任务路线图
@@ -52,23 +58,26 @@
 
 ## 2. 当前基线
 
-截至 2026-07-12，仓库已经具备：
+截至 2026-07-13，仓库已经具备：
 
 - ext4、btrfs、XFS、F2FS 四类文件系统配置。
 - Linux v6.8 和 v7.1 两个版本的扫描结果。
 - 错误路径抽取、候选规则、协议证据排名、wrapper summary、ownership hint、review feedback 和 LLM 辅助复核链路。
 - demo 端到端测试和一批模块级回归测试。
-- 8 个源码级确认、历史验证或动态验证的问题记录。
+- 16 个源码级确认、历史验证、动态验证、已修复或 patch submitted 的问题记录（`outputs/confirmed_bugs.md`）。
 - btrfs recovery 的 QEMU/fault-injection 验证材料。
+- Linux v6.14 四文件系统扫描 artifact 和 ext4/XFS/F2FS 154 条候选人工复核结果。
+- 多封已发往内核邮件列表的 ext4、XFS、F2FS patch submission 记录。
+- GitHub `main` 已同步到远端，交接文档和路线图可作为当前接手入口。
 
 当前主要缺口：
 
 - 没有独立、冻结、可复核的 ground-truth benchmark。
 - 没有完整的 Precision、Recall、F1、Precision@K 和人工成本指标。
 - 缺少与外部工具及基础规则方法的正式 baseline 对比。
-- 函数内分析仍是主体，跨函数所有权传播尚未形成核心算法。
-- 两个内核版本之间的候选变化没有系统归因。
-- 运行依赖、实验参数和输出来源没有统一 manifest。
+- 跨函数所有权传播已有可运行实现，但仍需整理成论文级算法、消融和威胁分析。
+- v6.8/v7.1 已有部分跨版本差分，Linux v6.14 已有扫描与人工复核；仍需统一成论文实验表格。
+- 运行 manifest 已在多轮实验中记录，但依赖锁定、artifact 一键复现和 CI 仍未完成。
 - 一部分确认材料引用仓库外路径，外部读者无法复现。
 - 缺少 LICENSE、CITATION、CI 和正式 artifact 说明。
 
@@ -101,7 +110,8 @@
 - [ ] 定义 `candidate`、`true bug`、`historical bug`、`false positive`、`uncertain`。
 - [ ] 定义 `source-confirmed`、`dynamically reproduced`、`patch submitted`、`upstream accepted`。
 - [ ] 定义资源泄漏、部分清理、错误吞噬和 stale error 的边界。
-- [ ] 修改 `outputs/confirmed_bugs.md`，按证据等级分组，不能把 8 条都表述为新 bug。
+- [x] 修改 `outputs/confirmed_bugs.md`，区分 source-confirmed、already fixed、patch submitted / under review、QEMU fault-injection confirmed；当前不能把 16 条都表述为新 bug。
+- [ ] 把 `outputs/confirmed_bugs.md` 进一步整理为论文表 7 可直接导出的 CSV/JSON。
 
 建议证据等级：
 
@@ -326,10 +336,11 @@
 
 ### F1. 统一候选核验队列 `P0`
 
-- [ ] 合并四个文件系统的高价值候选队列。
-- [ ] 优先处理 P1/P2、E2 以上且无明显 exception 的候选。
-- [ ] 每条记录调用链、资源状态、错误触发条件和影响。
-- [ ] 查询最新 upstream、stable 和邮件列表，避免重复报告。
+- [x] 已合并 Linux v6.14 四文件系统 LLM review task 队列：总计 520 条，ext4/XFS/F2FS 子集共 154 条已优先处理。
+- [x] 已优先处理 ext4、XFS、F2FS 中 P1/P2、E2 以上和高价值候选，并完成源码人工复核。
+- [x] ext4/XFS/F2FS 已核验项已记录函数、资源、错误路径、upstream/mainline 状态和 patch 状态（`outputs/confirmed_bugs.md`、`PROJECT_HANDOFF.md`）。
+- [x] 已查询 latest mainline，区分已经由上游修复、重复发现、已提交但未合入的项目，避免重复报告。
+- [ ] btrfs Linux v6.14 的 366 条候选还没有做同等粒度人工复核，应单独开一轮。
 - [ ] 为 false positive 记录可复用的规则更新建议。
 
 ### F2. 动态验证 `P1`
@@ -344,10 +355,12 @@
 ### F3. 补丁和上游状态 `P1`
 
 - [ ] 推进 `__add_reloc_root()` 的修复与提交。
+- [x] 已补充 XFS `xfs_rtginode_ensure()` 源码复核、latest mainline 对照和 patch submission 状态。
+- [x] 已记录 F2FS 三个 patch 的 Message-ID、subject、收件人和 v1/v2 关系。
+- [x] 已记录 submitted、already fixed upstream / duplicate finding、source-level confirmed、QEMU fault-injection confirmed 等状态（`outputs/confirmed_bugs.md`）。
+- [ ] 继续跟踪 ext4、XFS、F2FS 已提交 patch 的邮件列表 / patchwork 状态；维护者要求修改时只发 v2/v3，不重复开新线程。
 - [ ] 补齐 XFS 历史问题的准确 fixing commit。
-- [ ] 跟踪 ext4 和 btrfs 已提交 patch 的邮件列表状态。
-- [ ] 将可公开 patch 和复现材料放入仓库或稳定归档地址。
-- [ ] 记录 submitted、revised、accepted、rejected 和 duplicate 状态。
+- [ ] 将可公开 patch 和复现材料放入仓库或稳定归档地址，替换 `/root/bug_submit/...` 等外部路径。
 - [ ] 目标：至少 2 个 upstream accepted；未达到时如实报告。
 
 ### F4. 规则反馈闭环 `P1`
@@ -362,18 +375,20 @@
 
 ### G1. 一键运行 `P0`
 
-- [ ] 新增跨平台 Python pipeline runner。
-- [ ] 支持选择 Linux 路径、版本、文件系统和是否启用 LLM。
+- [x] 新增 Linux v6.14 四文件系统 Python 检查脚本（`scripts/check_linux_v6_14_filesystems.py`）。
+- [x] 支持选择 Linux 源码路径、输出目录、文件系统和是否运行 DeepSeek。
 - [ ] 运行前检查依赖、源码 commit、配置和 API key。
 - [ ] 支持 dry-run，打印将执行的步骤和输出路径。
 - [ ] 失败时保留阶段状态，允许从中断点继续。
 - [ ] 保留现有 Bash 脚本作为 Linux 快捷入口。
+- [ ] 后续需要把 v6.8/v7.1/v6.14 的实验入口统一为一个论文级 runner，而不是只服务本轮 v6.14 检查。
 
 ### G2. 实验 manifest `P0`
 
-- [ ] 每次运行写出 `run_manifest.json`。
+- [x] Linux v6.14 检查已写出 `check_manifest.json`。
+- [x] Linux v6.14 检查已记录 Linux tag/commit、源码来源和输出统计。
+- [ ] 统一所有论文实验为 `run_manifest.json` / `check_manifest.json` 的稳定 schema。
 - [ ] 记录 SE-EOD git commit 和 worktree dirty 状态。
-- [ ] 记录 Linux git commit/tag。
 - [ ] 记录 Python 和依赖版本。
 - [ ] 记录所有配置文件 SHA-256。
 - [ ] 记录完整 CLI 参数和开始/结束时间。
@@ -428,13 +443,13 @@
 
 ### H2. 必备表格 `P0`
 
-- [ ] 表 1：数据集和扫描规模。
+- [ ] 表 1：数据集和扫描规模。Linux v6.14 原始统计来源已具备（`outputs/linux-v6.14-bug-check/check_manifest.json`），仍需整理成论文表格。
 - [ ] 表 2：总体 Precision、Recall、F1。
 - [ ] 表 3：按文件系统和候选类型分组结果。
 - [ ] 表 4：内部消融实验。
 - [ ] 表 5：外部 baseline 对比。
 - [ ] 表 6：运行时间、内存和人工审查成本。
-- [ ] 表 7：真实 bug、证据等级、补丁和 upstream 状态。
+- [ ] 表 7：真实 bug、证据等级、补丁和 upstream 状态。原始记录已具备（`outputs/confirmed_bugs.md`），仍需导出成论文表格。
 
 ### H3. 必备图形 `P1`
 
@@ -491,10 +506,12 @@
 
 ### 第 12--14 周：强验证
 
-- [ ] 重跑四文件系统和多版本实验。
-- [ ] 完成跨版本差分归因。
+- [x] 已完成 Linux v6.14 四文件系统扫描与 ext4/XFS/F2FS 人工复核。
+- [ ] 重跑并冻结四文件系统、多版本的最终论文实验。
+- [ ] 完成统一的跨版本差分归因。
 - [ ] 动态验证高价值候选。
-- [ ] 推进 patch 和 upstream 状态核验。
+- [x] 已推进 ext4、XFS、F2FS 多个 patch submission。
+- [ ] 继续跟踪 patch review、accepted/rejected/duplicate 状态。
 
 ### 第 15--16 周：Artifact 和论文
 
