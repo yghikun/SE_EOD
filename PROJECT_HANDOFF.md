@@ -1,6 +1,6 @@
 # SE-EOD 项目交接文档
 
-更新时间：2026-07-13  
+更新时间：2026-07-13（已同步 GitHub main，并清理临时 PR 分支）  
 工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
 
 ## 1. 当前一句话状态
@@ -237,55 +237,48 @@ python -m pytest -q tests/test_linux_v6_14_checker.py
 
 ## 8. Git 和 GitHub 状态
 
-当前本地 `main` 曾经领先远端一个提交：
+当前 SE_EOD 仓库已经完成本轮主分支同步：
 
 ```text
-ab5b3f3 cfg测试
+branch: main
+remote: https://github.com/yghikun/SE_EOD.git
+artifact sync point: 28c58df Add Linux 6.14 bug-check outputs
+status: main 与 origin/main 对齐
 ```
 
-之前审计确认该提交没有包含 `linux-sources/`。
+本轮已进入 `main` 并推送到 GitHub 的关键提交：
 
-当前仍有未跟踪文件：
+- `156c461`：`Update handoff and confirmed bug status`
+- `6bc316b`：`Add Linux 6.14 filesystem checker`
+- `28c58df`：`Add Linux 6.14 bug-check outputs`
+
+对应的临时 PR：
 
 ```text
-?? outputs/linux-v6.14-bug-check-smoke/
-?? outputs/linux-v6.14-bug-check/
-?? scripts/check_linux_v6_14_filesystems.py
-?? tests/test_linux_v6_14_checker.py
+PR:    https://github.com/yghikun/SE_EOD/pull/1
+title: [codex] Update handoff and confirmed bug status
+state: MERGED
+mergedAt: 2026-07-13T07:17:27Z
 ```
 
-GitHub push 失败原因：
+PR 页面不能从 GitHub 历史中真正删除；它已经是 `MERGED` 状态。为避免后续误用，已删除对应的远端分支和本地临时分支：
 
 ```text
-remote: Permission to yghikun/SE_EOD.git denied to yghikun.
-HTTP 403
+deleted remote branch: origin/codex/update-handoff-confirmed-bugs
+deleted local branch:  codex/update-handoff-confirmed-bugs
 ```
 
-原因是 `GITHUB_TOKEN` 环境变量覆盖了认证，但该 token 没有目标仓库写权限。GitHub CLI 已经可用，但要么清除 `GITHUB_TOKEN` 后重新登录，要么换有写权限的 token。
+本轮重要文件已经纳入 GitHub：
 
-检查认证：
+- `PROJECT_HANDOFF.md`
+- `outputs/confirmed_bugs.md`
+- `scripts/check_linux_v6_14_filesystems.py`
+- `tests/test_linux_v6_14_checker.py`
+- `outputs/linux-v6.14-bug-check/`
 
-```powershell
-gh auth status
-```
+注意：`outputs/linux-v6.14-bug-check/` 已作为本轮 artifact 上传，目录约 68 MB，单文件未超过 GitHub 100 MB 限制。`linux-sources/` 仍然没有上传，也不应上传。
 
-当前用户之前看到：
-
-```text
-Logged in to github.com account yghikun (GITHUB_TOKEN)
-Git operations protocol: https
-```
-
-如需重新登录，先在当前 PowerShell 会话清除 token：
-
-```powershell
-Remove-Item Env:GITHUB_TOKEN
-gh auth login
-```
-
-注意：不要 force push，不要 stage `linux-sources/`，不要把大型输出目录一股脑推上去。建议只提交代码、测试、必要文档；大输出结果除非明确要做 artifact，否则保持本地。
-
-提交前推荐检查：
+后续提交前仍需检查：
 
 ```powershell
 git status --short
@@ -293,11 +286,11 @@ git diff --stat
 git diff --cached --stat
 ```
 
-只 stage 当前实现相关文件的示例：
+仍然不要提交：
 
-```powershell
-git add scripts/check_linux_v6_14_filesystems.py tests/test_linux_v6_14_checker.py PROJECT_HANDOFF.md
-```
+- `linux-sources/`
+- `E:\kernel-work\...` 外部 Linux patch 工作树
+- 邮箱授权码、API key、SMTP 密码
 
 ## 9. 论文路线图当前判断
 
@@ -305,23 +298,23 @@ git add scripts/check_linux_v6_14_filesystems.py tests/test_linux_v6_14_checker.
 
 论文还没完全闭环的部分：
 
-1. DeepSeek/LLM triage 结果还没有回收整理。
-2. ext4/xfs/f2fs/btrfs 的人工审计还没形成正式表格。
-3. LLM verdict 需要人工确认后才能转成论文中的 confirmed finding。
+1. ext4/xfs/f2fs 的 154 条候选已经完成 DeepSeek/人工复核，并已沉淀到 `outputs/confirmed_bugs.md`；后续要把这些结果整理成论文表格可直接使用的形式。
+2. btrfs 的 366 条候选还没有进入同等粒度的 DeepSeek/人工复核；如果继续扩展实验，建议单独开一轮，不要和已提交的 F2FS/XFS/ext4 patch 混在一起。
+3. 已提交到内核邮件列表的 patch 仍只能标为 `submitted / under review`，不能写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
 4. 正式 benchmark、Precision/Recall/F1、消融和外部 baseline 仍需按 `PAPER_ROADMAP.md` 收尾。
-5. GitHub 推送还没完成，且必须排除 `linux-sources/` 和不必要的大输出。
+5. GitHub 主分支已经同步完成；后续重点从“上传仓库”转为“跟踪上游 review、整理论文 artifact 和补齐实验闭环”。
 
 ## 10. 接手优先级
 
-P0：跑 DeepSeek 验证 ext4、xfs、f2fs，拿到 `deepseek_reviews.jsonl` 和 `deepseek_true_candidates.jsonl`。
+P0：跟踪 ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；如果维护者要求调整，只基于对应线程发 v2/v3，不要重复投新线程。
 
-P0：写 triage report，区分 `likely true bug`、`needs manual audit`、`false positive`。
+P0：把 `outputs/confirmed_bugs.md` 中的真 bug、已修复 bug、已提交 patch、未提交/排除项整理成论文表格。
 
-P1：决定哪些输出应该进入论文 artifact，哪些只保留本地。
+P1：如果继续做 btrfs，从 `outputs/linux-v6.14-bug-check/btrfs/` 的 366 条候选单独启动 DeepSeek/人工 triage。
 
-P1：整理提交范围，提交脚本、测试、交接文档，不提交 Linux 源码。
+P1：补正式 benchmark、Precision/Recall/F1、消融和外部 baseline。
 
-P2：恢复 GitHub 写权限后 push，但不要 force push。
+P2：后续仓库提交仍走 `main`，但每次提交前确认没有带入 `linux-sources/`、外部 Linux patch 工作树或任何密钥。
 
 ## 11. 最小恢复命令
 
@@ -336,7 +329,7 @@ Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\check_manifest.json -To
 python -m pytest -q tests/test_linux_v6_14_checker.py
 ```
 
-然后继续跑第 5 节的 DeepSeek 命令。
+然后优先查看第 12 节的人工复核与 patch 提交状态；第 5 节是较早的 DeepSeek 执行记录，ext4/XFS/F2FS 这部分已经完成，不要重复跑。
 
 ---
 
@@ -501,15 +494,31 @@ python -m pytest -q tests/test_linux_v6_14_checker.py
 
 ### 12.6 当前仓库状态提醒
 
-当前 SE_EOD 工作树有这些本轮相关改动：
+本轮 SE_EOD 仓库更新已经合并到 `main` 并推送到 GitHub。最终主分支包含：
 
-- `PROJECT_HANDOFF.md`：本交接补充。
-- `outputs/confirmed_bugs.md`：新增/修正 confirmed bug #13--#16 和 patch 提交状态。
-- `outputs/linux-v6.14-bug-check/`：本地分析输出，是否纳入 git 需要单独决定。
+- `PROJECT_HANDOFF.md`：交接补充。
+- `outputs/confirmed_bugs.md`：confirmed bug #13--#16、已修复项、已提交 patch 状态。
+- `outputs/linux-v6.14-bug-check/`：Linux 6.14 分析输出 artifact。
 - `scripts/check_linux_v6_14_filesystems.py`
 - `tests/test_linux_v6_14_checker.py`
 
-提交 SE_EOD 仓库前必须检查：
+最终核验过的最小测试：
+
+```text
+python -m pytest -q tests/test_linux_v6_14_checker.py
+2 passed in 0.02s
+```
+
+最终 GitHub 状态：
+
+```text
+artifact push range: ab5b3f3..28c58df
+PR #1: MERGED
+remote branch codex/update-handoff-confirmed-bugs: deleted
+local branch codex/update-handoff-confirmed-bugs: deleted
+```
+
+后续提交 SE_EOD 仓库前仍必须检查：
 
 ```powershell
 git status --short
