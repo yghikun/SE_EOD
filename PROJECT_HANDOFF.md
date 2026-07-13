@@ -1,252 +1,524 @@
 # SE-EOD 项目交接文档
 
-更新时间：2026-07-12  
+更新时间：2026-07-13  
 工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
 
-## 1. 交接摘要
+## 1. 当前一句话状态
 
-SE-EOD 是面向 Linux 文件系统错误路径的协议感知静态分析原型。目前已经可以对两个 Linux 版本中的 ext4、btrfs、XFS、F2FS 执行可复现的静态分析矩阵，生成候选、协议证据、排序结果、LLM review task 和运行 manifest。
+SE-EOD 当前已经完成论文核心方法的主要工程落地：CFG 路径敏感资源传播、跨函数摘要、函数指针/间接调用处理、retry/backedge 语义、`PTR_ERR` 路径事实、CFG 诊断、候选证据排序和 LLM review task 生成都已经接入主流程。
 
-当前最可信的实验版本是 `experiment-v1.3.3`。
+现在的工作重点已经从“核心方法还没落地”转为“用 Linux 6.14 的 ext4/xfs/f2fs/btrfs 做系统性检查，并让 LLM/DeepSeek 对候选做二次验证，再沉淀论文表格和人工审计结果”。
 
-必须先记住两件事：
+最重要的安全线：
 
-1. `benchmark/ext4-v6.8-pilot-labels.jsonl` 的 30 条标注只是第一 reviewer pilot，不是独立 gold benchmark，不能直接用来宣称正式 Precision/Recall。
-2. Linux v7.1 btrfs 最终保留的 4 条候选不是误报。它们对应 `btrfs_recover_relocation()` 的两个错误路径，并分别被输出为 `missing_cleanup` 和 `partial_cleanup`。同一缺陷已经在 v6.8 上获得 QEMU/fault-injection 证据，不能为了候选归零而添加压制规则。
+1. 不要把 `linux-sources/` 推到 GitHub。
+2. 不要把 DeepSeek/LLM verdict 当成 gold label，只能作为 triage evidence。
+3. 不要压掉已知应该保留的 ext4 pilot 候选：`candidate_65d848d5f1fd`、`candidate_f3e8e44a00d3`。
+4. 不要执行 `git reset --hard` 或清理未确认输出目录。
 
-## 2. 当前验证状态
+## 2. Linux 6.14 源码状态
 
-- 全量测试：`48 passed`
-- Python 源码与脚本：`compileall` 通过
-- 配置 JSON：全部可解析
-- `experiment-v1.3.3/experiment_manifest.json`：完整记录 8 个矩阵单元
-- v6.8/v7.1 btrfs 已知真阳性保留率：`100%`
-- v7.1 btrfs 95 条审计：`4 true_bug / 91 false_positive`
+已经拉取 Linux v6.14 的四个文件系统目录，位置：
 
-### experiment-v1.3.3 矩阵
+`E:\yanjiusheng\阅读论文\file_system\SE_EOD\linux-sources\linux-v6.14-fs`
 
-| Linux | 文件系统 | 错误路径 | 最终候选 |
-|---|---|---:|---:|
-| v6.8 | ext4 | 2222 | 16 |
-| v6.8 | btrfs | 4959 | 5 |
-| v6.8 | XFS | 1833 | 6 |
-| v6.8 | F2FS | 1645 | 0 |
-| v7.1 | ext4 | 2364 | 13 |
-| v7.1 | btrfs | 5442 | 4 |
-| v7.1 | XFS | 2280 | 8 |
-| v7.1 | F2FS | 1755 | 4 |
+只包含：
 
-与 v1.3 相比，只有 v7.1 btrfs 发生候选数量变化：`543 -> 4`，删除 539 条误报且保留 4 条已知真阳性。不能把该下降直接表述为 Precision 提升，正式准确率必须在冻结 benchmark 上测量。
+- `fs/ext4`
+- `fs/btrfs`
+- `fs/f2fs`
+- `fs/xfs`
 
-## 3. Linux 源码基线
+来源 manifest：
 
-源码位于 `linux-sources/`，只保留四个目标文件系统目录。
+`E:\yanjiusheng\阅读论文\file_system\SE_EOD\linux-sources\linux-v6.14-fs\SOURCE_MANIFEST.json`
 
-| 版本 | Commit | 官方归档 SHA-256 |
-|---|---|---|
-| v6.8 | `e8f897f4afef0031fe618a8e94127a0934896aba` | `87eebb4c5d35b5c71e2b1dbdd106be6e6ccc0ee3c3ba0602a3fc4d9d169a6b93` |
-| v7.1 | `8cd9520d35a6c38db6567e97dd93b1f11f185dc6` | `ad7f8010a17ecd9959c79cba639dfbbc9dccbbfb7323c5f1d04421368939f18f` |
+基线信息：
 
-完整来源记录：
+| 字段 | 值 |
+|---|---|
+| Linux tag | `v6.14` |
+| Commit | `38fec10eb60d687e30c8c6b5420d86e8149f7557` |
+| Source | `https://codeload.github.com/torvalds/linux/tar.gz/refs/tags/v6.14` |
+| Extracted at | `2026-07-13` |
+| Archive retained | `false` |
 
-- `linux-sources/linux-v6.8-fs/SOURCE_MANIFEST.json`
-- `linux-sources/linux-v7.1-fs/SOURCE_MANIFEST.json`
+`.gitignore` 已经包含 `/linux-sources/`，但提交前仍必须检查 `git status --short`，确认没有 Linux 源码被 staged。
 
-不要用其他源码目录覆盖这两个快照，除非同时更新 source manifest 和实验版本号。
+## 3. Linux 6.14 检查脚本
 
-## 4. 重要产物
+新增脚本：
 
-### 主实验
+`E:\yanjiusheng\阅读论文\file_system\SE_EOD\scripts\check_linux_v6_14_filesystems.py`
 
-- `outputs/experiment-v1.3/`：最初的 2×4 基线矩阵
-- `outputs/experiment-v1.3.1/`：btrfs path scope-cleanup 消融
-- `outputs/experiment-v1.3.2/`：95 条候选审计和通用内存自动清理消融
-- `outputs/experiment-v1.3.3/`：当前模型改进后的完整矩阵
-- `outputs/experiment-v1.3.3/reports/model_refinement_comparison.md`：v1.3 与 v1.3.3 对比
-- `outputs/experiment-v1.3.2/reports/btrfs_v7_1_candidate_audit.jsonl`：95 条逐条标签与证据
+对应测试：
 
-`experiment-v1.3.1` 和 `experiment-v1.3.2` 是论文消融证据，不是临时垃圾，不能删除。
+`E:\yanjiusheng\阅读论文\file_system\SE_EOD\tests\test_linux_v6_14_checker.py`
 
-### 已确认问题
+脚本能力：
 
-- `outputs/confirmed_bugs.md`：当前确认、历史修复和动态验证问题总表
-- `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`：btrfs recovery 故障注入证据
+- 默认检查 `ext4`、`btrfs`、`f2fs`、`xfs`
+- 开启 CFG 和 interprocedural analysis
+- 输出 error paths、候选、ranked evidence、function summaries
+- 为每个文件系统生成 `llm_review_tasks.jsonl`
+- 合并生成根目录 `llm_review_tasks.jsonl`
+- 可选 `--run-deepseek`
+- 支持 `--filesystem`、`--min-evidence-score`、`--deepseek-limit`
 
-部分证据仍引用 `/root/bug_submit/...` 等仓库外路径。正式 artifact 前必须迁入仓库或替换成公开 URL。
+基础运行命令：
 
-### Benchmark pilot
+```powershell
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
 
-- `benchmark/schema.json`：样本 schema
-- `benchmark/README.md`：标注流程
-- `benchmark/ext4-v6.8-pilot.jsonl`：30 条分层 pilot
-- `benchmark/ext4-v6.8-pilot-labels.jsonl`：第一 reviewer 标注
-- `benchmark/ext4-v6.8-pilot-reviewer2-todo.jsonl`：第二 reviewer 待标注文件
-- `benchmark/ext4-v6.8-pilot-evaluation.*`：pilot 评估
-- `benchmark/ext4-v6.8-pilot-taxonomy.*`：误报分类
+python scripts/check_linux_v6_14_filesystems.py `
+  --source linux-sources/linux-v6.14-fs `
+  --output-root outputs/linux-v6.14-bug-check
+```
 
-第二 reviewer、分歧裁决和冻结 test split 尚未完成。
+只跑某个文件系统：
 
-## 5. 配置结构
+```powershell
+python scripts/check_linux_v6_14_filesystems.py `
+  --source linux-sources/linux-v6.14-fs `
+  --output-root outputs/linux-v6.14-bug-check `
+  --filesystem ext4
+```
 
-配置职责说明见 `configs/README.md`。
+## 4. 已完成的 Linux 6.14 检查结果
 
-- `*_resource_map.json`：错误路径抽取阶段的资源状态、释放、自动清理和 callee consumption
-- `*_resource_protocols/*.json`：候选生成后的协议证据和排序解释
-- `*_wrapper_summaries.json`：wrapper/alias 证据；ext4 保留历史文件名 `wrapper_summaries.json`
-- `*_review_false_positives.json`：人工复核契约和 confirmed bug exceptions
+输出根目录：
 
-这些层次有部分 API 名称重叠，但用途不同，不应简单合并。
-
-btrfs 新复核规则已经合入 canonical `configs/btrfs_review_false_positives.json` 的 `path_rules`。不要创建 `btrfs_v1_3_4_false_positives.json` 之类按实验版本命名的配置。新增规则必须：
-
-1. 记录来源和 `reason_code`。
-2. 优先使用严格 `path_ids` 和 `match_path_ids: true`。
-3. 检查 `confirmed_bug_exceptions`，不得压制已知真阳性。
-4. 增加正例和负例回归测试。
-
-## 6. 核心实现变化
-
-当前资源跟踪器已经支持：
-
-- `__free(release_fn)`
-- `BTRFS_PATH_AUTO_FREE`
-- `BTRFS_PATH_AUTO_RELEASE`
-- `AUTO_KFREE`
-- `AUTO_KVFREE`
-- cleanup-managed pointer alias
-- `likely/unlikely/WARN_ON/WARN_ON_ONCE` 条件包装
-- `PTR_ERR/PTR_ERR_OR_ZERO` 派生获取失败
-- error-return callee consumption
-- reviewed false-positive path contracts
+`E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check`
 
 关键文件：
 
-- `src/resource_tracker.py`
-- `src/error_condition.py`
-- `src/candidate_rules.py`
-- `configs/btrfs_resource_map.json`
-- `configs/btrfs_review_false_positives.json`
+- `check_manifest.json`
+- `llm_review_tasks.jsonl`
+- `ext4/llm_review_tasks.jsonl`
+- `btrfs/llm_review_tasks.jsonl`
+- `f2fs/llm_review_tasks.jsonl`
+- `xfs/llm_review_tasks.jsonl`
 
-当前仍以函数内分析为主，还没有完成论文路线图所要求的函数摘要、调用图和固定点跨函数所有权传播。
+合并后的 LLM 任务：
 
-## 7. 常用命令
+```text
+manifest=E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check\check_manifest.json
+llm_tasks=520
+llm_input=E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check\llm_review_tasks.jsonl
+```
 
-安装依赖并运行测试：
+每个文件系统统计：
+
+| FS | Error paths | Candidates/Tasks | CFG functions | Truncated | Unresolved indirect calls |
+|---|---:|---:|---:|---:|---:|
+| ext4 | 2214 | 30 | 818 | 0 | 0 |
+| btrfs | 5026 | 366 | 1843 | 0 | 0 |
+| f2fs | 1614 | 55 | 677 | 0 | 0 |
+| xfs | 2023 | 69 | 869 | 0 | 1 |
+
+优先级分布：
+
+| Priority | Count |
+|---|---:|
+| P1 | 34 |
+| P2 | 402 |
+| P3 | 84 |
+
+证据等级：
+
+| Evidence | Count |
+|---|---:|
+| E2 protocol-supported | 498 |
+| E0 static-only | 22 |
+
+按文件系统的 severity：
+
+| FS | P1 | P2 | P3 |
+|---|---:|---:|---:|
+| ext4 | 20 | 10 | 0 |
+| btrfs | 9 | 324 | 33 |
+| f2fs | 0 | 32 | 23 |
+| xfs | 5 | 36 | 28 |
+
+PowerShell 读取中文 review question 时要用 UTF-8：
 
 ```powershell
-python -m pip install -r requirements.txt
+Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\ext4\llm_review_tasks.jsonl -TotalCount 1
+```
+
+## 5. 先验证 ext4、xfs、f2fs 的 DeepSeek 命令
+
+用户当前想先排除 btrfs，只把 `ext4`、`xfs`、`f2fs` 交给 DeepSeek/LLM 验证。三者合计任务数是 154。
+
+运行前设置 API key：
+
+```powershell
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+```
+
+执行：
+
+```powershell
+@'
+from pathlib import Path
+from src.llm_task_builder import (
+    run_deepseek_review,
+    extract_deepseek_true_candidates,
+)
+
+root = Path("outputs/linux-v6.14-bug-check")
+
+for filesystem in ("ext4", "xfs", "f2fs"):
+    output = root / filesystem
+    print(f"\n=== Reviewing {filesystem} ===")
+
+    stats = run_deepseek_review(
+        output / "llm_review_tasks.jsonl",
+        output / "deepseek_reviews.jsonl",
+    )
+    print(stats)
+
+    result = extract_deepseek_true_candidates(
+        output / "deepseek_reviews.jsonl",
+        output / "deepseek_true_candidates.jsonl",
+    )
+    print(result)
+'@ | python -
+```
+
+预期输出文件：
+
+- `outputs/linux-v6.14-bug-check/ext4/deepseek_reviews.jsonl`
+- `outputs/linux-v6.14-bug-check/ext4/deepseek_true_candidates.jsonl`
+- `outputs/linux-v6.14-bug-check/xfs/deepseek_reviews.jsonl`
+- `outputs/linux-v6.14-bug-check/xfs/deepseek_true_candidates.jsonl`
+- `outputs/linux-v6.14-bug-check/f2fs/deepseek_reviews.jsonl`
+- `outputs/linux-v6.14-bug-check/f2fs/deepseek_true_candidates.jsonl`
+
+如果 DeepSeek 中断，不要覆盖已完成 reviews。应使用已有函数的 `start_index` 和 `limit` 分段续跑，或先备份旧 `deepseek_reviews.jsonl`。
+
+## 6. DeepSeek 完成后的下一步
+
+完成 ext4/xfs/f2fs 验证后，接手者应该做：
+
+1. 统计每个 `deepseek_reviews.jsonl` 的成功数、失败数、解析失败数。
+2. 检查 review task id 是否和输入任务一一对应。
+3. 统计 verdict 分布。
+4. 读取 `deepseek_true_candidates.jsonl`，筛出 LLM 认为可能是真 bug 的候选。
+5. 对每个 true candidate 回到 Linux 6.14 源码看上下文，不直接相信 LLM。
+6. 生成 `ext4/xfs/f2fs` triage report，列出 candidate id、函数、资源、错误路径、LLM verdict、人工判断。
+
+建议生成的报告文件：
+
+`outputs/linux-v6.14-bug-check/reports/ext4_xfs_f2fs_deepseek_triage.md`
+
+## 7. 测试状态
+
+核心方法相关测试此前全量通过：
+
+```text
+102 passed
+```
+
+Linux 6.14 检查脚本新增测试通过：
+
+```text
+2 passed
+```
+
+接手后最小验证命令：
+
+```powershell
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
 python -m pytest -q
+python -m pytest -q tests/test_linux_v6_14_checker.py
 ```
 
-重跑当前完整矩阵：
+## 8. Git 和 GitHub 状态
+
+当前本地 `main` 曾经领先远端一个提交：
+
+```text
+ab5b3f3 cfg测试
+```
+
+之前审计确认该提交没有包含 `linux-sources/`。
+
+当前仍有未跟踪文件：
+
+```text
+?? outputs/linux-v6.14-bug-check-smoke/
+?? outputs/linux-v6.14-bug-check/
+?? scripts/check_linux_v6_14_filesystems.py
+?? tests/test_linux_v6_14_checker.py
+```
+
+GitHub push 失败原因：
+
+```text
+remote: Permission to yghikun/SE_EOD.git denied to yghikun.
+HTTP 403
+```
+
+原因是 `GITHUB_TOKEN` 环境变量覆盖了认证，但该 token 没有目标仓库写权限。GitHub CLI 已经可用，但要么清除 `GITHUB_TOKEN` 后重新登录，要么换有写权限的 token。
+
+检查认证：
 
 ```powershell
-python scripts/run_experiment_v1_3.py `
-  --output-root outputs/experiment-v1.3.3 `
-  --experiment-name experiment-v1.3.3 `
-  --force
+gh auth status
 ```
 
-只重跑某个单元：
+当前用户之前看到：
+
+```text
+Logged in to github.com account yghikun (GITHUB_TOKEN)
+Git operations protocol: https
+```
+
+如需重新登录，先在当前 PowerShell 会话清除 token：
 
 ```powershell
-python scripts/run_experiment_v1_3.py `
-  --output-root outputs/experiment-v1.3.3 `
-  --experiment-name experiment-v1.3.3 `
-  --version linux-v7.1 `
-  --filesystem btrfs `
-  --force
+Remove-Item Env:GITHUB_TOKEN
+gh auth login
 ```
 
-runner 会从所有已有 `run_manifest.json` 重建根 manifest，局部重跑不会再丢失其他矩阵单元。
+注意：不要 force push，不要 stage `linux-sources/`，不要把大型输出目录一股脑推上去。建议只提交代码、测试、必要文档；大输出结果除非明确要做 artifact，否则保持本地。
 
-生成模型改进对比：
+提交前推荐检查：
 
 ```powershell
-python scripts/compare_experiment_v1_3_3.py
+git status --short
+git diff --stat
+git diff --cached --stat
 ```
 
-重建 95 条审计：
+只 stage 当前实现相关文件的示例：
 
 ```powershell
-python scripts/audit_btrfs_v7_1_candidates.py
+git add scripts/check_linux_v6_14_filesystems.py tests/test_linux_v6_14_checker.py PROJECT_HANDOFF.md
 ```
 
-重建 scope-cleanup 消融报告：
+## 9. 论文路线图当前判断
+
+核心方法创新：已经工程实现到可跑 Linux 6.14 的程度。
+
+论文还没完全闭环的部分：
+
+1. DeepSeek/LLM triage 结果还没有回收整理。
+2. ext4/xfs/f2fs/btrfs 的人工审计还没形成正式表格。
+3. LLM verdict 需要人工确认后才能转成论文中的 confirmed finding。
+4. 正式 benchmark、Precision/Recall/F1、消融和外部 baseline 仍需按 `PAPER_ROADMAP.md` 收尾。
+5. GitHub 推送还没完成，且必须排除 `linux-sources/` 和不必要的大输出。
+
+## 10. 接手优先级
+
+P0：跑 DeepSeek 验证 ext4、xfs、f2fs，拿到 `deepseek_reviews.jsonl` 和 `deepseek_true_candidates.jsonl`。
+
+P0：写 triage report，区分 `likely true bug`、`needs manual audit`、`false positive`。
+
+P1：决定哪些输出应该进入论文 artifact，哪些只保留本地。
+
+P1：整理提交范围，提交脚本、测试、交接文档，不提交 Linux 源码。
+
+P2：恢复 GitHub 写权限后 push，但不要 force push。
+
+## 11. 最小恢复命令
+
+新的接手者只要从这里开始：
 
 ```powershell
-python scripts/compare_scope_cleanup_ablation.py
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
+
+Get-Content -Encoding UTF8 PROJECT_HANDOFF.md
+Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\check_manifest.json -TotalCount 40
+
+python -m pytest -q tests/test_linux_v6_14_checker.py
 ```
 
-## 8. 当前未完成事项
+然后继续跑第 5 节的 DeepSeek 命令。
 
-正式写论文结果前仍缺少：
+---
 
-1. 四文件系统独立 benchmark，建议总规模约 300 条，历史正例至少约 100 条。
-2. 第二 reviewer、Cohen's kappa、分歧 adjudication 和冻结 test split。
-3. 正式 Precision、Recall、F1、Precision@K 和分组指标。
-4. B0-B4 内部消融以及至少一个外部 baseline。
-5. 函数资源摘要、调用图和跨函数固定点传播。
-6. ext4、XFS、F2FS 剩余候选的系统性人工审计。
-7. 更多动态验证和 upstream 状态核验。
-8. `pyproject.toml`、锁定依赖、CI、LICENSE、CITATION 和干净环境复跑。
-9. 将仓库外 bug/patch 证据迁入 artifact。
+## 12. 2026-07-13 最新补充：ext4 / XFS / F2FS 人工复核与 patch 提交状态
 
-详细路线见 `PAPER_ROADMAP.md`。该文件顶部已经列出目前有产物支持的完成项。
+本节覆盖前面较早的“DeepSeek 完成后下一步”描述。ext4、XFS、F2FS 的 154 条候选已经完成完整性核验和源码人工复核：
 
-## 9. 建议接手顺序
+| FS | 候选数 | DeepSeek 判 true | 人工复核真候选 | 真 bug cluster |
+|---|---:|---:|---:|---:|
+| ext4 | 30 | 26 | 20 | 4 |
+| XFS | 69 | 7 | 5 | 3 |
+| F2FS | 55 | 19 | 18 | 4 |
+| 合计 | 154 | 52 | 43 | 11 |
 
-### P0：冻结正式 benchmark 流程
+已同步记录到：
 
-1. 完成 ext4 pilot 第二 reviewer 标注和 adjudication。
-2. 根据 pilot 修订标注指南，但不要把 Codex/LLM 标签当作 gold label。
-3. 收集四文件系统历史修复正例。
-4. 创建 development/validation/test split，并按 bug family 去重。
+- `outputs/confirmed_bugs.md`
 
-验收标准：至少能在冻结的小规模 benchmark 上无人工补答案地计算 Precision、Recall 和 F1。
+注意：`outputs/confirmed_bugs.md` 已新增 confirmed bug #14--#16，并修正了 XFS `xfs_rtginode_ensure()` 和 ext4 `ext4_init_orphan_info()` 的提交/未合入状态。
 
-### P0：实现核心方法创新
+### 12.1 最新 mainline 对照基线
 
-1. 定义资源状态机。
-2. 生成参数级函数摘要。
-3. 构建调用图并做固定点传播。
-4. 为每个跨函数结论输出传播证据链。
+最新版对照使用的是 Torvalds mainline HEAD：
 
-验收标准：解决一组当前 wrapper/ownership 误报，同时保留现有 confirmed bug golden tests。
+```text
+a13c140cc289c0b7b3770bce5b3ad42ab35074aa
+```
 
-### P0：完成论文评估
+Windows 上完整 Linux checkout 会因为大小写冲突导致 netfilter 等文件显示 modified；后续做内核 patch 时要用 sparse checkout，避开大小写冲突。
 
-1. 在冻结 benchmark 上跑 Full 和 B0-B4。
-2. 接入至少一个外部 baseline。
-3. 计算分组指标、置信区间、运行成本和人工成本。
-4. 从脚本生成论文表格原始 CSV/JSON。
+已经使用的干净 sparse 工作树：
 
-## 10. 交接风险清单
+```text
+E:\kernel-work\linux-f2fs-ifolio-sparse
+```
 
-- 不要把候选数量下降写成 Precision 提升。
-- 不要把 LLM/Codex verdict 当作 ground truth。
-- 不要把 submitted patch 写成 upstream accepted。
-- 不要把历史 bug 或重复发现写成全新 bug。
-- 不要删除 `experiment-v1.3.1/.2` 消融目录。
-- 不要给 `btrfs_recover_relocation()` 添加函数级 ownership-transfer 豁免。
-- 不要使用冻结 test split 调规则或权重。
-- 当前 worktree 含大量尚未提交的实验、benchmark、文档和实现变更；接手后应先审查并按逻辑拆分提交，不要执行 `git reset --hard`。
-
-## 11. 下一位接手者的最小检查
+该工作树通过以下方式建立：
 
 ```powershell
-python -m pytest -q
-python scripts/run_experiment_v1_3.py `
-  --output-root outputs/experiment-v1.3.3 `
-  --experiment-name experiment-v1.3.3
-python scripts/compare_experiment_v1_3_3.py
+cd E:\kernel-work
+git clone --no-checkout --shared .\linux-f2fs-ifolio-clean linux-f2fs-ifolio-sparse
+cd linux-f2fs-ifolio-sparse
+git sparse-checkout init --cone
+git sparse-checkout set fs/f2fs scripts MAINTAINERS
+git checkout master
 ```
 
-预期结果：
+### 12.2 已提交 patch，禁止重复提交
 
-- 测试至少 `48 passed`
-- 根 manifest 的 `run_count` 为 `8`
-- v6.8 btrfs 候选为 `5`
-- v7.1 btrfs 候选为 `4`
-- btrfs known-positive retention 为 `100%`
+这些已经发到对应 mailing list。不要重复投同一个 patch；后续只能基于维护者回复发 v2/v3 或 reply。
 
+#### ext4：已提交
+
+- `ext4_fc_replay_add_range()` / `ext4_fc_replay_del_range()`
+  - Subject: `ext4: propagate errors from fast commit range replay`
+  - 状态：patch submitted，latest mainline 在 2026-07-13 检查时仍未合入。
+- `ext4_init_orphan_info()`
+  - Subject: `ext4: fix buffer_head leak in ext4_init_orphan_info`
+  - 状态：patch submitted，latest mainline `a13c140cc289...` 仍是旧的 `for (i--; i >= 0; i--)` cleanup 形态。
+- `ext4_expand_extra_isize_ea()`
+  - Subject: `ext4: clear error before retrying inode xattr space fallback`
+  - 状态：patch submitted / under review。
+
+#### XFS：已提交
+
+- `xfs_rtginode_ensure()`
+  - Subject: `[PATCH] xfs: propagate errors from xfs_rtginode_load`
+  - To: `linux-xfs@vger.kernel.org`
+  - 维护者/Reviewer：Carlos Maiolino、Darrick J. Wong、Christoph Hellwig
+  - Fixes: `aa897e0bed0f ("xfs: support creating per-RTG files in growfs")`
+  - 状态：patch submitted，latest mainline `a13c140cc289...` 检查时仍未合入。
+
+#### F2FS：已提交
+
+1. `f2fs_get_new_data_folio()`
+
+   - v1 Message-ID: `<20260713055959.1865-1-3497809730@qq.com>`
+   - v2 Message-ID: `<20260713061601.712-1-3497809730@qq.com>`
+   - v2 Subject: `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`
+   - 状态：v2 submitted。v1 已被 v2 supersede；后续回复应基于 v2 线程。
+
+2. `find_in_level()`
+
+   - Message-ID: `<20260713063633.555-1-3497809730@qq.com>`
+   - Subject: `[PATCH] f2fs: fix dentry folio leak in find_in_level`
+   - 状态：patch submitted。
+
+3. `f2fs_move_inline_dirents()`
+
+   - Message-ID: `<20260713064043.1837-1-3497809730@qq.com>`
+   - Subject: `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`
+   - 状态：patch submitted。
+
+F2FS 收件人使用：
+
+```text
+To: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Chao Yu <chao@kernel.org>
+Cc: linux-f2fs-devel@lists.sourceforge.net
+Cc: linux-kernel@vger.kernel.org
+```
+
+不要把 F2FS patch 发到 `linux-xfs@vger.kernel.org` 或 `linux-btrfs@vger.kernel.org`。
+
+### 12.3 F2FS patch 工作树分支
+
+外部 Linux sparse 工作树中用过的分支：
+
+```text
+E:\kernel-work\linux-f2fs-ifolio-sparse
+```
+
+- `f2fs-ifolio-leak-fix`
+  - commit: `a0c8c0e255c92ff3ebb9d188d6dd5266330ac7cc`
+  - patch dir: `patches-v2/`
+  - 已发 v2。
+- `f2fs-find-in-level-folio-leak`
+  - commit: `dd9b477726b2f52bf495f436e49baecfa0bcdaf3`
+  - patch dir: `patches-find/`
+  - 已发送。
+- `f2fs-move-inline-dirents-ifolio-leak`
+  - commit: `38c593752c0f45eea652d8adaa6a5f46ccdf799a`
+  - patch dir: `patches-inline/`
+  - 已发送。
+
+后续如果要发 v2/v3，先切到对应分支，`git commit --amend`，再用 `git format-patch -1 -v2` 或 `-v3`。需要回复旧线程时必须加 `--in-reply-to <Message-ID>`。
+
+### 12.4 当前不应再当作未提交项的 bug
+
+下面这些已经提交或已由上游修复，不要再作为“待提交新 bug”处理：
+
+- ext4 `ext4_ext_shift_extents()`：latest mainline 已修。
+- ext4 `ext4_fc_replay_inode()`：latest mainline 已修；已有 upstream commit `ec0a7500d8ea`。
+- ext4 `ext4_dx_add_entry()`：latest mainline 已修。
+- XFS `xfs_qm_quotacheck_dqadjust()`：latest mainline 已修。
+- XFS `xfs_rtcopy_summary()`：latest mainline 已修。
+- F2FS `f2fs_rename()` with `RENAME_WHITEOUT`：latest mainline 已修。
+- XFS `xfs_rtginode_ensure()`：已提交 patch。
+- F2FS `f2fs_get_new_data_folio()`：已提交 v2。
+- F2FS `find_in_level()`：已提交。
+- F2FS `f2fs_move_inline_dirents()`：已提交。
+
+### 12.5 下一步优先事项
+
+P0：
+
+1. 跟踪 F2FS 三封 patch 在 `linux-f2fs-devel` / patchwork 上的回复。
+2. 跟踪 XFS `xfs_rtginode_ensure()` 回复，尤其是 Darrick/Christoph 是否要求调整 commit message 或 Fixes tag。
+3. 跟踪 ext4 已提交 patch 的 review/合入状态。
+4. 不要把 submitted patch 写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
+
+P1：
+
+1. 把 `outputs/confirmed_bugs.md` 中所有外部路径、Message-ID、状态整理成论文表格可用格式。
+2. 如果需要继续挖 btrfs，先从 `outputs/linux-v6.14-bug-check/btrfs/` 的 366 条候选做 DeepSeek/人工 triage；不要把 btrfs 和这轮 F2FS patch 混在一起。
+3. 运行最小测试：
+
+```powershell
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
+python -m pytest -q tests/test_linux_v6_14_checker.py
+```
+
+### 12.6 当前仓库状态提醒
+
+当前 SE_EOD 工作树有这些本轮相关改动：
+
+- `PROJECT_HANDOFF.md`：本交接补充。
+- `outputs/confirmed_bugs.md`：新增/修正 confirmed bug #13--#16 和 patch 提交状态。
+- `outputs/linux-v6.14-bug-check/`：本地分析输出，是否纳入 git 需要单独决定。
+- `scripts/check_linux_v6_14_filesystems.py`
+- `tests/test_linux_v6_14_checker.py`
+
+提交 SE_EOD 仓库前必须检查：
+
+```powershell
+git status --short
+git diff --stat
+git diff --cached --stat
+```
+
+仍然不要 stage 或提交：
+
+- `linux-sources/`
+- `E:\kernel-work\...` 外部 Linux patch 工作树
+- 邮箱授权码、API key、SMTP 密码

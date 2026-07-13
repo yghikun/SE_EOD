@@ -19,6 +19,14 @@ It does not mean upstream acceptance unless explicitly stated.
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
 | 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition; patch submitted | `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`, `/root/bug_submit/linux-btrfs-recover-relocation`, commit `08f1ccb98abb` |
 | 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
+| 9 | ext4 | `ext4_dx_add_entry()` | `bh2` `buffer_head` leak | source-level confirmed in v6.8; fixed in later mainline | v6.8 htree split error paths omitted `brelse(bh2)`; later code adds it |
+| 10 | ext4 | `ext4_ext_shift_extents()` | `ext4_ext_path` leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline sends `!extent` to `out:` and releases `path` |
+| 11 | F2FS | `f2fs_rename()` with `RENAME_WHITEOUT` | `f2fs_filename` crypto / casefold buffer leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline calls `f2fs_free_filename(&fname)` after whiteout creation |
+| 12 | XFS | `xfs_qm_quotacheck_dqadjust()` | dquot reference leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline routes attach-buffer failure through `xfs_qm_dqrele(dqp)` |
+| 13 | XFS | `xfs_rtginode_ensure()` | swallowed `xfs_rtginode_load()` error | patch submitted | `[PATCH] xfs: propagate errors from xfs_rtginode_load`, linux-xfs thread shown in local submission screenshot |
+| 14 | F2FS | `f2fs_get_new_data_folio()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`, Message-ID `<20260713061601.712-1-3497809730@qq.com>` |
+| 15 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | patch submitted | `[PATCH] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260713063633.555-1-3497809730@qq.com>` |
+| 16 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, Message-ID `<20260713064043.1837-1-3497809730@qq.com>` |
 
 ## ext4
 
@@ -91,8 +99,10 @@ Evidence:
 - The submitted fix tracks a `loaded` count and releases exactly the buffers
   that were successfully read.
 
-Status: confirmed and patch submitted.  Newer code inspected during review
-looked fixed by the `loaded++` cleanup-count approach.
+Status: confirmed and patch submitted.  Latest mainline HEAD checked on
+2026-07-13 (`a13c140cc289c0b7b3770bce5b3ad42ab35074aa`) still used the
+`for (i--; i >= 0; i--)` cleanup pattern, so the submitted fix did not appear
+merged in that tree.
 
 ### 4. `fs/ext4/xattr.c::ext4_expand_extra_isize_ea`
 
@@ -319,6 +329,118 @@ later upstream mainline.  The exact fixing commit has not been recorded in this
 workspace, so this is a validation/duplicate finding rather than a new patch
 submission.
 
+### 13. `fs/xfs/xfs_rtalloc.c::xfs_rtginode_ensure`
+
+Bug type: swallowed error from `xfs_rtginode_load()`.
+
+`xfs_rtginode_ensure()` is supposed to load an rtgroup metadata inode, creating
+it only when `xfs_rtginode_load()` reports `-ENOENT`.  The old code treated
+every error other than `-ENOENT` as success:
+
+```c
+error = xfs_rtginode_load(rtg, type, tp);
+xfs_trans_cancel(tp);
+
+if (error != -ENOENT)
+        return 0;
+return xfs_rtginode_create(rtg, type, true);
+```
+
+This suppresses real load failures such as allocation errors or metadata
+corruption errors, allowing the realtime growfs path to continue as though the
+inode had been loaded.
+
+Suggested / submitted fix shape:
+
+```c
+if (error != -ENOENT)
+        return error;
+return xfs_rtginode_create(rtg, type, true);
+```
+
+Evidence:
+
+- Source-level confirmation in local Linux v6.14 sparse tree:
+  `linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c`.
+- Latest mainline HEAD checked on 2026-07-13
+  (`a13c140cc289c0b7b3770bce5b3ad42ab35074aa`) still had the same swallowed
+  error shape.
+- Submitted patch evidence from local linux-xfs archive screenshot:
+  - Subject: `[PATCH] xfs: propagate errors from xfs_rtginode_load`
+  - From: Guanghui Yang `<3497809730@qq.com>`
+  - To: `linux-xfs@vger.kernel.org`
+  - Cc: Carlos Maiolino, Darrick J. Wong, Christoph Hellwig,
+    `linux-kernel@vger.kernel.org`, `stable@vger.kernel.org`
+  - Reported fixing target: commit `aa897e0bed0f ("xfs: support creating per-RTG files in growfs")`
+
+Status: confirmed and patch submitted.  Not recorded as fixed in latest
+mainline at the time of the 2026-07-13 recheck.
+
+## F2FS
+
+### 14. `fs/f2fs/data.c::f2fs_get_new_data_folio`
+
+Bug type: `ifolio` reference leak on `f2fs_reserve_block()` failure.
+
+`f2fs_get_new_data_folio()` documents that `ifolio` is only set by
+`make_empty_dir()`, and that `ifolio` should be released by this function on
+any error.  The allocation-failure path already releases `ifolio`, but the
+`f2fs_reserve_block()` failure path only released the newly grabbed data folio.
+
+The submitted v2 fix releases `ifolio` only if `dn.inode_folio` is still set,
+so it avoids a double put when `f2fs_reserve_block()` has already cleared the
+dnode.
+
+Evidence:
+
+- Source-level confirmation in latest mainline sparse checkout based on
+  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
+- Patch v1 Message-ID: `<20260713055959.1865-1-3497809730@qq.com>`
+- Patch v2 Message-ID: `<20260713061601.712-1-3497809730@qq.com>`
+- Patch subject: `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`
+
+Status: confirmed and patch v2 submitted.
+
+### 15. `fs/f2fs/dir.c::find_in_level`
+
+Bug type: `dentry_folio` reference leak on `find_in_block()` error.
+
+`find_in_level()` obtains `dentry_folio` from `f2fs_find_data_folio()` before
+calling `find_in_block()`.  If `find_in_block()` returns an error, the function
+stores the error in `*res_folio` and breaks out of the loop without dropping
+the successfully acquired `dentry_folio`.
+
+Evidence:
+
+- Source-level confirmation in latest mainline sparse checkout based on
+  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
+- Patch Message-ID: `<20260713063633.555-1-3497809730@qq.com>`
+- Patch subject: `[PATCH] f2fs: fix dentry folio leak in find_in_level`
+
+Status: confirmed and patch submitted.
+
+### 16. `fs/f2fs/inline.c::f2fs_move_inline_dirents`
+
+Bug type: `ifolio` reference leak on `f2fs_reserve_block()` failure.
+
+`f2fs_move_inline_dirents()` documents that the caller grabs `ifolio`, and that
+the function should release it on any error.  The cache-folio allocation
+failure path already releases `ifolio`, but the `f2fs_reserve_block()` failure
+path only released the newly grabbed folio through the shared `out` label.
+
+The submitted fix releases `ifolio` on this error path when `dn.inode_folio`
+is still set, matching the safer conditional-release shape used for
+`f2fs_get_new_data_folio()`.
+
+Evidence:
+
+- Source-level confirmation in latest mainline sparse checkout based on
+  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
+- Patch Message-ID: `<20260713064043.1837-1-3497809730@qq.com>`
+- Patch subject: `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`
+
+Status: confirmed and patch submitted.
+
 ## ext4
 
 ### 9. `fs/ext4/namei.c::ext4_dx_add_entry`
@@ -339,6 +461,37 @@ evidence.
 Status: source-level confirmed historical Linux v6.8 bug, fixed in the Linux
 v7.1 source snapshot. The exact fixing commit has not yet been identified.
 
+## Latest-mainline fixed bugs from Linux v6.14 ext4 / XFS / F2FS audit
+
+Date: 2026-07-13
+
+Baseline under recheck:
+
+- Candidate baseline: local Linux v6.14 filesystem sources under
+  `linux-sources/linux-v6.14-fs`.
+- Latest upstream checked: Torvalds mainline HEAD
+  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
+- Scope: the source-level true bug clusters from the ext4, XFS, and F2FS
+  154-candidate manual audit.
+
+The following entries are source-level bugs from the v6.14 candidate audit that
+are already fixed or structurally corrected in the latest mainline tree.  They
+should be treated as validation / duplicate findings unless a fixing commit
+still needs to be identified for historical tracking.
+
+| Confirmed bug # | FS | Function | Bug type | Latest-mainline status | Evidence |
+|---:|---|---|---|---|---|
+| 10 | ext4 | `ext4_ext_shift_extents()` | `ext4_ext_path` leak on corrupted / unexpected extent path | fixed in latest mainline | Latest code sends the `!extent` path to `out:` and releases with `ext4_free_ext_path(path)` instead of returning directly. |
+| 5 | ext4 | `ext4_fc_replay_inode()` | fast-commit replay error swallowed; earlier versions also leaked `iloc.bh` on error | fixed upstream / duplicate finding | Latest code releases `iloc.bh` at `out_brelse:` and returns `ret`; upstream fix recorded above as commit `ec0a7500d8ea`. Note: sibling `ext4_fc_replay_add_range()` and `ext4_fc_replay_del_range()` still return `0` from their shared `out:` labels in latest mainline, so they are not recorded here as fixed. |
+| 9 | ext4 | `ext4_dx_add_entry()` | missing `brelse(bh2)` on htree split journal-error paths | fixed in latest mainline | Latest code adds `brelse(bh2)` before the relevant `goto journal_error` paths. |
+| 12 | XFS | `xfs_qm_quotacheck_dqadjust()` | dquot reference leak after `xfs_dquot_attach_buf()` failure | fixed in latest mainline | Latest code routes the attach-buffer failure through `out_unlock`, then calls `xfs_qm_dqrele(dqp)`. |
+| 8 | XFS | `xfs_rtcopy_summary()` | swallowed error while copying realtime summary metadata | fixed in latest mainline | Latest code returns `error` from the shared cleanup label instead of unconditionally returning `0`. |
+| 11 | F2FS | `f2fs_rename()` with `RENAME_WHITEOUT` | `struct f2fs_filename` crypto / casefold buffer leak | fixed in latest mainline | Latest code calls `f2fs_free_filename(&fname)` immediately after `f2fs_create_whiteout()`. |
+
+Items from the same v6.14 audit that still appear unfixed in latest mainline,
+and therefore are not recorded in this fixed-bug table, are intentionally left
+for separate confirmation before being promoted here.
+
 ## Not Included As Confirmed Bugs
 
 The following candidates should not be presented as confirmed bugs yet:
@@ -351,3 +504,4 @@ The following candidates should not be presented as confirmed bugs yet:
   take ownership on failure.
 - `fs/btrfs/ctree.c::btrfs_next_old_leaf`: uncertain / likely false positive
   after path-state review; do not count as confirmed.
+
