@@ -299,14 +299,14 @@ git diff --cached --stat
 论文还没完全闭环的部分：
 
 1. ext4/xfs/f2fs 的 154 条候选已经完成 DeepSeek/人工复核，并已沉淀到 `outputs/confirmed_bugs.md`；后续要把这些结果整理成论文表格可直接使用的形式。
-2. btrfs 的 366 条候选还没有进入同等粒度的 DeepSeek/人工复核；如果继续扩展实验，建议单独开一轮，不要和已提交的 F2FS/XFS/ext4 patch 混在一起。
+2. btrfs 的 366 条候选还没有进入同等粒度的 DeepSeek/人工复核；如果继续扩展实验，建议单独开一轮，不要和本轮已经提交的 btrfs/F2FS/XFS/ext4 patch 混在一起。
 3. 已提交到内核邮件列表的 patch 仍只能标为 `submitted / under review`，不能写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
 4. 正式 benchmark、Precision/Recall/F1、消融和外部 baseline 仍需按 `PAPER_ROADMAP.md` 收尾。
 5. GitHub 主分支已经同步完成；后续重点从“上传仓库”转为“跟踪上游 review、整理论文 artifact 和补齐实验闭环”。
 
 ## 10. 接手优先级
 
-P0：跟踪 ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；如果维护者要求调整，只基于对应线程发 v2/v3，不要重复投新线程。
+P0：准备并提交 btrfs `reserve_chunk_space()` zoned 正返回值污染 `ret` 的修复；同时继续跟踪 btrfs、ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；如果维护者要求调整，只基于对应线程发 v2/v3，不要重复投新线程。
 
 P0：把 `outputs/confirmed_bugs.md` 中的真 bug、已修复 bug、已提交 patch、未提交/排除项整理成论文表格。
 
@@ -380,6 +380,25 @@ git checkout master
 ### 12.2 已提交 patch，禁止重复提交
 
 这些已经发到对应 mailing list。不要重复投同一个 patch；后续只能基于维护者回复发 v2/v3 或 reply。
+
+#### btrfs：已提交
+
+- `__add_reloc_root()`
+  - Subject: `[PATCH v2] btrfs: free mapping node on duplicate reloc root insert`
+  - 状态：v2 submitted，Qu Wenruo 已回复；后续只在该线程继续修改或回复。
+- `btrfs_recover_relocation()`
+  - Subject: `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`
+  - From: Guanghui Yang
+  - 状态：patch submitted；本地 QEMU/fault-injection 已验证，但尚未记录为 upstream merged。
+
+#### btrfs：已确认，尚未提交
+
+- `reserve_chunk_space()`
+  - Bug：zoned `btrfs_zoned_activate_one_bg()` 成功返回 `1` 后，`ret` 未归零，导致后续 `if (!ret)` 跳过 `btrfs_block_rsv_add()` 和 `trans->chunk_bytes_reserved` 更新。
+  - 不是 `bg` 生命周期 bug，也不是缺 `btrfs_put_block_group()`；`btrfs_create_chunk()` 成功后 block group 已进入 btrfs / transaction 管理。
+  - 复现：host-managed zoned `null_blk`，`zone_size=256MiB`，`zone_max_active=8`；修复前日志显示 `zoned_activate ret=1` 且 `skip chunk_block_rsv_add`，归零后 `chunk_reserved=393216`。
+  - 修复方向：`ret = btrfs_zoned_activate_one_bg(...); if (ret < 0) return; ret = 0;`，或使用单独局部变量保存 zoned activation 返回值。
+  - 状态：Linux 6.14 本地复现确认；需要准备并提交 btrfs patch。
 
 #### ext4：已提交
 
@@ -467,6 +486,8 @@ E:\kernel-work\linux-f2fs-ifolio-sparse
 - XFS `xfs_qm_quotacheck_dqadjust()`：latest mainline 已修。
 - XFS `xfs_rtcopy_summary()`：latest mainline 已修。
 - F2FS `f2fs_rename()` with `RENAME_WHITEOUT`：latest mainline 已修。
+- btrfs `__add_reloc_root()`：已提交 v2，且已有 Qu Wenruo 回复。
+- btrfs `btrfs_recover_relocation()`：已提交 patch。
 - XFS `xfs_rtginode_ensure()`：已提交 patch。
 - F2FS `f2fs_get_new_data_folio()`：已提交 v2。
 - F2FS `find_in_level()`：已提交。
@@ -476,10 +497,12 @@ E:\kernel-work\linux-f2fs-ifolio-sparse
 
 P0：
 
-1. 跟踪 F2FS 三封 patch 在 `linux-f2fs-devel` / patchwork 上的回复。
-2. 跟踪 XFS `xfs_rtginode_ensure()` 回复，尤其是 Darrick/Christoph 是否要求调整 commit message 或 Fixes tag。
-3. 跟踪 ext4 已提交 patch 的 review/合入状态。
-4. 不要把 submitted patch 写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
+1. 准备并提交 btrfs `reserve_chunk_space()` zoned 正返回值污染 `ret` 的修复；commit message 必须强调这不是 `btrfs_put_block_group()` / lifetime bug。
+2. 跟踪 btrfs 两个已提交 patch 的回复；`__add_reloc_root()` 后续修改必须基于已有 v2 线程。
+3. 跟踪 F2FS 三封 patch 在 `linux-f2fs-devel` / patchwork 上的回复。
+4. 跟踪 XFS `xfs_rtginode_ensure()` 回复，尤其是 Darrick/Christoph 是否要求调整 commit message 或 Fixes tag。
+5. 跟踪 ext4 已提交 patch 的 review/合入状态。
+6. 不要把 submitted patch 写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
 
 P1：
 

@@ -16,8 +16,8 @@ It does not mean upstream acceptance unless explicitly stated.
 | 3 | ext4 | `ext4_init_orphan_info()` | `buffer_head` leak | patch submitted | `/root/bug_submit/patches/orphan-v2/v2-0001-ext4-fix-buffer_head-leak-in-ext4_init_orphan_inf.patch` |
 | 4 | ext4 | `ext4_expand_extra_isize_ea()` | stale error after successful retry | patch submitted / under review | `/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch` |
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
-| 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | source-level confirmed | `fs/btrfs/relocation.c` duplicate `rb_simple_insert()` path |
-| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition; patch submitted | `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md`, `/root/bug_submit/linux-btrfs-recover-relocation`, commit `08f1ccb98abb` |
+| 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | patch v2 submitted; reviewer reply received | `[PATCH v2] btrfs: free mapping node on duplicate reloc root insert` |
+| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition; patch submitted | `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`, `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md` |
 | 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
 | 9 | ext4 | `ext4_dx_add_entry()` | `bh2` `buffer_head` leak | source-level confirmed in v6.8; fixed in later mainline | v6.8 htree split error paths omitted `brelse(bh2)`; later code adds it |
 | 10 | ext4 | `ext4_ext_shift_extents()` | `ext4_ext_path` leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline sends `!extent` to `out:` and releases `path` |
@@ -27,6 +27,16 @@ It does not mean upstream acceptance unless explicitly stated.
 | 14 | F2FS | `f2fs_get_new_data_folio()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`, Message-ID `<20260713061601.712-1-3497809730@qq.com>` |
 | 15 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | patch submitted | `[PATCH] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260713063633.555-1-3497809730@qq.com>` |
 | 16 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, Message-ID `<20260713064043.1837-1-3497809730@qq.com>` |
+| 17 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch submitted | `[PATCH] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_860054603C488A379E3D21126EA610D63108@qq.com` |
+| 18 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
+| 19 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
+| 20 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
+
+As of 2026-07-14, 6 of the 20 confirmed bug records are already fixed
+upstream.  The other 14 records are covered by submitted patches or patch
+series, but are not recorded here as upstream merged.  Bugs #1 and #2 share
+one ext4 patch, and bugs #18-#20 are covered by one 3-patch btrfs sprout
+rollback series.
 
 ## ext4
 
@@ -223,9 +233,11 @@ Evidence:
   `__add_reloc_root(struct btrfs_root *root, struct reloc_control *rc)`.
 - Earlier local validation included an ASan/LSan minimal reproduction showing a
   32-byte leak for this duplicate-insert path.
+- Mailing-list evidence checked on 2026-07-13 shows a reply from Qu Wenruo to
+  `[PATCH v2] btrfs: free mapping node on duplicate reloc root insert`.
 
-Status: confirmed source-level bug candidate.  Not yet upstream-submitted in
-the checked workspace.
+Status: confirmed source-level bug candidate and patch v2 submitted.  A
+reviewer reply has been received; this is not yet recorded as upstream merged.
 
 ### 7. `fs/btrfs/relocation.c::btrfs_recover_relocation`
 
@@ -256,6 +268,9 @@ Evidence:
   `/root/bug_submit/linux-btrfs-recover-relocation`
   - commit `08f1ccb98abb`
   - patch file `/tmp/btrfs-recover-relocation-cleanup-v1/0001-btrfs-drop-recovered-reloc-root-refs-on-recovery-fai.patch`
+- Mailing-list evidence checked on 2026-07-13 shows the submitted patch from
+  Guanghui Yang with subject
+  `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`.
 - Test target: Linux 6.8 Btrfs recovery.
 - Pending relocation image contained 25 `TREE_RELOC ROOT_ITEM` records.
 - Normal recovery succeeded.
@@ -282,7 +297,184 @@ references on errors before `clean_dirty_subvols()`, independent of
 `BTRFS_FS_ERROR`.
 
 Status: confirmed cleanup-defect candidate under the tested fault-injection
-condition, with a follow-up fix patched and locally validated.
+condition, with a follow-up fix locally validated and submitted upstream.  It
+is not yet recorded as upstream merged.
+
+### 17. `fs/btrfs/block-group.c::reserve_chunk_space`
+
+Bug type: positive zoned activation success return skips chunk metadata
+reservation.
+
+In Linux 6.14, `reserve_chunk_space()` reuses the local variable `ret` for both
+system chunk creation state and the return value of
+`btrfs_zoned_activate_one_bg()`:
+
+```c
+bg = btrfs_create_chunk(trans, flags);
+if (IS_ERR(bg)) {
+        ret = PTR_ERR(bg);
+} else {
+        ret = btrfs_zoned_activate_one_bg(fs_info, info, true);
+        if (ret < 0)
+                return;
+
+        btrfs_chunk_alloc_add_chunk_item(trans, bg);
+}
+...
+if (!ret) {
+        ret = btrfs_block_rsv_add(fs_info, &fs_info->chunk_block_rsv,
+                                  bytes, BTRFS_RESERVE_NO_FLUSH);
+        if (!ret)
+                trans->chunk_bytes_reserved += bytes;
+}
+```
+
+`btrfs_zoned_activate_one_bg()` returns `1` when it successfully activates a
+block group.  That is a successful result, but the positive value remains in
+`ret`, so the later `if (!ret)` condition is false and
+`btrfs_block_rsv_add()` is skipped.
+
+This is not a block group lifetime bug and not a missing
+`btrfs_put_block_group()` case.  The newly created block group is already
+inserted into btrfs structures and queued on `trans->new_bgs`.  The real issue
+is that a positive successful zoned activation result leaks into the later
+reservation condition.
+
+Reproducer evidence:
+
+- Host-managed zoned `null_blk` device with `zone_size=256MiB` and
+  `zone_max_active=8`.
+- Instrumented Linux 6.14 `reserve_chunk_space()` before the fix:
+
+```text
+BTRFS_REPRO zoned_activate ret=1 before_add_chunk_item chunk_reserved=0
+BTRFS_REPRO skip chunk_block_rsv_add ret=1 chunk_reserved=0
+```
+
+- After normalizing the non-negative activation result back to `0`:
+
+```c
+ret = btrfs_zoned_activate_one_bg(fs_info, info, true);
+if (ret < 0)
+        return;
+ret = 0;
+```
+
+the same workload showed:
+
+```text
+BTRFS_REPRO zoned_activate ret=1 before_add_chunk_item chunk_reserved=0
+BTRFS_REPRO chunk_block_rsv_add ret=0 chunk_reserved=393216
+```
+
+Suggested fix direction: do not let a positive success return from
+`btrfs_zoned_activate_one_bg()` control the later chunk block reservation.
+Either reset `ret` to `0` after the `ret < 0` check, or use a separate local
+variable for the zoned activation result.
+
+Submitted patch:
+
+- Subject: `[PATCH] btrfs: zoned: fix missing chunk metadata reservation`
+- Lore:
+  `https://lore.kernel.org/linux-btrfs/tencent_860054603C488A379E3D21126EA610D63108@qq.com/`
+
+Status: confirmed by targeted zoned-device reproduction on Linux 6.14 and
+patch submitted.  Not recorded as upstream merged.
+
+### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
+
+Bug type: failed sprout device remains linked on the transaction device update
+list.
+
+When creating the first writable chunks for a sprout filesystem,
+`btrfs_create_chunk()` can add the newly allocated device to the current
+transaction's device update list through `device->post_commit_list`.  If the
+subsequent system chunk creation fails, `btrfs_init_new_device()` aborts the
+transaction and releases the device while `post_commit_list` is still linked.
+
+The observed failure was:
+
+```text
+WARN_ON(!list_empty(&device->post_commit_list))
+```
+
+in `btrfs_free_device()`.  This is not a `meta_bg` local reference leak; the
+pending block group is drained from `trans->new_bgs` by the transaction abort
+path.
+
+Submitted patch:
+
+- Subject: `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`
+- Lore:
+  `https://lore.kernel.org/linux-btrfs/tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com/`
+
+Status: confirmed by targeted seed/sprout fault injection and patch submitted
+as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
+recorded as upstream merged.
+
+### 19. `fs/btrfs/volumes.c::btrfs_init_new_device`
+
+Bug type: active device pointers left on a failed sprout device.
+
+During sprout setup, `btrfs_init_new_device()` switches `latest_dev` and
+possibly `s_bdev` from the seed device to the new sprout device before the
+first writable chunks are fully created.  If the later chunk creation or sprout
+setup path fails, the old error path releases the new device without switching
+those active device pointers back to the seed device.
+
+The reproduced failure reached `btrfs_show_devname()` with a stale/freed active
+device pointer and triggered a NULL pointer dereference.
+
+Submitted patch:
+
+- Subject: `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`
+- Lore:
+  `https://lore.kernel.org/linux-btrfs/tencent_3A451E4FED103C3756888298712A161E2607@qq.com/`
+
+Status: confirmed by targeted seed/sprout fault injection and patch submitted
+as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
+recorded as upstream merged.
+
+### 20. `fs/btrfs/volumes.c::btrfs_init_new_device`
+
+Bug type: sprout `fs_devices` state is not rolled back after device-add
+failure.
+
+`btrfs_setup_sprout()` moves the seed devices out of `fs_info->fs_devices`,
+clears the seeding state and installs a new fsid for the sprout filesystem.
+If creating the first writable chunks fails afterwards, the old error path
+removes the failed new device but leaves the mounted filesystem in the
+partially initialized sprout `fs_devices` state.  The new sprout container then
+has no open devices.
+
+The reproduced failure triggered:
+
+```text
+assertion failed: nr_devices, in fs/btrfs/super.c
+kernel BUG at fs/btrfs/super.c
+```
+
+The final fault-injection run after the 3-patch series showed:
+
+```text
+volumes.c post_commit_list WARN      0
+free_fs_devices WARN                0
+btrfs_show_devname                  0
+BUG: kernel NULL pointer dereference 0
+assertion failed: nr_devices        0
+kernel BUG at fs/btrfs/super.c      0
+REPRO_DONE
+```
+
+Submitted patch:
+
+- Subject: `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`
+- Lore:
+  `https://lore.kernel.org/linux-btrfs/tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com/`
+
+Status: confirmed by targeted seed/sprout fault injection and patch submitted
+as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
+recorded as upstream merged.
 
 ## XFS
 

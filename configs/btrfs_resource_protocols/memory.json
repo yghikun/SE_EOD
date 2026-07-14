@@ -54,5 +54,19 @@
     "evidence_level": "E2_API_PROTOCOL",
     "confidence": "high",
     "description": "Dynamically allocated ulists must be freed directly or by free_leaf_list, which releases auxiliary leaf data and the ulist."
+  },
+  {
+    "protocol_id": "btrfs.extent_map.alloc.free",
+    "resource_kind": "extent_map",
+    "acquire_functions": ["alloc_extent_map"],
+    "release_functions": ["free_extent_map"],
+    "success_condition": "return_value != NULL",
+    "resource_expr": "lhs",
+    "required_action": "free_extent_map",
+    "exceptions": ["ownership_transferred", "released_by_wrapper", "resource_not_successfully_acquired", "resource_stored_for_later_cleanup"],
+    "evidence_type": "api_lifecycle",
+    "evidence_level": "E2_API_PROTOCOL",
+    "confidence": "high",
+    "description": "Btrfs extent maps allocated by alloc_extent_map must be released with free_extent_map unless ownership escapes."
   }
 ]

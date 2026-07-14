@@ -74,6 +74,7 @@ def suppresses_missing_cleanup(
     function_name = row.get("function", "")
     condition = row.get("condition", "").strip()
     error_source = row.get("error_source_expr", "")
+    file_name = row.get("file", "")
 
     if (
         function_name == "__track_dentry_update"
@@ -102,6 +103,34 @@ def suppresses_missing_cleanup(
         and error_source.startswith("ext4_whiteout_for_rename(")
         and missing_action == "ext4_journal_stop"
         and same_resource_expr(missing_arg, "handle")
+    ):
+        return True
+
+    if (
+        file_name == "fs/btrfs/extent-tree.c"
+        and function_name == "btrfs_lock_cluster"
+        and missing_action == "spin_unlock"
+        and same_resource_expr(missing_arg, "&cluster->refill_lock")
+    ):
+        return True
+
+    if (
+        file_name == "fs/btrfs/block-group.c"
+        and function_name == "reserve_chunk_space"
+        and missing_action in {"kfree", "kvfree", "kmem_cache_free"}
+        and same_resource_expr(missing_arg, "bg")
+        and str(resource.get("acquire_func", "") if resource else "")
+        in {"btrfs_create_chunk", "create_chunk"}
+    ):
+        return True
+
+    if (
+        file_name == "fs/btrfs/volumes.c"
+        and function_name == "init_first_rw_device"
+        and missing_action in {"kfree", "kvfree", "kmem_cache_free"}
+        and same_resource_expr(missing_arg, "meta_bg")
+        and str(resource.get("acquire_func", "") if resource else "")
+        in {"btrfs_create_chunk", "create_chunk"}
     ):
         return True
 

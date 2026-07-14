@@ -64,6 +64,10 @@
       "resource_type": "ulist",
       "release": ["ulist_free", "free_leaf_list"]
     },
+    "alloc_extent_map": {
+      "resource_type": "extent_map",
+      "release": ["free_extent_map"]
+    },
     "btrfs_start_transaction": {
       "resource_type": "btrfs_transaction",
       "release": ["btrfs_end_transaction", "btrfs_commit_transaction"],
