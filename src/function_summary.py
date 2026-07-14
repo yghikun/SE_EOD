@@ -437,9 +437,17 @@ def _map_condition_to_caller(
     if mapped == "always":
         return mapped
     for index in range(len(callee_args) - 1, -1, -1):
-        mapped = re.sub(
-            rf"\barg{index}\b", f"({callee_args[index].strip()})", mapped
+        actual = callee_args[index].strip()
+        # Parameter-to-parameter forwarding is already precedence-safe. Adding
+        # parentheses at every wrapper creates a fresh condition string on each
+        # fixed-point round (e.g. ``((((arg0))))``), preventing convergence.
+        replacement = (
+            actual
+            if re.fullmatch(r"arg\d+", actual)
+            or any(same_resource_expr(actual, parameter) for parameter in caller_parameters)
+            else f"({actual})"
         )
+        mapped = re.sub(rf"\barg{index}\b", lambda _match: replacement, mapped)
     return _normalize_parameter_condition(mapped, caller_parameters)
 
 

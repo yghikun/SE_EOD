@@ -1,13 +1,24 @@
 # SE-EOD 项目交接文档
 
-更新时间：2026-07-13（已同步 GitHub main，并清理临时 PR 分支）  
+更新时间：2026-07-14（当前状态以第 1、9、10、13 节为准；第 5、6、12 节保留历史执行记录）
 工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
 
 ## 1. 当前一句话状态
 
-SE-EOD 当前已经完成论文核心方法的主要工程落地：CFG 路径敏感资源传播、跨函数摘要、函数指针/间接调用处理、retry/backedge 语义、`PTR_ERR` 路径事实、CFG 诊断、候选证据排序和 LLM review task 生成都已经接入主流程。
+SE-EOD 当前已经完成论文核心方法的主要工程落地：CFG 路径敏感资源传播、跨函数摘要、简单函数指针/间接调用处理、retry/backedge 语义、`PTR_ERR` 路径事实、CFG 诊断、候选证据排序和 LLM review task 生成都已经接入主流程。
 
-现在的工作重点已经从“核心方法还没落地”转为“用 Linux 6.14 的 ext4/xfs/f2fs/btrfs 做系统性检查，并让 LLM/DeepSeek 对候选做二次验证，再沉淀论文表格和人工审计结果”。
+现在的工作重点不是继续增加候选，而是补齐论文可信度闭环：独立 benchmark、XFS 固定点收敛、B0--Full 消融、外部 baseline、正式指标和可复现 artifact。
+
+当前可核验快照：
+
+- Linux v6.8、v7.1、v6.14，目标文件系统为 ext4、btrfs、F2FS、XFS。
+- Linux v6.14 共生成 520 条 review task；ext4/XFS/F2FS 的 154 条已完成 DeepSeek 辅助 triage 和源码人工复核。
+- `outputs/confirmed_bugs.md` 当前记录 20 条 confirmed/reviewed bug records：6 条已由上游修复，其余 14 条由已提交 patch 或 patch series 覆盖，但尚未记为 upstream merged。
+- btrfs `reserve_chunk_space()` 修复已提交 v2，并获得 Reviewed-by；`btrfs_init_new_device()` sprout 回滚问题已提交 3-patch series。
+- 2026-07-14 修复 XFS 摘要收敛后全量测试结果为 `110 passed`。
+- Linux v6.14 XFS 原始 manifest 记录 50 轮未收敛；根因已定位为条件映射重复加括号，修复后 4 轮收敛且 69 条候选完全不变。诊断见 `outputs/linux-v6.14-xfs-convergence-check/xfs_convergence_report.md`。
+- XFS 仍有 1 个独立的 unresolved indirect call：`xfs_getfsmap` 中的函数指针 `fn`；它不影响摘要收敛，但需要作为保守边界披露。
+- 独立 benchmark 尚未建立。现有 30 条 ext4 v6.8 pilot 是开发集，不是 gold test set。
 
 最重要的安全线：
 
@@ -109,12 +120,14 @@ llm_input=E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug
 
 每个文件系统统计：
 
-| FS | Error paths | Candidates/Tasks | CFG functions | Truncated | Unresolved indirect calls |
-|---|---:|---:|---:|---:|---:|
-| ext4 | 2214 | 30 | 818 | 0 | 0 |
-| btrfs | 5026 | 366 | 1843 | 0 | 0 |
-| f2fs | 1614 | 55 | 677 | 0 | 0 |
-| xfs | 2023 | 69 | 869 | 0 | 1 |
+| FS | Error paths | Candidates/Tasks | CFG functions | Summary iterations/converged | Truncated | Unresolved indirect calls |
+|---|---:|---:|---:|---|---:|---:|
+| ext4 | 2214 | 30 | 818 | 4 / true | 0 | 0 |
+| btrfs | 5026 | 366 | 1843 | 5 / true | 0 | 0 |
+| f2fs | 1614 | 55 | 677 | 3 / true | 0 | 0 |
+| xfs | 2023 | 69 | 869 | 50 / false（原始）；4 / true（修复后） | 0 | 1 |
+
+XFS 不收敛已确认不是调用图深度或 SCC 发散，而是 `_map_condition_to_caller()` 每轮为参数增加括号，导致条件字符串和 effect identity 持续变化。修复后完整 XFS pipeline 在 4 轮收敛，69 个 ranked candidate 行完全一致，运行时间由 27.898 秒降至 15.640 秒。
 
 优先级分布：
 
@@ -146,9 +159,9 @@ PowerShell 读取中文 review question 时要用 UTF-8：
 Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\ext4\llm_review_tasks.jsonl -TotalCount 1
 ```
 
-## 5. 先验证 ext4、xfs、f2fs 的 DeepSeek 命令
+## 5. 历史记录：ext4、XFS、F2FS 的 DeepSeek 命令
 
-用户当前想先排除 btrfs，只把 `ext4`、`xfs`、`f2fs` 交给 DeepSeek/LLM 验证。三者合计任务数是 154。
+本节任务已经完成，仅保留用于复现当时的执行方式。不要重复调用模型或把这些 verdict 当作 gold label。三者合计任务数是 154。
 
 运行前设置 API key：
 
@@ -198,9 +211,9 @@ for filesystem in ("ext4", "xfs", "f2fs"):
 
 如果 DeepSeek 中断，不要覆盖已完成 reviews。应使用已有函数的 `start_index` 和 `limit` 分段续跑，或先备份旧 `deepseek_reviews.jsonl`。
 
-## 6. DeepSeek 完成后的下一步
+## 6. 历史记录：DeepSeek 完成后的核验步骤
 
-完成 ext4/xfs/f2fs 验证后，接手者应该做：
+以下步骤已经完成，仅作为审计流程记录：
 
 1. 统计每个 `deepseek_reviews.jsonl` 的成功数、失败数、解析失败数。
 2. 检查 review task id 是否和输入任务一一对应。
@@ -215,16 +228,10 @@ for filesystem in ("ext4", "xfs", "f2fs"):
 
 ## 7. 测试状态
 
-核心方法相关测试此前全量通过：
+2026-07-14 在当前工作树执行全量测试：
 
 ```text
-102 passed
-```
-
-Linux 6.14 检查脚本新增测试通过：
-
-```text
-2 passed
+110 passed in 0.45s
 ```
 
 接手后最小验证命令：
@@ -242,8 +249,8 @@ python -m pytest -q tests/test_linux_v6_14_checker.py
 ```text
 branch: main
 remote: https://github.com/yghikun/SE_EOD.git
-artifact sync point: 28c58df Add Linux 6.14 bug-check outputs
-status: main 与 origin/main 对齐
+HEAD/origin-main: fb24038 验证bug
+status: main 与 origin/main 对齐；工作树存在 `outputs/confirmed_bugs.md` 的未提交状态更新，禁止覆盖
 ```
 
 本轮已进入 `main` 并推送到 GitHub 的关键提交：
@@ -251,6 +258,7 @@ status: main 与 origin/main 对齐
 - `156c461`：`Update handoff and confirmed bug status`
 - `6bc316b`：`Add Linux 6.14 filesystem checker`
 - `28c58df`：`Add Linux 6.14 bug-check outputs`
+- `fb24038`：`验证bug`
 
 对应的临时 PR：
 
@@ -298,23 +306,25 @@ git diff --cached --stat
 
 论文还没完全闭环的部分：
 
-1. ext4/xfs/f2fs 的 154 条候选已经完成 DeepSeek/人工复核，并已沉淀到 `outputs/confirmed_bugs.md`；后续要把这些结果整理成论文表格可直接使用的形式。
-2. btrfs 的 366 条候选还没有进入同等粒度的 DeepSeek/人工复核；如果继续扩展实验，建议单独开一轮，不要和本轮已经提交的 btrfs/F2FS/XFS/ext4 patch 混在一起。
-3. 已提交到内核邮件列表的 patch 仍只能标为 `submitted / under review`，不能写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
-4. 正式 benchmark、Precision/Recall/F1、消融和外部 baseline 仍需按 `PAPER_ROADMAP.md` 收尾。
-5. GitHub 主分支已经同步完成；后续重点从“上传仓库”转为“跟踪上游 review、整理论文 artifact 和补齐实验闭环”。
+1. 当前只有 30 条 ext4 v6.8 开发 pilot；尚无独立、冻结、双 reviewer 的 ground-truth benchmark，这是正式投稿的首要阻塞项。
+2. ext4/XFS/F2FS 的 154 条候选已经完成 DeepSeek/人工复核并沉淀到 `outputs/confirmed_bugs.md`；btrfs 366 条尚未完成同等粒度审计，应先聚类并优先处理 P1/高分/新候选族。
+3. Linux v6.14 XFS 摘要不收敛已修复并验证候选稳定；剩余 `xfs_getfsmap::fn` 间接调用是需要披露的保守边界。
+4. 已提交到内核邮件列表的 patch 仍只能标为 `submitted / under review`，不能写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
+5. 正式 Recall/F1、B0--Full 消融、外部 baseline、依赖锁定、CI 和论文表格生成仍需按 `PAPER_ROADMAP.md` 收尾。
 
 ## 10. 接手优先级
 
-P0：准备并提交 btrfs `reserve_chunk_space()` zoned 正返回值污染 `ret` 的修复；同时继续跟踪 btrfs、ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；如果维护者要求调整，只基于对应线程发 v2/v3，不要重复投新线程。
+P0：扩展并冻结独立 benchmark：四文件系统 300--500 条样本、至少 100 个独立正例、dev/validation/test 隔离、双 reviewer、Cohen's kappa 和 adjudication。
 
-P0：把 `outputs/confirmed_bugs.md` 中的真 bug、已修复 bug、已提交 patch、未提交/排除项整理成论文表格。
+已完成：XFS 函数摘要在 4 轮收敛，69 个候选 ID 和 ranked rows 与修复前完全一致；后续只需将该修复纳入统一三版本最终重跑。
 
-P1：如果继续做 btrfs，从 `outputs/linux-v6.14-bug-check/btrfs/` 的 366 条候选单独启动 DeepSeek/人工 triage。
+P0：将 pilot 评估器升级为论文级评估入口，补 Recall、F1、分组指标、bootstrap 置信区间、CSV/JSON/Markdown/LaTeX 输出；随后运行 B0--Full 和至少一个外部工具 baseline。
 
-P1：补正式 benchmark、Precision/Recall/F1、消融和外部 baseline。
+P1：把 `outputs/confirmed_bugs.md` 整理为论文表 7 的 CSV/JSON，并将 `/root/bug_submit/...` 替换为 lore URL 或仓库内公开材料。
 
-P2：后续仓库提交仍走 `main`，但每次提交前确认没有带入 `linux-sources/`、外部 Linux patch 工作树或任何密钥。
+P1：对 btrfs 366 条候选先按函数、资源和路径族聚类，再优先人工复核 P1、高分和新候选族；LLM 仅可辅助排序。
+
+并行维护：继续跟踪 btrfs、ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；维护者要求调整时只沿对应线程发 v2/v3。
 
 ## 11. 最小恢复命令
 
@@ -326,16 +336,17 @@ cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
 Get-Content -Encoding UTF8 PROJECT_HANDOFF.md
 Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\check_manifest.json -TotalCount 40
 
-python -m pytest -q tests/test_linux_v6_14_checker.py
+git status --short
+python -m pytest -q
 ```
 
-然后优先查看第 12 节的人工复核与 patch 提交状态；第 5 节是较早的 DeepSeek 执行记录，ext4/XFS/F2FS 这部分已经完成，不要重复跑。
+然后优先查看第 13 节当前状态与 `PAPER_ROADMAP.md` 的“2026-07-14 当前执行顺序”；第 5、6、12 节是历史执行记录，不要重复跑已完成的 ext4/XFS/F2FS 模型任务。
 
 ---
 
-## 12. 2026-07-13 最新补充：ext4 / XFS / F2FS 人工复核与 patch 提交状态
+## 12. 2026-07-13 历史记录：人工复核与 patch 提交状态
 
-本节覆盖前面较早的“DeepSeek 完成后下一步”描述。ext4、XFS、F2FS 的 154 条候选已经完成完整性核验和源码人工复核：
+本节保留 2026-07-13 的执行现场。凡与第 1、9、10、13 节冲突的状态，以 2026-07-14 当前状态为准。ext4、XFS、F2FS 的 154 条候选已经完成完整性核验和源码人工复核：
 
 | FS | 候选数 | DeepSeek 判 true | 人工复核真候选 | 真 bug cluster |
 |---|---:|---:|---:|---:|
@@ -348,7 +359,7 @@ python -m pytest -q tests/test_linux_v6_14_checker.py
 
 - `outputs/confirmed_bugs.md`
 
-注意：`outputs/confirmed_bugs.md` 已新增 confirmed bug #14--#16，并修正了 XFS `xfs_rtginode_ensure()` 和 ext4 `ext4_init_orphan_info()` 的提交/未合入状态。
+注意：本节当时只更新到 confirmed bug #16；当前 `outputs/confirmed_bugs.md` 已扩展到 #20。
 
 ### 12.1 最新 mainline 对照基线
 
@@ -391,14 +402,14 @@ git checkout master
   - From: Guanghui Yang
   - 状态：patch submitted；本地 QEMU/fault-injection 已验证，但尚未记录为 upstream merged。
 
-#### btrfs：已确认，尚未提交
+#### btrfs：当时已确认、随后已提交
 
 - `reserve_chunk_space()`
   - Bug：zoned `btrfs_zoned_activate_one_bg()` 成功返回 `1` 后，`ret` 未归零，导致后续 `if (!ret)` 跳过 `btrfs_block_rsv_add()` 和 `trans->chunk_bytes_reserved` 更新。
   - 不是 `bg` 生命周期 bug，也不是缺 `btrfs_put_block_group()`；`btrfs_create_chunk()` 成功后 block group 已进入 btrfs / transaction 管理。
   - 复现：host-managed zoned `null_blk`，`zone_size=256MiB`，`zone_max_active=8`；修复前日志显示 `zoned_activate ret=1` 且 `skip chunk_block_rsv_add`，归零后 `chunk_reserved=393216`。
   - 修复方向：`ret = btrfs_zoned_activate_one_bg(...); if (ret < 0) return; ret = 0;`，或使用单独局部变量保存 zoned activation 返回值。
-  - 状态：Linux 6.14 本地复现确认；需要准备并提交 btrfs patch。
+  - 当前状态：Linux 6.14 本地复现确认；修复已提交 v2，lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com`，并获得 Johannes Thumshirn 的 Reviewed-by；尚未记录为 upstream merged。
 
 #### ext4：已提交
 
@@ -495,24 +506,22 @@ E:\kernel-work\linux-f2fs-ifolio-sparse
 
 ### 12.5 下一步优先事项
 
-P0：
+以下是 2026-07-13 当时的优先事项，已由第 10、13 节取代。状态修正如下：
 
-1. 准备并提交 btrfs `reserve_chunk_space()` zoned 正返回值污染 `ret` 的修复；commit message 必须强调这不是 `btrfs_put_block_group()` / lifetime bug。
+1. btrfs `reserve_chunk_space()` 修复已经提交 v2 并获得 Reviewed-by，不再是“待提交”事项。
 2. 跟踪 btrfs 两个已提交 patch 的回复；`__add_reloc_root()` 后续修改必须基于已有 v2 线程。
 3. 跟踪 F2FS 三封 patch 在 `linux-f2fs-devel` / patchwork 上的回复。
 4. 跟踪 XFS `xfs_rtginode_ensure()` 回复，尤其是 Darrick/Christoph 是否要求调整 commit message 或 Fixes tag。
 5. 跟踪 ext4 已提交 patch 的 review/合入状态。
 6. 不要把 submitted patch 写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
 
-P1：
-
 1. 把 `outputs/confirmed_bugs.md` 中所有外部路径、Message-ID、状态整理成论文表格可用格式。
-2. 如果需要继续挖 btrfs，先从 `outputs/linux-v6.14-bug-check/btrfs/` 的 366 条候选做 DeepSeek/人工 triage；不要把 btrfs 和这轮 F2FS patch 混在一起。
-3. 运行最小测试：
+2. 如果需要继续挖 btrfs，先对 366 条候选聚类，再做优先级人工 triage；不要把 DeepSeek verdict 当作标签。
+3. 运行全量测试：
 
 ```powershell
 cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-python -m pytest -q tests/test_linux_v6_14_checker.py
+python -m pytest -q
 ```
 
 ### 12.6 当前仓库状态提醒
@@ -520,16 +529,16 @@ python -m pytest -q tests/test_linux_v6_14_checker.py
 本轮 SE_EOD 仓库更新已经合并到 `main` 并推送到 GitHub。最终主分支包含：
 
 - `PROJECT_HANDOFF.md`：交接补充。
-- `outputs/confirmed_bugs.md`：confirmed bug #13--#16、已修复项、已提交 patch 状态。
+- `outputs/confirmed_bugs.md`：当前 confirmed/reviewed bug #1--#20、已修复项、已提交 patch 状态。
 - `outputs/linux-v6.14-bug-check/`：Linux 6.14 分析输出 artifact。
 - `scripts/check_linux_v6_14_filesystems.py`
 - `tests/test_linux_v6_14_checker.py`
 
-最终核验过的最小测试：
+2026-07-14 最终核验过的全量测试：
 
 ```text
-python -m pytest -q tests/test_linux_v6_14_checker.py
-2 passed in 0.02s
+python -m pytest -q
+110 passed in 0.45s
 ```
 
 最终 GitHub 状态：
@@ -554,3 +563,46 @@ git diff --cached --stat
 - `linux-sources/`
 - `E:\kernel-work\...` 外部 Linux patch 工作树
 - 邮箱授权码、API key、SMTP 密码
+
+---
+
+## 13. 2026-07-14 当前权威状态
+
+### 13.1 投稿阻塞项
+
+| 顺序 | 阻塞项 | 当前证据 | 完成标准 |
+|---:|---|---|---|
+| 1 | 独立 benchmark | 仅有 30 条 ext4 v6.8 开发 pilot | 四文件系统 300--500 条、至少 100 正例、冻结 test split、双 reviewer、kappa、adjudication |
+| 2 | 论文级指标 | 当前 evaluator 主要输出 precision 与 Precision@K | Recall、F1、分组指标、置信区间、人工成本和论文表格格式 |
+| 3 | Baseline/消融 | 已有 ext4 开发集局部消融 | 相同 benchmark 上 B0--Full、pattern baseline、至少一个外部工具 baseline |
+| 4 | Artifact | 有 runner/manifest，无打包、CI 和开源元数据 | 统一命令、稳定 manifest schema、依赖锁、CI、LICENSE、CITATION、干净环境复现 |
+
+已解除的阻塞项：XFS 摘要条件规范化已修复，4 轮收敛，候选稳定；`xfs_getfsmap::fn` 作为单独的保守间接调用边界保留。
+
+### 13.2 Bug 与 upstream 状态
+
+- `outputs/confirmed_bugs.md` 共 20 条记录。
+- 6 条已在上游修复；其余 14 条由已提交 patch 或 patch series 覆盖。
+- `reserve_chunk_space()`：v2 submitted，Reviewed-by received，未记录为 upstream merged。
+- `btrfs_init_new_device()`：3-patch sprout rollback series submitted，未记录为 upstream merged。
+- 所有状态更新必须带最后核验日期、公开 lore/commit 链接和 E0--E5 证据等级。
+- 继续跟踪邮件列表是并行维护任务，不能替代 benchmark 和正式评估主线。
+
+### 13.3 工作树与测试
+
+```text
+branch: main
+HEAD: fb24038
+origin/main: fb24038
+tests: 110 passed in 0.45s
+dirty: 包含用户的 outputs/confirmed_bugs.md 状态更新，以及本轮 XFS 收敛修复和文档；禁止覆盖用户修改
+```
+
+接手后的第一组命令：
+
+```powershell
+cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
+git status --short
+python -m pytest -q
+Get-Content -Encoding UTF8 PAPER_ROADMAP.md -TotalCount 130
+```

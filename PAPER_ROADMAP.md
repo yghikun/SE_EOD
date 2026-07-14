@@ -1,4 +1,4 @@
-# 已完成进度（2026-07-13）
+# 已完成进度（2026-07-14）
 
 以下任务已经完成并有仓库内产物；未列出的原路线图任务仍视为未完成。
 
@@ -16,6 +16,8 @@
 - [x] 交叉核验并保留 `btrfs_recover_relocation()` 4 条已由 QEMU/fault injection 支持的真阳性，禁止误报规则压制已知真 bug。
 - [x] 为自动清理、获取失败、错误返回消费、别名清理和审查契约增加回归测试（`tests/`）。
 - [x] 完成 `experiment-v1.3.3` 两版本四文件系统重跑及模型改进差分，v6.8/v7.1 btrfs 已知真阳性保留率 100%（`outputs/experiment-v1.3.3/`）。
+- [x] 完成 ext4 v6.8 的 CFG/path-sensitive 开发实验，接入基本块状态传播、状态 join、widening、截断统计和简单函数指针/间接调用处理（`src/cfg.py`、`src/resource_tracker.py`、`outputs/experiment-v1.5-cfg/`）。
+- [x] 2026-07-14 修复 XFS 摘要收敛后全量回归测试通过：`110 passed`。
 
 ## 核心方法实现进度（2026-07-12）
 
@@ -34,10 +36,12 @@
 - [x] 建立 Linux v6.14 四文件系统检查脚本和测试（`scripts/check_linux_v6_14_filesystems.py`、`tests/test_linux_v6_14_checker.py`）。
 - [x] 完成 Linux v6.14 `ext4`、`btrfs`、`f2fs`、`xfs` 四文件系统扫描，并上传 artifact（`outputs/linux-v6.14-bug-check/`）：合计 520 条 LLM review task，其中 ext4 30、btrfs 366、f2fs 55、xfs 69。
 - [x] 完成 ext4 / XFS / F2FS 共 154 条候选的 DeepSeek 辅助 triage 和源码人工复核：人工复核真候选 43 条，归并为 11 个真 bug cluster。
-- [x] 将已确认、已修复、已提交补丁和不应重复提交的项目记录到 `outputs/confirmed_bugs.md`，当前共 16 条 confirmed / reviewed bug records。
-- [x] 已提交本轮关键 kernel patch：ext4 3 组、XFS `xfs_rtginode_ensure()` 1 组、F2FS 3 组；当前状态均为 submitted / under review，不应写成 upstream accepted。
+- [x] 将已确认、已修复、已提交补丁和不应重复提交的项目记录到 `outputs/confirmed_bugs.md`，当前共 20 条 confirmed / reviewed bug records；其中 6 条已由上游修复，其余 14 条由已提交 patch 或 patch series 覆盖，但均不记为 upstream merged。
+- [x] 已提交本轮关键 kernel patch：ext4、btrfs、XFS 和 F2FS 均已有提交记录；`reserve_chunk_space()` 已提交 v2 并获得 Reviewed-by。当前 submitted / under review 项不得写成 upstream accepted。
 - [x] SE_EOD 仓库已同步到 GitHub `main`，临时 PR #1 已合并，临时分支已删除；交接文档同步提交为 `51b51c4`。
-- [ ] 仍需在开发 benchmark 上完成更细粒度的 B0--Full 消融、路径敏感 CFG、更复杂的条件返回/alias 关系和函数指针处理；当前实现是可验证的第一版方法闭环，不等同于最终论文版本，候选数变化不解释为最终 precision/recall。
+- [ ] 仍需在独立 benchmark 上完成更细粒度的 B0--Full 消融、复杂条件返回/alias 关系和间接调用边界验证；CFG 与简单函数指针处理已经落地，但目前仅完成 ext4 v6.8 开发集实验。当前实现是可验证的第一版方法闭环，不等同于最终论文版本，候选数变化不解释为最终 precision/recall。
+- [x] 已定位并修复 Linux v6.14 XFS 摘要不收敛：条件传播的重复括号导致 effect identity 每轮变化；修复后 4 轮收敛，69 个候选保持完全一致（`outputs/linux-v6.14-xfs-convergence-check/xfs_convergence_report.md`）。
+- [ ] XFS 仍有 1 个独立的 unresolved indirect call：`fs/xfs/xfs_fsmap.c::xfs_getfsmap` 中的 `fn`（约第 1097 行），需作为保守函数指针边界报告或后续建模。
 
 # SE-EOD 论文与项目完整任务路线图
 
@@ -58,16 +62,16 @@
 
 ## 2. 当前基线
 
-截至 2026-07-13，仓库已经具备：
+截至 2026-07-14，仓库已经具备：
 
 - ext4、btrfs、XFS、F2FS 四类文件系统配置。
-- Linux v6.8 和 v7.1 两个版本的扫描结果。
-- 错误路径抽取、候选规则、协议证据排名、wrapper summary、ownership hint、review feedback 和 LLM 辅助复核链路。
-- demo 端到端测试和一批模块级回归测试。
-- 16 个源码级确认、历史验证、动态验证、已修复或 patch submitted 的问题记录（`outputs/confirmed_bugs.md`）。
+- Linux v6.8、v7.1 和 v6.14 三个版本的扫描结果；v6.14 已覆盖四个目标文件系统。
+- 错误路径抽取、CFG/path-sensitive 传播、跨函数摘要、简单函数指针/间接调用处理、候选规则、协议证据排名、wrapper summary、ownership hint、review feedback 和 LLM 辅助复核链路。
+- demo 端到端测试和模块级回归测试；2026-07-14 修复 XFS 摘要收敛后全量测试为 `110 passed`。
+- 20 个源码级确认、历史验证、动态验证、已修复或 patch submitted 的问题记录（`outputs/confirmed_bugs.md`）；其中 6 个已由上游修复，其余 14 个由已提交 patch/series 覆盖，但尚未记为 upstream merged。
 - btrfs recovery 的 QEMU/fault-injection 验证材料。
 - Linux v6.14 四文件系统扫描 artifact 和 ext4/XFS/F2FS 154 条候选人工复核结果。
-- 多封已发往内核邮件列表的 ext4、XFS、F2FS patch submission 记录。
+- 多封已发往内核邮件列表的 ext4、btrfs、XFS、F2FS patch submission 记录。
 - GitHub `main` 已同步到远端，交接文档和路线图可作为当前接手入口。
 
 当前主要缺口：
@@ -80,6 +84,7 @@
 - 运行 manifest 已在多轮实验中记录，但依赖锁定、artifact 一键复现和 CI 仍未完成。
 - 一部分确认材料引用仓库外路径，外部读者无法复现。
 - 缺少 LICENSE、CITATION、CI 和正式 artifact 说明。
+- Linux v6.14 XFS 的摘要不收敛问题已修复并完成隔离重跑；仍有 `xfs_getfsmap` 的 1 个 unresolved indirect call，需要在威胁分析中披露。
 
 ## 3. 优先级定义
 
@@ -87,6 +92,17 @@
 - `P1`：决定论文质量、可复现性和投稿层次。
 - `P2`：增强影响力，但可以在首篇论文后继续。
 - 每项任务完成后，将 `[ ]` 改为 `[x]`，并补充产物路径或结果链接。
+
+### 2026-07-14 当前执行顺序
+
+当前不再以“增加候选数量”为主线，按以下阻塞关系推进：
+
+1. **独立 benchmark**：从 30 条 ext4 开发 pilot 扩展到四文件系统 300--500 条样本，至少 100 个独立正例；冻结 dev/validation/test，完成双 reviewer、Cohen's kappa 和分歧裁决。
+2. **分析正确性**：已修复 XFS 摘要固定点问题；下一步验证修复后的 XFS 结果进入统一三版本实验，并记录 `xfs_getfsmap::fn` 的保守函数指针边界。
+3. **论文级评估**：补齐 Recall、F1、分组指标、bootstrap 置信区间、人工成本和机器可读/LaTeX 输出。
+4. **正式 baseline 与消融**：在相同 benchmark 上完成 B0--Full，并实现至少一个 pattern baseline 和一个外部工具 baseline。
+5. **Artifact 与论文表格**：统一 runner/manifest，锁定依赖，补 CI、LICENSE、CITATION 和公开证据；由脚本生成论文表 1--7。
+6. **并行维护 upstream**：继续跟踪已提交 patch；只有进入维护者 tree 或 mainline 后才标记 E5/upstream accepted。
 
 ## 4. 阶段 A：冻结研究问题和实验口径
 
@@ -110,7 +126,7 @@
 - [ ] 定义 `candidate`、`true bug`、`historical bug`、`false positive`、`uncertain`。
 - [ ] 定义 `source-confirmed`、`dynamically reproduced`、`patch submitted`、`upstream accepted`。
 - [ ] 定义资源泄漏、部分清理、错误吞噬和 stale error 的边界。
-- [x] 修改 `outputs/confirmed_bugs.md`，区分 source-confirmed、already fixed、patch submitted / under review、QEMU fault-injection confirmed；当前不能把 16 条都表述为新 bug。
+- [x] 修改 `outputs/confirmed_bugs.md`，区分 source-confirmed、already fixed、patch submitted / under review、QEMU fault-injection confirmed；当前 20 条记录不能都表述为新 bug。
 - [ ] 把 `outputs/confirmed_bugs.md` 进一步整理为论文表 7 可直接导出的 CSV/JSON。
 
 建议证据等级：
@@ -192,23 +208,23 @@
 
 ### C1. 定义资源状态模型 `P0`
 
-- [ ] 定义 `UNSEEN`、`ACQUIRED`、`BORROWED`、`TRANSFERRED`、`RELEASED`、`ESCAPED`、`UNKNOWN` 状态。
-- [ ] 定义 acquire、release、return、out-parameter、field store 和 callback 注册的状态转换。
-- [ ] 定义错误路径终点上的违规条件。
+- [x] 定义 `UNSEEN`、`ACQUIRED`、`BORROWED`、`TRANSFERRED`、`RELEASED`、`ESCAPED`、`UNKNOWN` 状态（`src/resource_state.py`）。
+- [x] 定义 acquire、release、return、out-parameter、field store 和 callback 注册的状态转换。
+- [x] 定义错误路径终点上的违规条件。
 - [ ] 定义 alias 不确定、条件编译和未知调用的保守语义。
-- [ ] 将模型写入 `docs/method/resource_state_model.md`。
+- [x] 将模型写入 `docs/method/resource_state_model.md`。
 
 验收标准：模型能用状态转换解释当前所有主要候选类型，而不是依赖散落的特殊分支。
 
 ### C2. 构建函数摘要 `P0`
 
-- [ ] 为函数生成参数级资源摘要。
-- [ ] 摘要至少表达 acquire、release、transfer、borrow、escape 和 conditional effect。
-- [ ] 支持返回值携带资源和 out-parameter 获取资源。
-- [ ] 支持第二参数或非首参数释放资源。
-- [ ] 支持 wrapper 中的条件释放。
-- [ ] 为无法可靠解析的函数输出 `UNKNOWN`，不能静默假设安全。
-- [ ] 将摘要序列化，便于缓存和人工检查。
+- [x] 为函数生成参数级资源摘要（`src/function_summary.py`）。
+- [x] 摘要已表达 acquire、release、transfer、escape 和 conditional effect；显式 borrow effect 仍需补齐并单独评估。
+- [x] 支持返回值携带资源和 out-parameter 获取资源。
+- [x] 支持第二参数或非首参数释放资源。
+- [x] 支持 wrapper 中的条件释放。
+- [x] 对无法可靠解析的调用记录 unknown/未解析信息，不静默假设安全。
+- [x] 将摘要序列化到 `function_summaries.json`，便于人工检查；跨运行增量缓存仍未实现。
 
 建议摘要示例：
 
@@ -223,23 +239,25 @@
 
 ### C3. 调用图与固定点传播 `P0`
 
-- [ ] 构建目标文件系统范围内的调用图。
-- [ ] 处理递归和调用环，定义固定点迭代终止条件。
-- [ ] 在调用点应用 callee summary。
-- [ ] 对无法解析的函数指针和宏调用采用保守策略。
+- [x] 构建目标文件系统范围内的调用图。
+- [x] 已实现固定点迭代和轮次上限；XFS 未收敛根因是条件表达式重复括号导致 effect identity 抖动，已修复并在 4 轮内收敛。
+- [x] 在调用点应用 callee summary。
+- [x] 对简单函数指针进行目标传播，对无法解析的间接调用采用 `UNKNOWN` 保守策略并输出诊断；宏和预处理边界仍需系统报告。
 - [ ] 缓存稳定摘要，避免全量重复计算。
-- [ ] 输出每个跨函数结论的传播链，保证可解释性。
+- [x] 输出跨函数结论的传播链，保证可解释性。
 
 验收标准：至少解决一组当前已知的 wrapper/ownership false positives，并保留已知真阳性。
 
 ### C4. 路径敏感与别名处理 `P1`
 
-- [ ] 将函数内线性 label 解析逐步替换或补充为基本块 CFG。
-- [ ] 区分 acquire 成功路径和 acquire failure 路径。
+- [x] 已用基本块 CFG 补充函数内线性 label 解析，并接入主流程（`src/cfg.py`、`outputs/experiment-v1.5-cfg/`）。
+- [x] 区分 acquire 成功路径和 acquire failure 路径。
 - [ ] 支持简单字段别名、数组元素和指针赋值传播。
-- [ ] 为路径合并定义状态 join 规则。
-- [ ] 限制路径爆炸，并记录被截断路径。
+- [x] 为路径合并定义状态 join 规则（`src/resource_state.py::join_states`）。
+- [x] 通过状态上限与 widening 限制路径爆炸，并在 manifest 中记录 truncated/widened blocks。
 - [ ] 报告宏和预处理不可见性造成的分析盲区。
+
+当前边界：本地字段存储逃逸和简单指针赋值已覆盖，但数组元素、复杂 alias 与跨过程指针关系仍未达到论文级完整度；CFG 消融目前仅覆盖 ext4 v6.8 开发集。
 
 ### C5. 协议自动推断 `P2`
 
@@ -282,9 +300,9 @@
 
 ### D3. 指标实现 `P0`
 
-- [ ] 新建统一评估脚本 `scripts/evaluate_benchmark.py`。
+- [x] 已建立 pilot 评估脚本 `scripts/evaluate_benchmark.py`；仍需升级为冻结 benchmark 的统一评估入口。
 - [ ] 计算 Precision、Recall、F1。
-- [ ] 计算 Precision@10、@20、@50、@100。
+- [x] 已计算当前样本规模允许的 Precision@10、@20、@50、@100。
 - [ ] 计算不同文件系统和候选类型的分组指标。
 - [ ] 计算误报减少率和真阳性保留率。
 - [ ] 报告 bootstrap 置信区间或适当显著性检验。
@@ -311,12 +329,12 @@
 
 ### E2. 解释 btrfs 候选增长 `P0`
 
-- [ ] 核对两个版本使用的 resource map、protocol 和 wrapper summary 是否一致。
-- [ ] 区分新增源码和旧函数中新出现的候选。
-- [ ] 抽样审查新增的 543 条候选。
-- [ ] 统计各 candidate type、resource kind 和 evidence level 的变化。
-- [ ] 判断增长来自真实新增风险、覆盖率提升还是误报。
-- [ ] 将结论写入版本差分报告。
+- [x] 核对两个版本使用的 resource map、protocol 和 wrapper summary，并通过冻结矩阵控制配置差异。
+- [x] 区分新增源码和旧函数中新出现的候选。
+- [x] 对清理模型修正后的 v7.1 btrfs 95 条候选完成逐条源码审计，而不是继续使用原始 543 条作为最终口径。
+- [x] 统计各 candidate type、resource kind 和 evidence level 的变化。
+- [x] 确认原始增长主要受 scope-cleanup/自动清理建模缺失影响，并验证已知真阳性保留率。
+- [x] 将结论写入 `outputs/experiment-v1.3.1/reports/scope_cleanup_ablation.md` 和 `outputs/experiment-v1.3.2/reports/btrfs_v7_1_candidate_audit.md`。
 
 ### E3. 跨文件系统迁移 `P1`
 
@@ -327,8 +345,8 @@
 
 ### E4. 增加第三个 Linux 版本 `P1`
 
-- [ ] 选择一个较早版本或最新稳定版本，明确选择理由。
-- [ ] 使用相同 pipeline 扫描四个文件系统。
+- [x] 选择 Linux v6.14 作为第三个版本，并保存 tag、commit 和来源 manifest。
+- [x] 使用 CFG + interprocedural pipeline 扫描 ext4、btrfs、F2FS、XFS（`outputs/linux-v6.14-bug-check/`）。
 - [ ] 验证主要结论不是 v6.8/v7.1 的偶然现象。
 - [ ] 控制实验规模，不能因增加版本而牺牲人工标注质量。
 
@@ -354,11 +372,13 @@
 
 ### F3. 补丁和上游状态 `P1`
 
-- [ ] 推进 `__add_reloc_root()` 的修复与提交。
+- [x] `__add_reloc_root()` 修复已提交 v2，并收到 reviewer 回复；后续只沿已有线程推进。
+- [x] `reserve_chunk_space()` zoned 正返回值修复已提交 v2，并获得 Reviewed-by；尚未记为 upstream merged。
+- [x] `btrfs_init_new_device()` sprout 回滚问题已形成并提交 3-patch series。
 - [x] 已补充 XFS `xfs_rtginode_ensure()` 源码复核、latest mainline 对照和 patch submission 状态。
 - [x] 已记录 F2FS 三个 patch 的 Message-ID、subject、收件人和 v1/v2 关系。
 - [x] 已记录 submitted、already fixed upstream / duplicate finding、source-level confirmed、QEMU fault-injection confirmed 等状态（`outputs/confirmed_bugs.md`）。
-- [ ] 继续跟踪 ext4、XFS、F2FS 已提交 patch 的邮件列表 / patchwork 状态；维护者要求修改时只发 v2/v3，不重复开新线程。
+- [ ] 继续跟踪 ext4、btrfs、XFS、F2FS 已提交 patch 的邮件列表 / patchwork 状态；维护者要求修改时只发 v2/v3，不重复开新线程。
 - [ ] 补齐 XFS 历史问题的准确 fixing commit。
 - [ ] 将可公开 patch 和复现材料放入仓库或稳定归档地址，替换 `/root/bug_submit/...` 等外部路径。
 - [ ] 目标：至少 2 个 upstream accepted；未达到时如实报告。
@@ -485,8 +505,8 @@
 ### 第 1--2 周：实验地基
 
 - [ ] 完成 A1、A2。
-- [ ] 完成 benchmark schema 和标注指南。
-- [ ] 增加运行 manifest 初版。
+- [x] 完成 benchmark schema 和 pilot 标注指南；独立 benchmark 的 sampling/adjudication 细则仍待冻结。
+- [x] 增加运行 manifest 初版；稳定统一 schema 仍待完成。
 - [ ] 固定依赖并恢复本地测试环境。
 
 ### 第 3--6 周：Benchmark 和 baseline
@@ -499,9 +519,9 @@
 
 ### 第 7--11 周：核心方法
 
-- [ ] 实现资源状态模型。
-- [ ] 实现函数摘要和调用图传播。
-- [ ] 增加路径合并、未知调用和可解释传播链。
+- [x] 实现资源状态模型。
+- [x] 实现函数摘要和调用图传播。
+- [x] 增加路径合并、未知调用诊断和可解释传播链；XFS 摘要不收敛已修复，复杂 alias 边界仍待完善。
 - [ ] 用开发集修复错误，不接触冻结测试集。
 
 ### 第 12--14 周：强验证
@@ -510,7 +530,7 @@
 - [ ] 重跑并冻结四文件系统、多版本的最终论文实验。
 - [ ] 完成统一的跨版本差分归因。
 - [ ] 动态验证高价值候选。
-- [x] 已推进 ext4、XFS、F2FS 多个 patch submission。
+- [x] 已推进 ext4、btrfs、XFS、F2FS 多个 patch submission。
 - [ ] 继续跟踪 patch review、accepted/rejected/duplicate 状态。
 
 ### 第 15--16 周：Artifact 和论文

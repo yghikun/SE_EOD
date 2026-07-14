@@ -74,6 +74,21 @@ def test_release_summary_propagates_to_fixed_point():
     assert db.call_graph["outer_free"] == ("middle_free",)
 
 
+def test_conditional_summary_normalizes_parameter_forwarding_at_fixed_point():
+    functions = [
+        function("leaf_free_if", "void *ptr", "if (ptr->flags) kfree(ptr);"),
+        function("middle_free_if", "void *value", "leaf_free_if(value);"),
+        function("outer_free_if", "void *owned", "middle_free_if(owned);"),
+    ]
+
+    db = infer_function_summaries(functions, RESOURCE_MAP)
+
+    assert db.converged
+    assert db.iterations < 10
+    effect = db.find("outer_free_if").effects[0]
+    assert effect.condition == "arg0->flags"
+
+
 def test_external_transfer_seed_propagates_through_local_wrapper():
     resource_map = {
         **RESOURCE_MAP,
@@ -305,7 +320,7 @@ def test_conditional_effect_remaps_flag_through_wrapper():
     assert any(
         effect.resource == "arg1"
         and effect.action == "release"
-        and effect.condition == "(arg0)"
+        and effect.condition == "arg0"
         for effect in effects
     )
 

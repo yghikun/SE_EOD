@@ -27,7 +27,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 14 | F2FS | `f2fs_get_new_data_folio()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`, Message-ID `<20260713061601.712-1-3497809730@qq.com>` |
 | 15 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | patch submitted | `[PATCH] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260713063633.555-1-3497809730@qq.com>` |
 | 16 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, Message-ID `<20260713064043.1837-1-3497809730@qq.com>` |
-| 17 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch submitted | `[PATCH] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_860054603C488A379E3D21126EA610D63108@qq.com` |
+| 17 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch v2 submitted; Reviewed-by received | `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com` |
 | 18 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
 | 19 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
 | 20 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
@@ -374,12 +374,22 @@ variable for the zoned activation result.
 
 Submitted patch:
 
-- Subject: `[PATCH] btrfs: zoned: fix missing chunk metadata reservation`
+- Subject: `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`
 - Lore:
+  `https://lore.kernel.org/linux-btrfs/tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com/`
+- v1 Lore:
   `https://lore.kernel.org/linux-btrfs/tencent_860054603C488A379E3D21126EA610D63108@qq.com/`
+- Review:
+  Johannes Thumshirn provided
+  `Reviewed-by: Johannes Thumshirn <johannes.thumshirn@wdc.com>`.
+- v2 testing:
+  targeted zoned `null_blk` reproducer with a 4G host-managed device,
+  256MiB zones and `zone_max_active=8`; `btrfs_zoned_activate_one_bg()`
+  returned `1` and `btrfs_block_rsv_add()` reserved 393216 bytes.  xfstests
+  was not run because the reproduction host did not have an xfstests tree.
 
 Status: confirmed by targeted zoned-device reproduction on Linux 6.14 and
-patch submitted.  Not recorded as upstream merged.
+patch v2 submitted.  Not recorded as upstream merged.
 
 ### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
@@ -696,4 +706,3 @@ The following candidates should not be presented as confirmed bugs yet:
   take ownership on failure.
 - `fs/btrfs/ctree.c::btrfs_next_old_leaf`: uncertain / likely false positive
   after path-state review; do not count as confirmed.
-
