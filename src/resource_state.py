@@ -9,6 +9,7 @@ from enum import Enum
 class ResourceState(str, Enum):
     UNSEEN = "UNSEEN"
     ACQUIRED = "ACQUIRED"
+    MAY_ACQUIRED = "MAY_ACQUIRED"
     BORROWED = "BORROWED"
     TRANSFERRED = "TRANSFERRED"
     RELEASED = "RELEASED"
@@ -31,6 +32,9 @@ _TRANSITIONS: dict[tuple[ResourceState, ResourceAction], ResourceState] = {
     (ResourceState.ACQUIRED, ResourceAction.RELEASE): ResourceState.RELEASED,
     (ResourceState.ACQUIRED, ResourceAction.TRANSFER): ResourceState.TRANSFERRED,
     (ResourceState.ACQUIRED, ResourceAction.ESCAPE): ResourceState.ESCAPED,
+    (ResourceState.MAY_ACQUIRED, ResourceAction.RELEASE): ResourceState.RELEASED,
+    (ResourceState.MAY_ACQUIRED, ResourceAction.TRANSFER): ResourceState.TRANSFERRED,
+    (ResourceState.MAY_ACQUIRED, ResourceAction.ESCAPE): ResourceState.ESCAPED,
     (ResourceState.BORROWED, ResourceAction.RELEASE): ResourceState.UNKNOWN,
     (ResourceState.BORROWED, ResourceAction.TRANSFER): ResourceState.TRANSFERRED,
     (ResourceState.BORROWED, ResourceAction.ESCAPE): ResourceState.ESCAPED,
@@ -50,6 +54,11 @@ def join_states(left: ResourceState, right: ResourceState) -> ResourceState:
 
     if left is right:
         return left
+    if ResourceState.ACQUIRED in {left, right} or ResourceState.MAY_ACQUIRED in {
+        left,
+        right,
+    }:
+        return ResourceState.MAY_ACQUIRED
     if left is ResourceState.UNSEEN or right is ResourceState.UNSEEN:
         return ResourceState.UNKNOWN
     return ResourceState.UNKNOWN
@@ -63,10 +72,13 @@ class ResourceViolation:
 
 
 def error_path_violation(state: ResourceState) -> ResourceViolation | None:
-    if state is ResourceState.ACQUIRED:
+    if state in {ResourceState.ACQUIRED, ResourceState.MAY_ACQUIRED}:
         return ResourceViolation(
             kind="missing_cleanup",
             state=state,
-            message="owned resource reaches an error return without release or transfer",
+            message=(
+                "possibly owned resource reaches an error return without a proven "
+                "release or transfer"
+            ),
         )
     return None

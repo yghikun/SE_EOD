@@ -74,6 +74,16 @@ def _json_list(value: str) -> list[Any]:
     return parsed if isinstance(parsed, list) else []
 
 
+def _json_dict(value: str) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 def _int_or_zero(value: str) -> int:
     try:
         return int(value)
@@ -82,6 +92,33 @@ def _int_or_zero(value: str) -> int:
 
 
 def _task_id(row: dict[str, str]) -> str:
+    condition_start = row.get("condition_start_byte", "")
+    path_identity = (
+        "|".join(
+            [
+                condition_start,
+                row.get("condition_end_byte", ""),
+                row.get("branch_taken", ""),
+                row.get("cfg_edge_kind", ""),
+            ]
+        )
+        if condition_start not in {"", "0"}
+        else row.get("path_id", "")
+    )
+    raw = "|".join(
+        [
+            row.get("file", ""),
+            row.get("function", ""),
+            path_identity,
+            row.get("candidate_type", ""),
+            row.get("error_line", ""),
+        ]
+    )
+    digest = hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()[:20]
+    return f"llm_review_{digest}"
+
+
+def _legacy_task_id(row: dict[str, str]) -> str:
     raw = "|".join(
         [
             row.get("file", ""),
@@ -173,12 +210,25 @@ def task_from_candidate(
         "severity": row.get("severity", ""),
         "error_line": error_line,
         "condition": row.get("condition", ""),
+        "branch_taken": row.get("branch_taken", ""),
+        "condition_start_byte": row.get("condition_start_byte", ""),
+        "condition_end_byte": row.get("condition_end_byte", ""),
+        "cfg_edge_id": row.get("cfg_edge_id", ""),
+        "cfg_source_block": row.get("cfg_source_block", ""),
+        "cfg_target_block": row.get("cfg_target_block", ""),
+        "cfg_edge_kind": row.get("cfg_edge_kind", ""),
+        "cfg_witness": _json_dict(row.get("cfg_witness", "")),
+        "resource_analysis": row.get("resource_analysis", ""),
         "error_source_expr": row.get("error_source_expr", ""),
         "held_resources": _json_list(row.get("held_resources", "")),
         "cleanup_calls": _json_list(row.get("cleanup_calls", "")),
         "missing_cleanup_candidates": _json_list(
             row.get("missing_cleanup_candidates", "")
         ),
+        "released_cleanup_candidates": _json_list(
+            row.get("released_cleanup_candidates", "")
+        ),
+        "partial_cleanup": row.get("partial_cleanup", "").lower() == "true",
         "final_return_expr": row.get("final_return_expr", ""),
         "source_context": source_context(
             linux_path, row.get("file", ""), error_line, context_lines
@@ -199,9 +249,20 @@ def task_from_candidate(
         "evidence_level": ranked_evidence.get("evidence_level", "")
         if ranked_evidence
         else "",
+        "path_candidate_id": ranked_evidence.get("path_candidate_id", "")
+        if ranked_evidence
+        else "",
+        "obligation_candidate_ids": ranked_evidence.get(
+            "obligation_candidate_ids", []
+        )
+        if ranked_evidence
+        else [],
         "evidence_score": ranked_evidence.get("evidence_score", 0)
         if ranked_evidence
         else 0,
+        "score_dimensions": ranked_evidence.get("score_dimensions", {})
+        if ranked_evidence
+        else {},
         "score_explanation": ranked_evidence.get("score_explanation", [])
         if ranked_evidence
         else [],
@@ -233,7 +294,9 @@ def build_llm_review_tasks(
     ) as output_fh:
         for row in csv.DictReader(input_fh):
             total_candidates += 1
-            ranked_evidence = ranked_index.get(_task_id(row))
+            ranked_evidence = ranked_index.get(_task_id(row)) or ranked_index.get(
+                _legacy_task_id(row)
+            )
             if min_evidence_score is not None:
                 score = _int_or_zero(
                     ranked_evidence.get("evidence_score") if ranked_evidence else None

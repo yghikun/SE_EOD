@@ -22,6 +22,14 @@ CSV_COLUMNS = [
     "error_line",
     "condition",
     "condition_type",
+    "branch_taken",
+    "condition_start_byte",
+    "condition_end_byte",
+    "cfg_edge_id",
+    "cfg_source_block",
+    "cfg_target_block",
+    "cfg_edge_kind",
+    "cfg_witness",
     "error_var",
     "error_source_expr",
     "exit_type",
@@ -30,12 +38,21 @@ CSV_COLUMNS = [
     "final_return_expr",
     "held_resources",
     "missing_cleanup_candidates",
+    "released_cleanup_candidates",
+    "partial_cleanup",
+    "resource_analysis",
     "confidence",
     "reason",
 ]
 
 
-JSON_FIELDS = {"cleanup_calls", "held_resources", "missing_cleanup_candidates"}
+JSON_FIELDS = {
+    "cleanup_calls",
+    "held_resources",
+    "missing_cleanup_candidates",
+    "released_cleanup_candidates",
+    "cfg_witness",
+}
 
 
 def write_error_paths_csv(paths: Iterable[ErrorPath], out_path: str | Path) -> None:

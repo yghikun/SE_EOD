@@ -14,6 +14,11 @@ class CFGEdge:
     target: int
     kind: str = "fallthrough"
     condition: str = ""
+    scope_unwind: int = 0
+
+    @property
+    def edge_id(self) -> str:
+        return f"e{self.source}_{self.target}_{self.kind}_u{self.scope_unwind}"
 
 
 @dataclass
@@ -24,6 +29,11 @@ class BasicBlock:
     start_line: int = 0
     end_line: int = 0
     label: str = ""
+    start_byte: int = 0
+    end_byte: int = 0
+    condition_start_byte: int = 0
+    condition_end_byte: int = 0
+    scope_depth: int = 0
 
 
 @dataclass
@@ -65,6 +75,7 @@ class _CFGBuilder:
         self.pending_gotos: list[tuple[int, str]] = []
         self.unsupported: list[str] = []
         self.next_id = 0
+        self.scope_depth = 0
         self.entry = self._block("entry")
         self.exit = self._block("exit")
 
@@ -74,6 +85,7 @@ class _CFGBuilder:
         node: Any | None = None,
         label: str = "",
         text: str | None = None,
+        condition_node: Any | None = None,
     ) -> int:
         block_id = self.next_id
         self.next_id += 1
@@ -84,11 +96,27 @@ class _CFGBuilder:
             start_line=node.start_line if node is not None else 0,
             end_line=node.end_line if node is not None else 0,
             label=label,
+            start_byte=node.start_byte if node is not None else 0,
+            end_byte=node.end_byte if node is not None else 0,
+            condition_start_byte=(
+                condition_node.start_byte if condition_node is not None else 0
+            ),
+            condition_end_byte=(
+                condition_node.end_byte if condition_node is not None else 0
+            ),
+            scope_depth=self.scope_depth,
         )
         return block_id
 
     def _edge(self, source: int, target: int, kind: str = "fallthrough", condition: str = "") -> None:
-        edge = CFGEdge(source, target, kind, condition)
+        scope_unwind = 0
+        if kind in {"goto", "backedge", "break", "continue", "return"}:
+            scope_unwind = max(
+                0,
+                self.blocks[source].scope_depth
+                - self.blocks[target].scope_depth,
+            )
+        edge = CFGEdge(source, target, kind, condition, scope_unwind)
         if edge not in self.edges:
             self.edges.append(edge)
 
@@ -138,8 +166,28 @@ class _CFGBuilder:
         return _Fragment(first if first is not None else self.exit, exits)
 
     def _statement(self, node: Any, break_target: int | None, continue_target: int | None) -> _Fragment:
+        if node.type == "else_clause":
+            children = self._named_statements(node)
+            if not children:
+                empty = self._block("empty", node, text="")
+                return _Fragment(empty, [(empty, "fallthrough")])
+            return self._statement(children[-1], break_target, continue_target)
         if node.type == "compound_statement":
-            return self._sequence(self._named_statements(node), break_target, continue_target)
+            enter = self._block("scope_enter", node, text="")
+            self.scope_depth += 1
+            body = self._sequence(
+                self._named_statements(node), break_target, continue_target
+            )
+            self.scope_depth -= 1
+            leave = self._block("scope_exit", node, text="")
+            self._edge(enter, body.entry)
+            remaining: list[tuple[int, str]] = []
+            for source, kind in body.exits:
+                if kind == "fallthrough":
+                    self._edge(source, leave)
+                else:
+                    remaining.append((source, kind))
+            return _Fragment(enter, [*remaining, (leave, "fallthrough")])
         if node.type == "labeled_statement":
             label_node = node.child_by_field_name("label")
             label = label_node.text.strip() if label_node is not None else ""
@@ -155,7 +203,9 @@ class _CFGBuilder:
         if node.type == "if_statement":
             condition_node = node.child_by_field_name("condition")
             condition = condition_node.text.strip() if condition_node is not None else "unknown"
-            block = self._block("condition", node, text=condition)
+            block = self._block(
+                "condition", node, text=condition, condition_node=condition_node
+            )
             consequence = self._statement(node.child_by_field_name("consequence"), break_target, continue_target)
             alternative_node = node.child_by_field_name("alternative")
             if alternative_node is not None:
@@ -169,7 +219,9 @@ class _CFGBuilder:
         if node.type in {"while_statement", "for_statement", "do_statement"}:
             condition_node = node.child_by_field_name("condition")
             condition = condition_node.text.strip() if condition_node is not None else "1"
-            header = self._block("loop_condition", node, text=condition)
+            header = self._block(
+                "loop_condition", node, text=condition, condition_node=condition_node
+            )
             after = self._block("loop_exit")
             body_node = node.child_by_field_name("body")
             body = self._statement(body_node, after, header)

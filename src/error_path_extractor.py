@@ -38,6 +38,14 @@ class ErrorPath:
     error_line: int
     condition: str
     condition_type: str
+    branch_taken: str
+    condition_start_byte: int
+    condition_end_byte: int
+    cfg_edge_id: str
+    cfg_source_block: int | str
+    cfg_target_block: int | str
+    cfg_edge_kind: str
+    cfg_witness: dict[str, Any]
     error_var: str
     error_source_expr: str
     exit_type: str
@@ -46,6 +54,9 @@ class ErrorPath:
     final_return_expr: str
     held_resources: list[dict]
     missing_cleanup_candidates: list[str]
+    released_cleanup_candidates: list[str]
+    partial_cleanup: bool
+    resource_analysis: str
     confidence: str
     reason: str
     linux_git_commit: str = ""
@@ -148,6 +159,15 @@ def _merge_confidence(base: str, final_return_expr: str, condition: ConditionInf
             return "high"
         return "medium"
     return base
+
+
+def _lower_confidence(confidence: str) -> str:
+    return {
+        "high": "medium",
+        "medium": "low",
+        "low": "low",
+        "uncertain": "uncertain",
+    }.get(confidence, confidence)
 
 
 def _condition_implies_cycle(condition: str, cycle_condition: str) -> bool:
@@ -591,10 +611,10 @@ class ErrorPathExtractor:
                 return
             condition_text = _condition_text(function, condition_node)
             branches = [
-                node.child_by_field_name("consequence"),
-                node.child_by_field_name("alternative"),
+                (node.child_by_field_name("consequence"), True),
+                (node.child_by_field_name("alternative"), False),
             ]
-            for branch in branches:
+            for branch, branch_truth in branches:
                 for branch_exit in _collect_branch_exits(function, branch):
                     label_cleanup: list[str] = []
                     final_return_expr = branch_exit.return_expr
@@ -613,8 +633,15 @@ class ErrorPathExtractor:
                         final_return_expr = resolution.final_return_expr
                         label_reason = resolution.reason
 
+                    branch_condition = (
+                        condition_text
+                        if branch_truth
+                        else f"!({condition_text})"
+                    )
                     condition = classify_condition(
-                        condition_text, final_return_expr, branch_exit.target_label
+                        branch_condition,
+                        final_return_expr,
+                        branch_exit.target_label,
                     )
                     confidence = _merge_confidence(
                         condition.confidence, final_return_expr, condition
@@ -648,6 +675,9 @@ class ErrorPathExtractor:
                                 final_return_expr,
                                 label_reason,
                             ),
+                            "true" if branch_truth else "false",
+                            condition_node.start_byte,
+                            condition_node.end_byte,
                         )
                     )
 
@@ -704,6 +734,9 @@ class ErrorPathExtractor:
         final_return_expr: str,
         confidence: str,
         reason: str,
+        branch_taken: str = "direct",
+        condition_start_byte: int = 0,
+        condition_end_byte: int = 0,
     ) -> ErrorPath:
         error_source = find_error_source(
             statements, condition.error_var, error_line, function.parameters
@@ -711,16 +744,55 @@ class ErrorPathExtractor:
         held = self.resource_tracker.held_before_cfg(
             function, error_line, condition, error_source
         )
+        resource_analysis = "cfg"
         if held is None:
+            resource_analysis = "linear-degraded"
             held = self.resource_tracker.held_before(
                 statements, error_line, condition, error_source, function.name
             )
-        missing = self.resource_tracker.missing_cleanup_candidates(held, cleanup_calls)
+        outcome = self.resource_tracker.cleanup_outcome_cfg(
+            function, error_line, condition, target_label, held
+        )
+        if outcome is None:
+            if resource_analysis == "cfg":
+                resource_analysis = "linear-fallback"
+                confidence = "low"
+            missing = self.resource_tracker.missing_cleanup_candidates(
+                held, cleanup_calls
+            )
+            released_cleanup_candidates: list[str] = []
+            partial_cleanup = False
+        else:
+            missing = outcome.missing
+            released_cleanup_candidates = outcome.released
+            partial_cleanup = outcome.partial
+        uncertain_ownership = any(
+            resource.ownership_state == "MAY_ACQUIRED" for resource in held
+        )
+        if function.analysis_quality != "tree-sitter":
+            confidence = "low"
+            reason = (
+                f"{reason}; degraded analysis quality: "
+                f"{function.analysis_quality}"
+            )
         if missing:
             reason = f"{reason}; suspicious missing cleanup candidates"
-        release_reasons = self._release_reasons(held, cleanup_calls, target_label)
+            if uncertain_ownership:
+                confidence = _lower_confidence(confidence)
+                reason = f"{reason}; ownership may still be held"
+        release_reasons = self._release_reasons(
+            held, cleanup_calls, target_label, set(missing)
+        )
         if release_reasons:
             reason = f"{reason}; {'; '.join(release_reasons)}"
+
+        cfg_witness = self.resource_tracker.cfg_edge_witness(
+            function,
+            error_line,
+            branch_taken,
+            condition_start_byte,
+            condition_end_byte,
+        )
 
         return ErrorPath(
             file=str(function.file),
@@ -731,6 +803,14 @@ class ErrorPathExtractor:
             error_line=error_line,
             condition=condition.condition,
             condition_type=condition.condition_type,
+            branch_taken=branch_taken,
+            condition_start_byte=condition_start_byte,
+            condition_end_byte=condition_end_byte,
+            cfg_edge_id=str(cfg_witness.get("edge_id", "")),
+            cfg_source_block=cfg_witness.get("source_block", ""),
+            cfg_target_block=cfg_witness.get("target_block", ""),
+            cfg_edge_kind=str(cfg_witness.get("edge_kind", "")),
+            cfg_witness=cfg_witness,
             error_var=condition.error_var,
             error_source_expr=error_source,
             exit_type=exit_type,
@@ -739,15 +819,24 @@ class ErrorPathExtractor:
             final_return_expr=final_return_expr or "unknown",
             held_resources=[res.to_csv_dict() for res in held],
             missing_cleanup_candidates=missing,
+            released_cleanup_candidates=released_cleanup_candidates,
+            partial_cleanup=partial_cleanup,
+            resource_analysis=resource_analysis,
             confidence=confidence,
             reason=reason,
         )
 
     def _release_reasons(
-        self, held: list[HeldResource], cleanup_calls: list[str], target_label: str
+        self,
+        held: list[HeldResource],
+        cleanup_calls: list[str],
+        target_label: str,
+        missing: set[str],
     ) -> list[str]:
         reasons: list[str] = []
         for res in held:
+            if res.release_suggestion in missing:
+                continue
             for call in cleanup_calls:
                 if not cleanup_call_releases_resource(call, res):
                     continue

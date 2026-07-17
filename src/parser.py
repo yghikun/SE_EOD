@@ -59,7 +59,12 @@ def parse_c_file(path: str | Path) -> ParsedFile:
 
     try:
         tree = parser.parse(text.encode("utf-8", errors="replace"))
-        return ParsedFile(source_path, text, tree, "tree-sitter+c/text", warnings)
+        if bool(getattr(tree.root_node, "has_error", False)):
+            warnings.append("tree-sitter parse contains ERROR nodes")
+            parser_kind = "degraded-tree-sitter"
+        else:
+            parser_kind = "tree-sitter"
+        return ParsedFile(source_path, text, tree, parser_kind, warnings)
     except Exception as exc:
         warnings.append(f"tree-sitter parse failed: {exc}")
         return ParsedFile(source_path, text, None, "text", warnings)
@@ -200,14 +205,19 @@ def extract_call_expressions(text: str) -> list[str]:
             i += 1
             continue
         start = i
-        i += 1
-        while i < len(text) and (text[i].isalnum() or text[i] == "_"):
+        callee = __import__("re").match(
+            r"[A-Za-z_]\w*(?:(?:\s*(?:->|\.)\s*[A-Za-z_]\w*)|(?:\s*\[[^\[\]]+\]))*",
+            text[start:],
+        )
+        if callee is None:
             i += 1
-        name = text[start:i]
+            continue
+        i = start + callee.end()
+        name = compact_ws(text[start:i])
         j = i
         while j < len(text) and text[j].isspace():
             j += 1
-        if j >= len(text) or text[j] != "(" or name in keywords:
+        if j >= len(text) or text[j] != "(" or name.strip() in keywords:
             continue
         close = find_matching_paren(text, j)
         if close == -1:

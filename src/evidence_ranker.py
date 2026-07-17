@@ -12,9 +12,11 @@ from typing import Any, Iterable
 from .manual_review import ManualReviewDB, manual_score_adjustment
 from .historical_fix import HistoricalFixDB
 from .ownership_transfer import ownership_transfer_hints_for_candidate
+from .parser import call_name_and_first_arg
 from .protocol_db import ResourceProtocolDB
 from .protocol_matcher import match_protocol_evidence
 from .wrapper_summary import WrapperSummaryDB
+from .resource_release import missing_cleanup_matches_resource
 
 
 E0_STATIC_RULE_ONLY = "E0_STATIC_RULE_ONLY"
@@ -33,13 +35,20 @@ MISSING_EVIDENCE_V1 = [
 
 SUMMARY_COLUMNS = [
     "candidate_id",
+    "path_candidate_id",
+    "obligation_candidate_ids",
+    "legacy_candidate_id",
     "file",
     "function",
     "error_line",
     "candidate_type",
     "severity",
+    "branch_taken",
+    "cfg_edge_id",
+    "resource_analysis",
     "evidence_level",
     "evidence_score",
+    "score_dimensions",
     "historical_fix_ids",
     "fixed_versions",
     "matched_protocol_ids",
@@ -64,6 +73,31 @@ SUMMARY_COLUMNS = [
 
 
 def candidate_fingerprint(row: dict[str, str]) -> str:
+    condition_start = row.get("condition_start_byte", "")
+    path_identity = (
+        "|".join(
+            [
+                condition_start,
+                row.get("condition_end_byte", ""),
+                row.get("branch_taken", ""),
+                row.get("cfg_edge_kind", ""),
+            ]
+        )
+        if condition_start not in {"", "0"}
+        else row.get("path_id", "")
+    )
+    return "|".join(
+        [
+            row.get("file", ""),
+            row.get("function", ""),
+            path_identity,
+            row.get("candidate_type", ""),
+            row.get("error_line", ""),
+        ]
+    )
+
+
+def legacy_candidate_fingerprint(row: dict[str, str]) -> str:
     return "|".join(
         [
             row.get("file", ""),
@@ -76,15 +110,29 @@ def candidate_fingerprint(row: dict[str, str]) -> str:
 
 
 def candidate_id_for_row(row: dict[str, str]) -> str:
-    digest = hashlib.sha1(
+    digest = hashlib.sha256(
         candidate_fingerprint(row).encode("utf-8", errors="replace")
-    ).hexdigest()[:12]
+    ).hexdigest()[:20]
     return f"candidate_{digest}"
 
 
 def llm_task_id_for_row(row: dict[str, str]) -> str:
-    digest = hashlib.sha1(
+    digest = hashlib.sha256(
         candidate_fingerprint(row).encode("utf-8", errors="replace")
+    ).hexdigest()[:20]
+    return f"llm_review_{digest}"
+
+
+def legacy_candidate_id_for_row(row: dict[str, str]) -> str:
+    digest = hashlib.sha1(
+        legacy_candidate_fingerprint(row).encode("utf-8", errors="replace")
+    ).hexdigest()[:12]
+    return f"candidate_{digest}"
+
+
+def legacy_llm_task_id_for_row(row: dict[str, str]) -> str:
+    digest = hashlib.sha1(
+        legacy_candidate_fingerprint(row).encode("utf-8", errors="replace")
     ).hexdigest()[:12]
     return f"llm_review_{digest}"
 
@@ -130,15 +178,66 @@ def _static_evidence(row: dict[str, str]) -> dict[str, Any]:
     cleanup_calls = evidence.get("cleanup_calls")
     if not isinstance(cleanup_calls, list):
         cleanup_calls = _json_list(row.get("cleanup_calls", ""))
+    released_cleanup = _json_list(row.get("released_cleanup_candidates", ""))
     return {
         "reason": row.get("reason", ""),
         "held_resources": held_resources,
         "missing_cleanup_candidates": missing_releases,
         "cleanup_calls": cleanup_calls,
+        "released_cleanup_candidates": released_cleanup,
+        "partial_cleanup": row.get("partial_cleanup", "").lower() == "true",
         "error_source_expr": row.get("error_source_expr", ""),
+        "branch_taken": row.get("branch_taken", ""),
+        "cfg_edge_id": row.get("cfg_edge_id", ""),
+        "cfg_edge_kind": row.get("cfg_edge_kind", ""),
+        "cfg_source_block": row.get("cfg_source_block", ""),
+        "cfg_target_block": row.get("cfg_target_block", ""),
+        "cfg_witness": _json_value(row.get("cfg_witness", ""), {}),
+        "resource_analysis": row.get("resource_analysis", ""),
         "exit_type": row.get("exit_type", ""),
         "target_label": row.get("target_label", ""),
     }
+
+
+def obligation_candidate_ids_for_row(
+    row: dict[str, str], static_evidence: dict[str, Any]
+) -> list[str]:
+    obligations: list[tuple[str, str]] = []
+    resources = [
+        resource
+        for resource in static_evidence.get("held_resources", [])
+        if isinstance(resource, dict)
+    ]
+    for action in static_evidence.get("missing_cleanup_candidates", []):
+        action_text = str(action)
+        name, argument = call_name_and_first_arg(action_text)
+        matched = [
+            resource
+            for resource in resources
+            if missing_cleanup_matches_resource(name, argument, resource)
+        ]
+        if not matched:
+            obligations.append(("", action_text))
+            continue
+        obligations.extend(
+            (str(resource.get("resource_id", "")), action_text)
+            for resource in matched
+        )
+    if not obligations:
+        obligations.append(("", row.get("candidate_type", "")))
+
+    identifiers: list[str] = []
+    for resource_id, action in obligations:
+        raw = "|".join(
+            [candidate_fingerprint(row), resource_id, action]
+        )
+        digest = hashlib.sha256(
+            raw.encode("utf-8", errors="replace")
+        ).hexdigest()[:20]
+        identifier = f"obligation_{digest}"
+        if identifier not in identifiers:
+            identifiers.append(identifier)
+    return identifiers
 
 
 def load_deepseek_true_candidates(path: str | Path | None) -> dict[str, dict[str, Any]]:
@@ -355,6 +454,56 @@ def _score(
     return score, explanation
 
 
+def _score_dimensions(
+    row: dict[str, str],
+    static_evidence: dict[str, Any],
+    protocol_evidence: list[dict[str, Any]],
+    llm_evidence: dict[str, Any] | None,
+    historical_fix_evidence: list[dict[str, Any]],
+    review_priority: int,
+) -> dict[str, int]:
+    held_resources = static_evidence.get("held_resources", [])
+    uncertain = any(
+        isinstance(resource, dict)
+        and (
+            resource.get("ownership_state") == "MAY_ACQUIRED"
+            or bool(resource.get("uncertainty_causes"))
+        )
+        for resource in held_resources
+    )
+    witness = static_evidence.get("cfg_witness", {})
+    if row.get("resource_analysis") == "cfg":
+        static_certainty = 70 if uncertain else 90
+        if isinstance(witness, dict) and witness.get("analysis_truncated"):
+            static_certainty = min(static_certainty, 40)
+        elif isinstance(witness, dict) and witness.get("widened_on_path"):
+            static_certainty = min(static_certainty, 60)
+        if isinstance(witness, dict) and witness.get("cfg_complete") is False:
+            static_certainty = min(static_certainty, 35)
+    else:
+        static_certainty = 30
+
+    confidence = str((llm_evidence or {}).get("confidence", "")).lower()
+    model_certainty = {"high": 80, "medium": 55, "low": 30}.get(
+        confidence, 40 if llm_evidence else 0
+    )
+    protocol_support = 60 if protocol_evidence else 0
+    historical_confirmation = 100 if historical_fix_evidence else 0
+    external_confirmation = max(protocol_support, historical_confirmation)
+    impact = {"P1": 100, "P2": 70, "P3": 40}.get(
+        row.get("severity", ""), 30
+    )
+    return {
+        "static_certainty": static_certainty,
+        "model_certainty": model_certainty,
+        "protocol_support": protocol_support,
+        "historical_confirmation": historical_confirmation,
+        "external_confirmation": external_confirmation,
+        "impact": impact,
+        "review_priority": review_priority,
+    }
+
+
 def rank_candidate_rows(
     rows: Iterable[dict[str, str]],
     protocols: ResourceProtocolDB,
@@ -385,14 +534,28 @@ def rank_candidate_rows(
             ownership_transfer_hints=ownership_hints,
         )
         task_id = llm_task_id_for_row(row)
+        legacy_task_id = legacy_llm_task_id_for_row(row)
         candidate_id = candidate_id_for_row(row)
+        legacy_candidate_id = legacy_candidate_id_for_row(row)
+        obligation_candidate_ids = obligation_candidate_ids_for_row(
+            row, static_evidence
+        )
         historical_fix_evidence = historical_fixes.match(row) if historical_fixes else []
         manual_review = (
-            manual_reviews.find_any([candidate_id, task_id, row.get("path_id", "")])
+            manual_reviews.find_any(
+                [
+                    *obligation_candidate_ids,
+                    candidate_id,
+                    legacy_candidate_id,
+                    task_id,
+                    legacy_task_id,
+                    row.get("path_id", ""),
+                ]
+            )
             if manual_reviews
             else None
         )
-        llm_record = llm_records.get(task_id)
+        llm_record = llm_records.get(task_id) or llm_records.get(legacy_task_id)
         level = _evidence_level(
             protocol_evidence, llm_record, historical_fix_evidence
         )
@@ -402,16 +565,28 @@ def rank_candidate_rows(
         manual_adjustment, manual_explanation = manual_score_adjustment(manual_review)
         score += manual_adjustment
         score_explanation.extend(manual_explanation)
+        score_dimensions = _score_dimensions(
+            row,
+            static_evidence,
+            protocol_evidence,
+            llm_record,
+            historical_fix_evidence,
+            score,
+        )
         wrapper_evidence = _wrapper_evidence(protocol_evidence)
         exception_hints = _exception_hints(protocol_evidence, ownership_hints)
         has_exception_hints = bool(exception_hints)
         ranked.append(
             {
                 "candidate_id": candidate_id,
+                "path_candidate_id": candidate_id,
+                "obligation_candidate_ids": obligation_candidate_ids,
+                "legacy_candidate_id": legacy_candidate_id,
                 "candidate_type": row.get("candidate_type", ""),
                 "severity": row.get("severity", ""),
                 "evidence_level": level,
                 "evidence_score": score,
+                "score_dimensions": score_dimensions,
                 "manual_review": manual_review.to_dict() if manual_review else {},
                 "manual_score_adjustment": manual_adjustment,
                 "static_evidence": static_evidence,
@@ -434,8 +609,16 @@ def rank_candidate_rows(
                 "path_id": row.get("path_id", ""),
                 "error_line": _int_or_zero(row.get("error_line", "")),
                 "condition": row.get("condition", ""),
+                "branch_taken": row.get("branch_taken", ""),
+                "cfg_edge_id": row.get("cfg_edge_id", ""),
+                "cfg_edge_kind": row.get("cfg_edge_kind", ""),
+                "cfg_source_block": row.get("cfg_source_block", ""),
+                "cfg_target_block": row.get("cfg_target_block", ""),
+                "cfg_witness": _json_value(row.get("cfg_witness", ""), {}),
+                "resource_analysis": row.get("resource_analysis", ""),
                 "final_return_expr": row.get("final_return_expr", ""),
                 "llm_task_id": task_id,
+                "legacy_llm_task_id": legacy_task_id,
             }
         )
 
@@ -504,13 +687,25 @@ def write_candidates_with_evidence_csv(
             writer.writerow(
                 {
                     "candidate_id": item.get("candidate_id", ""),
+                    "path_candidate_id": item.get("path_candidate_id", ""),
+                    "obligation_candidate_ids": json.dumps(
+                        item.get("obligation_candidate_ids", []),
+                        ensure_ascii=False,
+                    ),
+                    "legacy_candidate_id": item.get("legacy_candidate_id", ""),
                     "file": item.get("file", ""),
                     "function": item.get("function", ""),
                     "error_line": item.get("error_line", ""),
                     "candidate_type": item.get("candidate_type", ""),
                     "severity": item.get("severity", ""),
+                    "branch_taken": item.get("branch_taken", ""),
+                    "cfg_edge_id": item.get("cfg_edge_id", ""),
+                    "resource_analysis": item.get("resource_analysis", ""),
                     "evidence_level": item.get("evidence_level", ""),
                     "evidence_score": item.get("evidence_score", ""),
+                    "score_dimensions": json.dumps(
+                        item.get("score_dimensions", {}), ensure_ascii=False
+                    ),
                     "historical_fix_ids": ",".join(
                         str(evidence.get("fix_id", ""))
                         for evidence in item.get("historical_fix_evidence", [])
@@ -610,10 +805,18 @@ def load_ranked_candidates_index(path: str | Path | None) -> dict[str, dict[str,
             continue
         if not isinstance(item, dict):
             continue
-        for key in ["llm_task_id", "candidate_id"]:
+        for key in [
+            "llm_task_id",
+            "legacy_llm_task_id",
+            "candidate_id",
+            "legacy_candidate_id",
+        ]:
             value = str(item.get(key, ""))
             if value:
                 index[value] = item
+        for value in item.get("obligation_candidate_ids", []):
+            if value:
+                index[str(value)] = item
     return index
 
 

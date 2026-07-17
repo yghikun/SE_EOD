@@ -7,6 +7,7 @@ from src.evidence_ranker import (
     E0_STATIC_RULE_ONLY,
     E2_API_PROTOCOL_SUPPORTED,
     candidate_id_for_row,
+    obligation_candidate_ids_for_row,
     rank_candidate_rows,
 )
 from src.candidate_rules import error_swallowed_candidates, run_candidate_rules
@@ -26,6 +27,46 @@ from src.wrapper_summary import WrapperSummaryDB
 def _read_csv(path: Path) -> list[dict]:
     with path.open(newline="", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
+
+
+def test_path_and_obligation_candidate_ids_have_distinct_granularity():
+    row = {
+        "file": "fs/demo.c",
+        "function": "work",
+        "path_id": "work#001",
+        "candidate_type": "missing_cleanup",
+        "error_line": "20",
+        "condition_start_byte": "100",
+        "condition_end_byte": "108",
+        "branch_taken": "true",
+        "cfg_edge_kind": "true",
+    }
+    static_evidence = {
+        "held_resources": [
+            {
+                "resource_id": "p1@1:kmalloc#1",
+                "var": "p1",
+                "resource_type": "memory",
+                "release_functions": ["kfree"],
+            },
+            {
+                "resource_id": "p2@2:kmalloc#1",
+                "var": "p2",
+                "resource_type": "memory",
+                "release_functions": ["kfree"],
+            },
+        ],
+        "missing_cleanup_candidates": ["kfree(p1)", "kfree(p2)"],
+    }
+
+    path_id = candidate_id_for_row(row)
+    obligation_ids = obligation_candidate_ids_for_row(row, static_evidence)
+
+    assert path_id.startswith("candidate_")
+    assert len(path_id.removeprefix("candidate_")) == 20
+    assert len(obligation_ids) == 2
+    assert len(set(obligation_ids)) == 2
+    assert all(identifier.startswith("obligation_") for identifier in obligation_ids)
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -261,7 +302,7 @@ def test_demo_extracts_required_error_paths(tmp_path):
         and row["candidate_type"] == "missing_cleanup"
         for row in candidates
     )
-    assert not any(
+    assert any(
         row["function"] == "demo_ownership_transfer_hint"
         and row["candidate_type"] == "missing_cleanup"
         for row in candidates
@@ -343,6 +384,15 @@ def test_demo_extracts_required_error_paths(tmp_path):
     assert missing_task["protocol_exceptions_to_check"]
     assert missing_task["evidence_level"] == E2_API_PROTOCOL_SUPPORTED
     assert missing_task["evidence_score"] > 0
+    assert set(missing_task["score_dimensions"]) == {
+        "static_certainty",
+        "model_certainty",
+        "protocol_support",
+        "historical_confirmation",
+        "external_confirmation",
+        "impact",
+        "review_priority",
+    }
     assert "wrapper_evidence" in missing_task
     assert "ownership_transfer_hints" in missing_task
     assert "has_exception_hints" in missing_task
@@ -356,6 +406,10 @@ def test_demo_extracts_required_error_paths(tmp_path):
     assert any("wrapper 是否真的释放" in q for q in missing_task["review_questions"])
 
     assert len(ranked) == len(candidates)
+    assert all(
+        item["score_dimensions"]["review_priority"] == item["evidence_score"]
+        for item in ranked
+    )
     assert len(evidence_rows) == len(candidates)
     assert ranked == sorted(
         ranked,
@@ -916,7 +970,12 @@ def test_f2fs_mount_teardown_owns_victim_secmap():
         function_name="init_victim_secmap",
     )
 
-    assert held == []
+    assert len(held) == 1
+    assert held[0].var == "dirty_i->victim_secmap"
+    assert held[0].ownership_state == "MAY_ACQUIRED"
+    assert held[0].uncertainty_causes == [
+        "unreviewed_ownership_transfer_hint"
+    ]
 
 
 def test_f2fs_find_entry_error_uses_output_parameter_contract():

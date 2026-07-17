@@ -208,12 +208,25 @@ def _base_candidate(
         "candidate_type": candidate_type,
         "severity": severity,
         "condition": row.get("condition", ""),
+        "branch_taken": row.get("branch_taken", ""),
+        "condition_start_byte": row.get("condition_start_byte", ""),
+        "condition_end_byte": row.get("condition_end_byte", ""),
+        "cfg_edge_id": row.get("cfg_edge_id", ""),
+        "cfg_source_block": row.get("cfg_source_block", ""),
+        "cfg_target_block": row.get("cfg_target_block", ""),
+        "cfg_edge_kind": row.get("cfg_edge_kind", ""),
+        "cfg_witness": row.get("cfg_witness", "{}"),
         "exit_type": row.get("exit_type", ""),
         "target_label": row.get("target_label", ""),
         "error_source_expr": row.get("error_source_expr", ""),
         "held_resources": row.get("held_resources", "[]"),
         "cleanup_calls": row.get("cleanup_calls", "[]"),
         "missing_cleanup_candidates": row.get("missing_cleanup_candidates", "[]"),
+        "released_cleanup_candidates": row.get(
+            "released_cleanup_candidates", "[]"
+        ),
+        "partial_cleanup": row.get("partial_cleanup", ""),
+        "resource_analysis": row.get("resource_analysis", ""),
         "final_return_expr": row.get("final_return_expr", ""),
         "evidence": evidence,
         "reason": reason,
@@ -230,12 +243,13 @@ def _row_context(row: dict[str, str]) -> tuple[list[dict[str, Any]], list[str], 
     missing_releases = [
         str(call) for call in _json_list(row, "missing_cleanup_candidates")
     ]
-    missing_releases = _filter_already_released(
-        row, held_resources, missing_releases, cleanup_calls
-    )
-    missing_releases = _filter_acquire_failure_missing(
-        row, held_resources, missing_releases
-    )
+    if row.get("resource_analysis") != "cfg":
+        missing_releases = _filter_already_released(
+            row, held_resources, missing_releases, cleanup_calls
+        )
+        missing_releases = _filter_acquire_failure_missing(
+            row, held_resources, missing_releases
+        )
     return held_resources, cleanup_calls, missing_releases, row.get("final_return_expr", "")
 
 
@@ -273,9 +287,15 @@ def partial_cleanup_candidates(
     held_resources, cleanup_calls, missing_releases, final_return_expr = _row_context(row)
     if row.get("confidence") == "low":
         return []
-    if len(held_resources) < 2 or not cleanup_calls or not missing_releases:
-        return []
-    if not _released_resources(held_resources, cleanup_calls):
+    if row.get("resource_analysis") == "cfg":
+        if row.get("partial_cleanup", "").lower() != "true":
+            return []
+    else:
+        if len(held_resources) < 2 or not cleanup_calls or not missing_releases:
+            return []
+        if not _released_resources(held_resources, cleanup_calls):
+            return []
+    if not missing_releases:
         return []
 
     evidence = _evidence(held_resources, missing_releases, cleanup_calls, final_return_expr)

@@ -57,6 +57,7 @@ class Function:
     body_start_byte: int = 0
     file_bytes: bytes = b""
     parameters: set[str] = field(default_factory=set)
+    analysis_quality: str = "tree-sitter"
 
 
 CONTROL_KEYWORDS = {"if", "for", "while", "switch", "return", "sizeof"}
@@ -276,6 +277,7 @@ def _extract_functions_from_ast(parsed: ParsedFile) -> list[Function]:
                         body_start_byte=body_node.start_byte,
                         file_bytes=source_bytes,
                         parameters=_function_parameters(source_bytes, node),
+                        analysis_quality=parsed.parser_kind,
                     )
                 )
             return
@@ -337,6 +339,7 @@ def extract_functions(parsed: ParsedFile) -> list[Function]:
                 body_start_byte=len(text[: brace_idx + 1].encode("utf-8", errors="replace")),
                 file_bytes=source_bytes,
                 parameters=_parameters_from_signature(real_header),
+                analysis_quality="degraded-text",
             )
         )
         idx = close_idx + 1

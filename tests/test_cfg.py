@@ -36,7 +36,7 @@ again:
     assert any(edge.kind == "return" and edge.target == cfg.exit for edge in cfg.edges)
 
 
-def test_dataflow_joins_conflicting_branch_states_to_unknown(tmp_path: Path):
+def test_dataflow_join_preserves_possible_acquired_state(tmp_path: Path):
     function = _function(
         tmp_path,
         """
@@ -65,12 +65,15 @@ int work(int release)
     )
     use_block = next(block for block in cfg.blocks.values() if block.text == "use();")
 
-    assert result.in_states[use_block.id] is ResourceState.UNKNOWN
+    assert result.in_states[use_block.id] is ResourceState.MAY_ACQUIRED
     assert result.truncated is False
 
 
-def test_dataflow_join_with_unseen_is_not_definitely_acquired(tmp_path: Path):
-    assert join_states(ResourceState.UNSEEN, ResourceState.ACQUIRED) is ResourceState.UNKNOWN
+def test_dataflow_join_with_unseen_is_possibly_acquired(tmp_path: Path):
+    assert (
+        join_states(ResourceState.UNSEEN, ResourceState.ACQUIRED)
+        is ResourceState.MAY_ACQUIRED
+    )
 
 
 def test_disjunctive_dataflow_preserves_branch_states_until_bound(tmp_path: Path):

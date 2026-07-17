@@ -463,7 +463,12 @@ def main(argv: list[str] | None = None) -> int:
 
     summary_db = FunctionSummaryDB()
     if args.enable_interprocedural:
-        summary_db = infer_function_summaries(all_functions, resource_map)
+        summary_functions = [
+            function
+            for function in all_functions
+            if function.analysis_quality == "tree-sitter"
+        ]
+        summary_db = infer_function_summaries(summary_functions, resource_map)
         summary_db.write_json(Path(args.function_summaries_out))
         if not summary_db.converged:
             warnings.append("interprocedural summaries did not converge")
@@ -500,6 +505,36 @@ def main(argv: list[str] | None = None) -> int:
     medium = sum(1 for path in all_paths if path.confidence == "medium")
     low = sum(1 for path in all_paths if path.confidence == "low")
     suspicious = sum(1 for path in all_paths if path.missing_cleanup_candidates)
+    suspicious_paths = [
+        path for path in all_paths if path.missing_cleanup_candidates
+    ]
+    candidates_with_unknown_guard = sum(
+        1
+        for path in suspicious_paths
+        if any(
+            "unresolved_acquire_validity"
+            in resource.get("uncertainty_causes", [])
+            for resource in path.held_resources
+        )
+    )
+    candidates_with_loop_multiplicity = sum(
+        1
+        for path in suspicious_paths
+        if any(
+            resource.get("multiplicity") == "many"
+            for resource in path.held_resources
+        )
+    )
+    candidates_with_incomplete_cfg = sum(
+        1
+        for path in suspicious_paths
+        if path.cfg_witness.get("cfg_complete") is False
+    )
+    candidates_with_widening = sum(
+        1
+        for path in suspicious_paths
+        if bool(path.cfg_witness.get("widened_on_path"))
+    )
 
     for warning in warnings:
         print(f"warning: {warning}", file=sys.stderr)
@@ -511,6 +546,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"medium_confidence_paths={medium}")
     print(f"low_confidence_paths={low}")
     print(f"suspicious_missing_cleanup_candidates={suspicious}")
+    print(f"candidates_with_unknown_guard={candidates_with_unknown_guard}")
+    print(
+        "candidates_with_loop_multiplicity="
+        f"{candidates_with_loop_multiplicity}"
+    )
+    print(f"candidates_with_incomplete_cfg={candidates_with_incomplete_cfg}")
+    print(f"candidates_with_widening={candidates_with_widening}")
     if args.enable_interprocedural:
         print(f"function_summaries={len(summary_db.summaries)}")
         print(f"summary_iterations={summary_db.iterations}")
@@ -524,6 +566,12 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "cfg_unresolved_indirect_calls="
         f"{cfg_diagnostics['unresolved_indirect_calls']}"
+    )
+    print(f"cfg_inferred_validity_guards={cfg_diagnostics['inferred_validity_guards']}")
+    print(f"cfg_unknown_validity_guards={cfg_diagnostics['unknown_validity_guards']}")
+    print(
+        "cfg_loop_multiplicity_resources="
+        f"{cfg_diagnostics['loop_multiplicity_resources']}"
     )
 
     if args.check_candidates:

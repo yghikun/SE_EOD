@@ -202,7 +202,12 @@ def test_error_callee_consumption_and_field_ownership_transfer():
         function_name="recover",
     )
 
-    assert held == []
+    assert len(held) == 1
+    assert held[0].var == "owner->root"
+    assert held[0].ownership_state == "MAY_ACQUIRED"
+    assert held[0].uncertainty_causes == [
+        "unreviewed_ownership_transfer_hint"
+    ]
 
 
 def test_auto_cleanup_applies_to_return_and_goto_exits(tmp_path: Path):
