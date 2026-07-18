@@ -18,12 +18,29 @@ RESOURCE_MAP = {
     }
 }
 
+STRICT_RESOURCE_MAP = {
+    "acquire_functions": {
+        "kmalloc": {
+            "resource_type": "memory",
+            "release": ["kfree"],
+            "validity_guard": "{var} != NULL",
+        },
+    }
+}
+
 
 def _rows(tmp_path: Path, source: str):
     path = tmp_path / "flow.c"
     path.write_text(source, encoding="utf-8")
     function = extract_functions(parse_c_file(path))[0]
     return ErrorPathExtractor(ResourceTracker(RESOURCE_MAP)).extract(function)
+
+
+def _strict_rows(tmp_path: Path, source: str):
+    path = tmp_path / "flow.c"
+    path.write_text(source, encoding="utf-8")
+    function = extract_functions(parse_c_file(path))[0]
+    return ErrorPathExtractor(ResourceTracker(STRICT_RESOURCE_MAP)).extract(function)
 
 
 def test_cfg_reports_reachable_unreleased_branch(tmp_path: Path):
@@ -44,6 +61,79 @@ int work(int release, int err)
     )
     error = next(row for row in rows if row.condition == "err")
     assert error.missing_cleanup_candidates == ["kfree(ptr)"]
+
+
+def test_incomplete_cfg_on_candidate_slice_forces_low_confidence(tmp_path: Path):
+    rows = _strict_rows(
+        tmp_path,
+        """
+int work(int err, int mode)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    if (err) {
+        switch (mode) {
+        case 1:
+            return -EAGAIN;
+        default:
+            break;
+        }
+        return err;
+    }
+    kfree(ptr);
+    return 0;
+}
+""",
+    )
+
+    error = next(row for row in rows if row.condition == "err")
+    assert error.confidence == "low"
+    assert error.cfg_witness["cfg_complete"] is False
+    assert error.cfg_witness["cfg_slice_complete"] is False
+    assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == [
+        "switch_statement"
+    ]
+    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"]
+    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"][0]["type"] == (
+        "switch_statement"
+    )
+
+
+def test_unrelated_unsupported_cfg_does_not_force_path_low_confidence(
+    tmp_path: Path,
+):
+    rows = _strict_rows(
+        tmp_path,
+        """
+int work(int err, int mode)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    if (mode) {
+        switch (mode) {
+        case 1:
+            mode = 0;
+            break;
+        default:
+            break;
+        }
+    }
+    if (err)
+        return err;
+    kfree(ptr);
+    return 0;
+}
+""",
+    )
+
+    error = next(row for row in rows if row.condition == "err")
+    assert error.confidence == "high"
+    assert error.cfg_witness["cfg_complete"] is False
+    assert error.cfg_witness["cfg_slice_complete"] is True
+    assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == []
+    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"] == []
 
 
 def test_cfg_does_not_treat_conditional_label_cleanup_as_must_release(
@@ -405,6 +495,99 @@ int work(int err)
     later_error = next(row for row in rows if row.condition == "err")
     assert later_error.missing_cleanup_candidates == ["kfree(p1)"]
     assert {resource["var"] for resource in later_error.held_resources} == {"p1"}
+
+
+def test_shadowed_result_symbol_does_not_satisfy_outer_pending_guard(
+    tmp_path: Path,
+):
+    resource_map = {
+        **RESOURCE_MAP,
+        "interprocedural_effect_seeds": {
+            "submit": {
+                "resource": "arg0",
+                "action": "transfer",
+                "strength": "must",
+                "exit_class": "success",
+                "return_guard": "return == 0",
+            }
+        },
+    }
+    summaries = infer_function_summaries([], resource_map)
+    path = tmp_path / "shadowed_pending.c"
+    path.write_text(
+        """
+int work(int err)
+{
+    void *ptr = kmalloc(8);
+    int ret = submit(ptr);
+    {
+        int ret = 0;
+        if (!ret)
+            return -EAGAIN;
+    }
+    if (err)
+        return err;
+    kfree(ptr);
+    return 0;
+}
+""",
+        encoding="utf-8",
+    )
+    function = extract_functions(parse_c_file(path))[0]
+    rows = ErrorPathExtractor(ResourceTracker(resource_map, summaries)).extract(
+        function
+    )
+
+    shadow_error = next(row for row in rows if row.final_return_expr == "-EAGAIN")
+    later_error = next(row for row in rows if row.condition == "err")
+    assert shadow_error.missing_cleanup_candidates == ["kfree(ptr)"]
+    assert later_error.missing_cleanup_candidates == ["kfree(ptr)"]
+    shadow_states = [
+        state
+        for exit_block in shadow_error.cfg_witness["exit_states"]
+        for state in exit_block["states"]
+    ]
+    assert any(
+        "ret" in state["symbol_ids"]
+        and state["symbol_ids"]["ret"].startswith("sid_")
+        for state in shadow_states
+    )
+    assert any(state["representative_trace"] for state in shadow_states)
+
+
+def test_cfg_witness_trace_keeps_acquire_anchor_when_truncated(tmp_path: Path):
+    filler = "\n".join(f"    err += {index};" for index in range(60))
+    rows = _rows(
+        tmp_path,
+        f"""
+int work(int err)
+{{
+    void *ptr = kmalloc(8);
+{filler}
+    if (err)
+        return err;
+    kfree(ptr);
+    return 0;
+}}
+""",
+    )
+
+    error = next(row for row in rows if row.condition == "err")
+    states = [
+        state
+        for exit_block in error.cfg_witness["exit_states"]
+        for state in exit_block["states"]
+    ]
+
+    assert any(state["trace_truncated"] for state in states)
+    assert any(
+        any(
+            anchor.get("event") == "acquire"
+            and anchor.get("resource_id") == "ptr@4:kmalloc#1"
+            for anchor in state["trace_anchors"]
+        )
+        for state in states
+    )
 
 
 def test_independent_release_condition_keeps_unreleased_path(tmp_path: Path):

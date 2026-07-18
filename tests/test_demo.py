@@ -7,13 +7,14 @@ from src.evidence_ranker import (
     E0_STATIC_RULE_ONLY,
     E2_API_PROTOCOL_SUPPORTED,
     candidate_id_for_row,
+    obligation_records_for_row,
     obligation_candidate_ids_for_row,
     rank_candidate_rows,
 )
 from src.candidate_rules import error_swallowed_candidates, run_candidate_rules
 from src.error_condition import classify_condition
 from src.label_resolver import Statement
-from src.llm_task_builder import extract_deepseek_true_candidates
+from src.llm_task_builder import build_llm_review_tasks, extract_deepseek_true_candidates
 from src.main import main
 from src.manual_review import ManualReviewDB, ManualReviewLabel
 from src.ownership_transfer import ownership_transfer_hints_for_candidate
@@ -67,6 +68,129 @@ def test_path_and_obligation_candidate_ids_have_distinct_granularity():
     assert len(obligation_ids) == 2
     assert len(set(obligation_ids)) == 2
     assert all(identifier.startswith("obligation_") for identifier in obligation_ids)
+
+
+def test_ranking_splits_conflicting_manual_labels_by_obligation():
+    row = {
+        "file": "fs/demo.c",
+        "function": "work",
+        "path_id": "work#001",
+        "candidate_type": "missing_cleanup",
+        "error_line": "20",
+        "severity": "P2",
+        "condition": "err",
+        "final_return_expr": "err",
+        "evidence": json.dumps(
+            {
+                "acquired_resources": [
+                    {
+                        "resource_id": "ptr@1:kmalloc#1",
+                        "var": "ptr",
+                        "resource_type": "memory",
+                        "release_functions": ["kfree"],
+                    },
+                    {
+                        "resource_id": "bh@2:sb_bread#1",
+                        "var": "bh",
+                        "resource_type": "buffer_head",
+                        "release_functions": ["brelse"],
+                    },
+                ],
+                "missing_releases": ["kfree(ptr)", "brelse(bh)"],
+                "cleanup_calls": [],
+                "final_return_expr": "err",
+            }
+        ),
+    }
+    static_evidence = {
+        "held_resources": json.loads(row["evidence"])["acquired_resources"],
+        "missing_cleanup_candidates": ["kfree(ptr)", "brelse(bh)"],
+        "cleanup_calls": [],
+    }
+    labels = {}
+    for obligation in obligation_records_for_row(row, static_evidence):
+        verdict = (
+            "false_positive"
+            if obligation["missing_cleanup"] == "kfree(ptr)"
+            else "true_candidate"
+        )
+        labels[obligation["obligation_id"]] = ManualReviewLabel(
+            candidate_id=obligation["obligation_id"],
+            verdict=verdict,
+            confidence="high",
+        )
+
+    ranked = rank_candidate_rows(
+        [row],
+        ResourceProtocolDB(),
+        manual_reviews=ManualReviewDB(labels=labels),
+    )
+
+    assert len(ranked) == 2
+    by_missing = {item["missing_cleanup"]: item for item in ranked}
+    assert by_missing["kfree(ptr)"]["manual_review"]["verdict"] == "false_positive"
+    assert by_missing["brelse(bh)"]["manual_review"]["verdict"] == "true_candidate"
+    assert all(item["candidate_id"] == item["obligation_id"] for item in ranked)
+    assert len({item["path_candidate_id"] for item in ranked}) == 1
+
+
+def test_llm_tasks_follow_ranked_obligation_granularity(tmp_path: Path):
+    linux = tmp_path / "linux"
+    source = linux / "fs" / "demo.c"
+    source.parent.mkdir(parents=True)
+    source.write_text("int work(void) { return -EIO; }\n", encoding="utf-8")
+    ranked_path = tmp_path / "ranked.jsonl"
+    tasks_path = tmp_path / "tasks.jsonl"
+    items = [
+        {
+            "llm_task_id": "llm_review_one",
+            "file": "fs/demo.c",
+            "function": "work",
+            "candidate_type": "missing_cleanup",
+            "severity": "P2",
+            "error_line": 1,
+            "obligation_id": "obligation_one",
+            "resource_id": "ptr@1:kmalloc#1",
+            "missing_cleanup": "kfree(ptr)",
+            "static_evidence": {
+                "held_resources": [{"var": "ptr"}],
+                "missing_cleanup_candidates": ["kfree(ptr)"],
+                "cleanup_calls": [],
+            },
+        },
+        {
+            "llm_task_id": "llm_review_two",
+            "file": "fs/demo.c",
+            "function": "work",
+            "candidate_type": "missing_cleanup",
+            "severity": "P2",
+            "error_line": 1,
+            "obligation_id": "obligation_two",
+            "resource_id": "bh@2:sb_bread#1",
+            "missing_cleanup": "brelse(bh)",
+            "static_evidence": {
+                "held_resources": [{"var": "bh"}],
+                "missing_cleanup_candidates": ["brelse(bh)"],
+                "cleanup_calls": [],
+            },
+        },
+    ]
+    ranked_path.write_text(
+        "\n".join(json.dumps(item) for item in items) + "\n",
+        encoding="utf-8",
+    )
+
+    result = build_llm_review_tasks(
+        linux, tmp_path / "unused.csv", tasks_path, ranked_candidates_jsonl=ranked_path
+    )
+    tasks = _read_jsonl(tasks_path)
+
+    assert result["llm_review_tasks"] == 2
+    assert [task["task_id"] for task in tasks] == ["llm_review_one", "llm_review_two"]
+    assert [task["missing_cleanup"] for task in tasks] == [
+        "kfree(ptr)",
+        "brelse(bh)",
+    ]
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -154,6 +278,77 @@ def test_cli_scans_configured_fs_subdir(tmp_path):
     assert rows
     assert all(row["file"].startswith("fs/btrfs/") for row in rows)
     assert any(row["function"] == "demo_missing_brelse" for row in candidates)
+
+
+def test_cli_quarantines_low_confidence_paths_and_candidates(
+    tmp_path: Path, capsys
+):
+    linux = tmp_path / "linux"
+    ext4 = linux / "fs" / "ext4"
+    ext4.mkdir(parents=True)
+    (ext4 / "quarantine_demo.c").write_text(
+        """
+int work(int err, int mode)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    if (err) {
+        switch (mode) {
+        case 1:
+            return -EAGAIN;
+        default:
+            break;
+        }
+        return err;
+    }
+    kfree(ptr);
+    return 0;
+}
+""",
+        encoding="utf-8",
+    )
+    out = tmp_path / "error_paths.csv"
+    candidates_out = tmp_path / "candidates.csv"
+    quarantine_out = tmp_path / "quarantined_error_paths.csv"
+    quarantine_candidates_out = tmp_path / "quarantined_candidates.csv"
+
+    rc = main(
+        [
+            "--linux",
+            str(linux),
+            "--out",
+            str(out),
+            "--check-candidates",
+            "--candidates-out",
+            str(candidates_out),
+            "--quarantined-error-paths-out",
+            str(quarantine_out),
+            "--quarantined-candidates-out",
+            str(quarantine_candidates_out),
+        ]
+    )
+
+    assert rc == 0
+    stdout = capsys.readouterr().out
+    assert "quarantined_error_paths=2" in stdout
+    assert "low_due_to_cfg_slice=2" in stdout
+    assert "quarantined_missing_cleanup_count=2" in stdout
+    assert not [
+        row
+        for row in _read_csv(candidates_out)
+        if row["function"] == "work"
+        and "kfree(ptr)" in _json(row, "missing_cleanup_candidates")
+    ]
+    quarantined_rows = _read_csv(quarantine_out)
+    assert len(quarantined_rows) == 2
+    assert all(row["confidence"] == "low" for row in quarantined_rows)
+    quarantined_candidates = _read_csv(quarantine_candidates_out)
+    assert len(quarantined_candidates) == 2
+    assert all(
+        "kfree(ptr)" in _json(row, "missing_cleanup_candidates")
+        for row in quarantined_candidates
+    )
 
 
 def _rows(rows: list[dict], function: str) -> list[dict]:
@@ -972,7 +1167,7 @@ def test_f2fs_mount_teardown_owns_victim_secmap():
 
     assert len(held) == 1
     assert held[0].var == "dirty_i->victim_secmap"
-    assert held[0].ownership_state == "MAY_ACQUIRED"
+    assert held[0].ownership_state == "ACQUIRED"
     assert held[0].uncertainty_causes == [
         "unreviewed_ownership_transfer_hint"
     ]

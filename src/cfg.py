@@ -44,6 +44,8 @@ class ControlFlowGraph:
     exit: int
     labels: dict[str, int] = field(default_factory=dict)
     unsupported_nodes: list[str] = field(default_factory=list)
+    unsupported_blocks: dict[int, list[str]] = field(default_factory=dict)
+    unsupported_ranges: list[dict[str, int | str]] = field(default_factory=list)
 
     def successors(self, block_id: int) -> list[CFGEdge]:
         return [edge for edge in self.edges if edge.source == block_id]
@@ -74,6 +76,8 @@ class _CFGBuilder:
         self.labels: dict[str, int] = {}
         self.pending_gotos: list[tuple[int, str]] = []
         self.unsupported: list[str] = []
+        self.unsupported_blocks: dict[int, list[str]] = {}
+        self.unsupported_ranges: list[dict[str, int | str]] = []
         self.next_id = 0
         self.scope_depth = 0
         self.entry = self._block("entry")
@@ -120,6 +124,23 @@ class _CFGBuilder:
         if edge not in self.edges:
             self.edges.append(edge)
 
+    def _mark_unsupported(
+        self, block_id: int, node_type: str, node: Any | None = None
+    ) -> None:
+        self.unsupported.append(node_type)
+        self.unsupported_blocks.setdefault(block_id, []).append(node_type)
+        block = self.blocks[block_id]
+        self.unsupported_ranges.append(
+            {
+                "type": node_type,
+                "block": block_id,
+                "start_byte": node.start_byte if node is not None else block.start_byte,
+                "end_byte": node.end_byte if node is not None else block.end_byte,
+                "start_line": node.start_line if node is not None else block.start_line,
+                "end_line": node.end_line if node is not None else block.end_line,
+            }
+        )
+
     def build(self) -> ControlFlowGraph:
         if self.function.body_node is None:
             return ControlFlowGraph(self.blocks, self.edges, self.entry, self.exit)
@@ -133,7 +154,7 @@ class _CFGBuilder:
                 kind = "backedge" if self.blocks[target].start_line <= self.blocks[source].start_line else "goto"
                 self._edge(source, target, kind)
             else:
-                self.unsupported.append(f"unresolved_goto:{label}")
+                self._mark_unsupported(source, f"unresolved_goto:{label}")
                 self._edge(source, self.exit, "unknown")
         return ControlFlowGraph(
             self.blocks,
@@ -142,6 +163,11 @@ class _CFGBuilder:
             self.exit,
             self.labels,
             sorted(set(self.unsupported)),
+            {
+                block_id: sorted(set(nodes))
+                for block_id, nodes in self.unsupported_blocks.items()
+            },
+            list(self.unsupported_ranges),
         )
 
     @staticmethod
@@ -246,7 +272,7 @@ class _CFGBuilder:
             self._edge(block, continue_target or self.exit, "continue")
             return _Fragment(block, [])
         if node.type in {"switch_statement", "case_statement"}:
-            self.unsupported.append(node.type)
+            self._mark_unsupported(block, node.type, node)
         return _Fragment(block, [(block, "fallthrough")])
 
 

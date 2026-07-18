@@ -254,12 +254,14 @@ def _row_context(row: dict[str, str]) -> tuple[list[dict[str, Any]], list[str], 
 
 
 def missing_cleanup_candidates(
-    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+    row: dict[str, str],
+    analysis_contracts: dict[str, Any] | None = None,
+    include_low_confidence: bool = False,
 ) -> list[dict[str, str]]:
     if _suppressed_by_review_contract(row, "missing_cleanup", analysis_contracts):
         return []
     held_resources, cleanup_calls, missing_releases, final_return_expr = _row_context(row)
-    if row.get("confidence") == "low":
+    if row.get("confidence") in {"low", "uncertain"} and not include_low_confidence:
         return []
     if not held_resources or not missing_releases:
         return []
@@ -280,12 +282,14 @@ def missing_cleanup_candidates(
 
 
 def partial_cleanup_candidates(
-    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+    row: dict[str, str],
+    analysis_contracts: dict[str, Any] | None = None,
+    include_low_confidence: bool = False,
 ) -> list[dict[str, str]]:
     if _suppressed_by_review_contract(row, "partial_cleanup", analysis_contracts):
         return []
     held_resources, cleanup_calls, missing_releases, final_return_expr = _row_context(row)
-    if row.get("confidence") == "low":
+    if row.get("confidence") in {"low", "uncertain"} and not include_low_confidence:
         return []
     if row.get("resource_analysis") == "cfg":
         if row.get("partial_cleanup", "").lower() != "true":
@@ -457,11 +461,21 @@ def stale_error_after_retry_candidates(
 
 
 def run_candidate_rules(
-    row: dict[str, str], analysis_contracts: dict[str, Any] | None = None
+    row: dict[str, str],
+    analysis_contracts: dict[str, Any] | None = None,
+    include_low_confidence: bool = False,
 ) -> list[dict[str, str]]:
     candidates: list[dict[str, str]] = []
-    candidates.extend(partial_cleanup_candidates(row, analysis_contracts))
-    candidates.extend(missing_cleanup_candidates(row, analysis_contracts))
+    candidates.extend(
+        partial_cleanup_candidates(
+            row, analysis_contracts, include_low_confidence
+        )
+    )
+    candidates.extend(
+        missing_cleanup_candidates(
+            row, analysis_contracts, include_low_confidence
+        )
+    )
     candidates.extend(error_swallowed_candidates(row, analysis_contracts))
     candidates.extend(stale_error_after_retry_candidates(row, analysis_contracts))
     return candidates

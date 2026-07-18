@@ -65,11 +65,18 @@ def check_candidates(
     error_paths_csv: str | Path,
     candidates_csv: str | Path,
     analysis_contracts: dict | None = None,
+    include_low_confidence: bool = False,
 ) -> dict[str, int]:
     rows = read_error_paths(error_paths_csv)
     candidates: list[dict[str, str]] = []
     for row in rows:
-        candidates.extend(run_candidate_rules(row, analysis_contracts))
+        candidates.extend(
+            run_candidate_rules(
+                row,
+                analysis_contracts,
+                include_low_confidence=include_low_confidence,
+            )
+        )
 
     write_candidates_csv(candidates, candidates_csv)
 

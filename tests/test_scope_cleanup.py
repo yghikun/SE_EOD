@@ -204,7 +204,7 @@ def test_error_callee_consumption_and_field_ownership_transfer():
 
     assert len(held) == 1
     assert held[0].var == "owner->root"
-    assert held[0].ownership_state == "MAY_ACQUIRED"
+    assert held[0].ownership_state == "ACQUIRED"
     assert held[0].uncertainty_causes == [
         "unreviewed_ownership_transfer_hint"
     ]

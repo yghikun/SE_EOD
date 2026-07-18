@@ -24,6 +24,7 @@ from .function_summary import FunctionSummaryDB, SummaryEffect
 from .resource_state import ResourceAction, ResourceState, join_states
 from .cfg import BasicBlock, CFGEdge, build_cfg
 from .dataflow import DisjunctiveDataflowResult, solve_forward_disjunctive
+from .resource_config_audit import audit_resource_map
 
 
 _UNKNOWN_FUNCTION_TARGET = "<unknown>"
@@ -48,6 +49,9 @@ class HeldResource:
     release_suggestion_template: str = ""
     scope_cleanup_function: str = ""
     scope_cleanup_decl_line: int | None = None
+    aggregate_id: str = ""
+    container_owner: str = ""
+    membership_relation: str = ""
     ownership_state: str = ResourceState.ACQUIRED.value
     uncertainty_causes: list[str] = field(default_factory=list)
 
@@ -74,6 +78,7 @@ class PendingSummaryEffect:
     call_site_id: str
     resource_id: str
     result_var: str
+    result_symbol_id: str
     result_version: int
     action: str
     strength: str
@@ -90,6 +95,8 @@ class ScopeFrame:
     function_target_complete: dict[str, bool]
     definition_versions: dict[str, int]
     path_facts: frozenset[tuple[str, bool]]
+    symbol_ids: dict[str, str] = field(default_factory=dict)
+    next_symbol_id: int = 1
     declared_names: frozenset[str] = frozenset()
 
 
@@ -101,10 +108,16 @@ class ResourceFlowState:
     function_targets: dict[str, frozenset[str]]
     function_target_complete: dict[str, bool] = field(default_factory=dict)
     definition_versions: dict[str, int] = field(default_factory=dict)
+    symbol_ids: dict[str, str] = field(default_factory=dict)
+    next_symbol_id: int = 1
     scope_frames: tuple[ScopeFrame, ...] = ()
     pending_summary_effects: tuple[PendingSummaryEffect, ...] = ()
     unresolved_indirect_calls: frozenset[str] = frozenset()
     path_facts: frozenset[tuple[str, bool]] = frozenset()
+    aggregate_memberships: frozenset[tuple[str, str, str]] = frozenset()
+    trace: tuple[dict[str, Any], ...] = field(default_factory=tuple, compare=False)
+    trace_total_events: int = field(default=0, compare=False)
+    trace_anchors: tuple[dict[str, Any], ...] = field(default_factory=tuple, compare=False)
 
     def clone(self) -> "ResourceFlowState":
         return ResourceFlowState(
@@ -117,6 +130,8 @@ class ResourceFlowState:
             function_targets=dict(self.function_targets),
             function_target_complete=dict(self.function_target_complete),
             definition_versions=dict(self.definition_versions),
+            symbol_ids=dict(self.symbol_ids),
+            next_symbol_id=self.next_symbol_id,
             scope_frames=tuple(
                 ScopeFrame(
                     aliases=dict(frame.aliases),
@@ -125,6 +140,8 @@ class ResourceFlowState:
                     function_target_complete=dict(frame.function_target_complete),
                     definition_versions=dict(frame.definition_versions),
                     path_facts=frozenset(frame.path_facts),
+                    symbol_ids=dict(frame.symbol_ids),
+                    next_symbol_id=frame.next_symbol_id,
                     declared_names=frozenset(frame.declared_names),
                 )
                 for frame in self.scope_frames
@@ -132,6 +149,10 @@ class ResourceFlowState:
             pending_summary_effects=tuple(self.pending_summary_effects),
             unresolved_indirect_calls=frozenset(self.unresolved_indirect_calls),
             path_facts=frozenset(self.path_facts),
+            aggregate_memberships=frozenset(self.aggregate_memberships),
+            trace=tuple(dict(item) for item in self.trace),
+            trace_total_events=self.trace_total_events,
+            trace_anchors=tuple(dict(item) for item in self.trace_anchors),
         )
 
 
@@ -447,6 +468,15 @@ def _out_resource_var(args: list[str], cfg: dict[str, Any]) -> str:
     return raw
 
 
+def _strip_address(expr: str) -> str:
+    value = expr.strip()
+    while value.startswith("&"):
+        value = value[1:].strip()
+    while value.startswith("(") and value.endswith(")"):
+        value = value[1:-1].strip()
+    return value
+
+
 class ResourceTracker:
     def __init__(
         self,
@@ -460,7 +490,11 @@ class ResourceTracker:
         self.resource_ownership_transfers = resource_map.get(
             "resource_ownership_transfers", []
         )
+        self.resource_membership_functions = resource_map.get(
+            "resource_membership_functions", {}
+        )
         self.scope_cleanup_macros = resource_map.get("scope_cleanup_macros", {})
+        self.config_audit = audit_resource_map(resource_map)
         self.function_summaries = function_summaries or FunctionSummaryDB()
         self.release_functions_by_type = self._release_functions_by_type()
         self._cfg_cache: dict[
@@ -504,6 +538,15 @@ class ResourceTracker:
                     continue
                 identity = self._resource_identity(resource)
                 held_resource = HeldResource(**resource.to_csv_dict())
+                for member_resource_id, aggregate_id, relation in sorted(
+                    state.aggregate_memberships
+                ):
+                    if member_resource_id != identity:
+                        continue
+                    held_resource.aggregate_id = aggregate_id
+                    if relation:
+                        held_resource.membership_relation = relation
+                    break
                 effective_state = resource_state
                 if guard_status is None and resource.validity_guard:
                     effective_state = ResourceState.MAY_ACQUIRED
@@ -709,6 +752,65 @@ class ResourceTracker:
             f"{resource.acquire_func}"
         )
 
+    @staticmethod
+    def _record_trace(state: ResourceFlowState, event: dict[str, Any]) -> None:
+        compact: dict[str, Any] = {}
+        for key, value in event.items():
+            if value is None or value == "" or value == []:
+                continue
+            compact[key] = value
+        state.trace_total_events += 1
+        state.trace = (*state.trace, compact)[-48:]
+        if compact.get("anchor"):
+            anchor = {key: value for key, value in compact.items() if key != "anchor"}
+            state.trace_anchors = (*state.trace_anchors, anchor)[-32:]
+
+    @staticmethod
+    def _symbol_id(state: ResourceFlowState, expression: str) -> str:
+        normalized = norm_resource_expr(expression)
+        return state.symbol_ids.get(normalized, "")
+
+    @staticmethod
+    def _definition_key(state: ResourceFlowState, expression: str) -> str:
+        return ResourceTracker._symbol_id(state, expression) or norm_resource_expr(
+            expression
+        )
+
+    @staticmethod
+    def _symbolize_atom(state: ResourceFlowState, atom: str) -> str:
+        parts = atom.split(":")
+        changed = False
+        for index in range(1, len(parts)):
+            normalized = norm_resource_expr(parts[index])
+            symbol_id = state.symbol_ids.get(normalized)
+            if symbol_id:
+                parts[index] = symbol_id
+                changed = True
+        return ":".join(parts) if changed else atom
+
+    def _alias_atom(self, state: ResourceFlowState, atom: str) -> str:
+        parts = atom.split(":")
+        changed = False
+        for index in range(1, len(parts)):
+            resolved = self._resolve_alias(state, parts[index])
+            if resolved != parts[index]:
+                parts[index] = resolved
+                changed = True
+        return ":".join(parts) if changed else atom
+
+    def _facts_with_symbol_ids(
+        self, state: ResourceFlowState, facts: list[tuple[str, bool]]
+    ) -> list[tuple[str, bool]]:
+        expanded: list[tuple[str, bool]] = []
+        for atom, truth in facts:
+            symbol_atom = ResourceTracker._symbolize_atom(state, atom)
+            expanded.append((symbol_atom, truth))
+            if symbol_atom != atom:
+                alias_atom = self._alias_atom(state, atom)
+                if alias_atom not in {atom, symbol_atom}:
+                    expanded.append((alias_atom, truth))
+        return expanded
+
     def cfg_diagnostics(self) -> dict[str, Any]:
         functions: list[dict[str, Any]] = []
         unresolved_calls: set[str] = set()
@@ -860,6 +962,7 @@ class ResourceTracker:
                                 "call_site_id": pending.call_site_id,
                                 "resource_id": pending.resource_id,
                                 "result_var": pending.result_var,
+                                "result_symbol_id": pending.result_symbol_id,
                                 "result_version": pending.result_version,
                                 "action": pending.action,
                                 "strength": pending.strength,
@@ -869,6 +972,28 @@ class ResourceTracker:
                             }
                             for pending in state.pending_summary_effects
                         ],
+                        "aggregate_memberships": [
+                            {
+                                "resource_id": resource_id,
+                                "aggregate_id": aggregate_id,
+                                "relation": relation,
+                            }
+                            for (
+                                resource_id,
+                                aggregate_id,
+                                relation,
+                            ) in sorted(state.aggregate_memberships)
+                        ],
+                        "symbol_ids": dict(sorted(state.symbol_ids.items())),
+                        "representative_trace": list(state.trace),
+                        "trace_total_events": state.trace_total_events,
+                        "trace_truncated": state.trace_total_events > len(state.trace),
+                        "trace_start_reason": (
+                            "rolling_window"
+                            if state.trace_total_events > len(state.trace)
+                            else "complete"
+                        ),
+                        "trace_anchors": list(state.trace_anchors),
                     }
                 )
             block = cfg.blocks[block_id]
@@ -889,6 +1014,18 @@ class ResourceTracker:
             }
             for candidate in cfg.edges
             if candidate.source in reachable and candidate.scope_unwind
+        ]
+        unsupported_on_reachable_slice = sorted(
+            {
+                node_type
+                for block_id in reachable
+                for node_type in cfg.unsupported_blocks.get(block_id, [])
+            }
+        )
+        unsupported_ranges_on_reachable_slice = [
+            item
+            for item in getattr(cfg, "unsupported_ranges", [])
+            if int(item.get("block", -1)) in reachable
         ]
         return {
             "kind": "cfg_analysis_snapshot",
@@ -913,6 +1050,9 @@ class ResourceTracker:
             "analysis_truncated": result.truncated,
             "cfg_complete": not cfg.unsupported_nodes,
             "unsupported_nodes": list(cfg.unsupported_nodes),
+            "cfg_slice_complete": not unsupported_on_reachable_slice,
+            "unsupported_nodes_on_reachable_slice": unsupported_on_reachable_slice,
+            "unsupported_ranges_on_reachable_slice": unsupported_ranges_on_reachable_slice,
         }
 
     @staticmethod
@@ -1004,39 +1144,65 @@ class ResourceTracker:
     ) -> ResourceFlowState:
         if block.kind == "scope_enter":
             self._enter_scope(state)
+            self._record_trace(state, {"event": "scope_enter", "block": block.id})
             return state
         if block.kind == "scope_exit":
             self._leave_scope(state)
+            self._record_trace(state, {"event": "scope_exit", "block": block.id})
             return state
         if block.kind in {"entry", "exit", "empty", "condition", "loop_condition", "loop_exit", "label"}:
             return state
         text = block.text
+        self._record_trace(
+            state,
+            {
+                "event": "block",
+                "block": block.id,
+                "kind": block.kind,
+                "line": block.start_line,
+            },
+        )
         assignment_calls = _assignment_calls(text)
         assigned = _assigned_expressions(text)
         if block.kind == "declaration":
-            self._record_scope_declarations(state, _declaration_names(text))
+            self._record_scope_declarations(
+                state, _declaration_names(text), block.start_byte
+            )
         if assigned:
             for expression in assigned:
-                state.definition_versions[expression] = (
-                    state.definition_versions.get(expression, 0) + 1
+                definition_key = self._definition_key(state, expression)
+                state.definition_versions[definition_key] = (
+                    state.definition_versions.get(definition_key, 0) + 1
                 )
             state.path_facts = frozenset(
                 (atom, truth)
                 for atom, truth in state.path_facts
                 if not any(
                     _fact_mentions_assignment(atom, expression)
+                    or (
+                        bool(self._symbol_id(state, expression))
+                        and _fact_mentions_assignment(
+                            atom, self._symbol_id(state, expression)
+                        )
+                    )
                     for expression in assigned
                 )
             )
+            assigned_symbol_ids = {
+                symbol_id
+                for expression in assigned
+                if (symbol_id := self._symbol_id(state, expression))
+            }
             state.pending_summary_effects = tuple(
                 pending
                 for pending in state.pending_summary_effects
                 if pending.result_var not in assigned
+                and pending.result_symbol_id not in assigned_symbol_ids
             )
         assignment_facts = _assignment_path_facts(text)
         if assignment_facts:
             facts = dict(state.path_facts)
-            for atom, truth in assignment_facts:
+            for atom, truth in self._facts_with_symbol_ids(state, assignment_facts):
                 facts[atom] = truth
             state.path_facts = frozenset(facts.items())
         for var, release in self._scope_cleanup_declarations(text):
@@ -1161,16 +1327,24 @@ class ResourceTracker:
             function_target_complete=dict(state.function_target_complete),
             definition_versions=dict(state.definition_versions),
             path_facts=frozenset(state.path_facts),
+            symbol_ids=dict(state.symbol_ids),
+            next_symbol_id=state.next_symbol_id,
         )
         state.scope_frames = (*state.scope_frames, frame)
 
     @staticmethod
     def _record_scope_declarations(
-        state: ResourceFlowState, declared_names: set[str]
+        state: ResourceFlowState, declared_names: set[str], start_byte: int = 0
     ) -> None:
         if not state.scope_frames or not declared_names:
             return
         frame = state.scope_frames[-1]
+        declared = {norm_resource_expr(name) for name in declared_names}
+        for name in sorted(declared):
+            state.symbol_ids[name] = (
+                f"sid_{state.next_symbol_id}_{name}_{start_byte or 0}"
+            )
+            state.next_symbol_id += 1
         replacement = ScopeFrame(
             aliases=frame.aliases,
             scope_cleanups=frame.scope_cleanups,
@@ -1178,8 +1352,10 @@ class ResourceTracker:
             function_target_complete=frame.function_target_complete,
             definition_versions=frame.definition_versions,
             path_facts=frame.path_facts,
+            symbol_ids=frame.symbol_ids,
+            next_symbol_id=frame.next_symbol_id,
             declared_names=frozenset(
-                {*frame.declared_names, *map(norm_resource_expr, declared_names)}
+                {*frame.declared_names, *declared}
             ),
         )
         state.scope_frames = (*state.scope_frames[:-1], replacement)
@@ -1190,6 +1366,11 @@ class ResourceTracker:
             return
         frame = state.scope_frames[-1]
         state.scope_frames = state.scope_frames[:-1]
+        declared_symbol_ids = {
+            name: symbol_id
+            for name in frame.declared_names
+            if (symbol_id := state.symbol_ids.get(name))
+        }
         for name in frame.declared_names:
             if name in frame.aliases:
                 state.aliases[name] = frame.aliases[name]
@@ -1211,12 +1392,25 @@ class ResourceTracker:
                 state.definition_versions[name] = frame.definition_versions[name]
             else:
                 state.definition_versions.pop(name, None)
+            symbol_id = state.symbol_ids.get(name)
+            if symbol_id:
+                state.definition_versions.pop(symbol_id, None)
+            if name in frame.symbol_ids:
+                state.symbol_ids[name] = frame.symbol_ids[name]
+            else:
+                state.symbol_ids.pop(name, None)
 
         current_facts = {
             (atom, truth)
             for atom, truth in state.path_facts
             if not any(
                 _fact_mentions_assignment(atom, name)
+                or (
+                    bool(declared_symbol_ids.get(name))
+                    and _fact_mentions_assignment(
+                        atom, declared_symbol_ids.get(name, "")
+                    )
+                )
                 for name in frame.declared_names
             )
         }
@@ -1225,14 +1419,19 @@ class ResourceTracker:
             for atom, truth in frame.path_facts
             if any(
                 _fact_mentions_assignment(atom, name)
+                or _fact_mentions_assignment(
+                    atom, frame.symbol_ids.get(name, f"implicit_{name}")
+                )
                 for name in frame.declared_names
             )
         }
         state.path_facts = frozenset(current_facts | restored_facts)
+        state.next_symbol_id = frame.next_symbol_id
         state.pending_summary_effects = tuple(
             pending
             for pending in state.pending_summary_effects
             if pending.result_var not in frame.declared_names
+            and pending.result_symbol_id not in set(declared_symbol_ids.values())
         )
 
     def _transfer_cfg_edge(
@@ -1243,6 +1442,17 @@ class ResourceTracker:
     ) -> ResourceFlowState | None:
         for _ in range(edge.scope_unwind):
             self._leave_scope(state)
+        self._record_trace(
+            state,
+            {
+                "event": "edge",
+                "edge_id": edge.edge_id,
+                "source": edge.source,
+                "target": edge.target,
+                "kind": edge.kind,
+                "scope_unwind": edge.scope_unwind,
+            },
+        )
         if edge.kind == "backedge":
             modified = self._loop_modified_expressions(cfg, edge) if cfg else set()
             state.path_facts = frozenset(
@@ -1250,13 +1460,21 @@ class ResourceTracker:
                 for atom, truth in state.path_facts
                 if not any(
                     _fact_mentions_assignment(atom, expression)
+                    or (
+                        bool(self._symbol_id(state, expression))
+                        and _fact_mentions_assignment(
+                            atom, self._symbol_id(state, expression)
+                        )
+                    )
                     for expression in modified
                 )
             )
             return state
         if edge.kind not in {"true", "false"} or not edge.condition:
             return state
-        edge_facts = _condition_facts(edge.condition, edge.kind == "true")
+        edge_facts = self._facts_with_symbol_ids(
+            state, _condition_facts(edge.condition, edge.kind == "true")
+        )
         if not edge_facts:
             return state
         facts = dict(state.path_facts)
@@ -1349,15 +1567,23 @@ class ResourceTracker:
     def _pending_effect_guard(
         state: ResourceFlowState, pending: PendingSummaryEffect
     ) -> bool | None:
-        if state.definition_versions.get(pending.result_var, 0) != pending.result_version:
+        definition_key = pending.result_symbol_id or pending.result_var
+        if state.definition_versions.get(definition_key, 0) != pending.result_version:
             return False
         guard = pending.return_guard.strip()
         if not guard:
             guard = "return == 0" if pending.exit_class == "success" else "return != 0"
-        expression = re.sub(
-            r"\breturn\b", pending.result_var, guard, flags=re.IGNORECASE
-        )
-        required = _condition_facts(expression, True)
+        expression = re.sub(r"\breturn\b", pending.result_var, guard, flags=re.IGNORECASE)
+        required = []
+        for atom, truth in _condition_facts(expression, True):
+            symbol_atom = atom
+            if pending.result_symbol_id:
+                symbol_atom = re.sub(
+                    rf"(?<![A-Za-z0-9_]){re.escape(pending.result_var)}(?![A-Za-z0-9_])",
+                    pending.result_symbol_id,
+                    atom,
+                )
+            required.append((symbol_atom, truth))
         if not required:
             return None
         known = dict(state.path_facts)
@@ -1433,6 +1659,18 @@ class ResourceTracker:
         state.resources[resource.resource_id] = (
             resource,
             acquired_state,
+        )
+        self._record_trace(
+            state,
+            {
+                "event": "acquire",
+                "anchor": True,
+                "resource_id": resource.resource_id,
+                "var": resource.var,
+                "function": call_name,
+                "line": line,
+                "state": acquired_state.value,
+            },
         )
         state.path_facts = frozenset(
             (atom, truth)
@@ -1512,11 +1750,15 @@ class ResourceTracker:
             return
 
         resolved_args = [self._resolve_alias(state, arg) for arg in args]
+        self._flow_apply_membership_call(state, name, resolved_args)
         for key, (resource, resource_state) in list(state.resources.items()):
             identity = HeldResource(**resource.to_csv_dict())
             identity.var = key
-            directly_released = call_releases_resource(
+            direct_release_target = self._direct_release_target(
                 name, resolved_args, identity
+            )
+            directly_released = self._call_releases_with_membership(
+                state, name, resolved_args, identity, key
             ) or self._consumer_releases(name, resolved_args, identity, "always")
             if name == "ext4_fc_free" and call_releases_resource(
                 name, resolved_args, resource
@@ -1530,6 +1772,23 @@ class ResourceTracker:
                     resource_state,
                     ResourceState.RELEASED,
                     resource.release_cardinality,
+                    direct_release_target,
+                )
+                continue
+            if (
+                direct_release_target
+                and resource.multiplicity == "many"
+                and resource.release_cardinality == "all"
+                and resource.membership_relation
+            ):
+                self._discharge_resource(
+                    state,
+                    key,
+                    resource,
+                    resource_state,
+                    ResourceState.RELEASED,
+                    resource.release_cardinality,
+                    direct_release_target,
                 )
                 continue
 
@@ -1568,8 +1827,9 @@ class ResourceTracker:
                             call_site_id=call_site_id or name,
                             resource_id=key,
                             result_var=result_var,
+                            result_symbol_id=self._symbol_id(state, result_var),
                             result_version=state.definition_versions.get(
-                                result_var, 0
+                                self._definition_key(state, result_var), 0
                             ),
                             action=effect.action,
                             strength=effect.strength,
@@ -1600,6 +1860,147 @@ class ResourceTracker:
                 state.unresolved_indirect_calls = frozenset(
                     {*state.unresolved_indirect_calls, name}
                 )
+
+    def _flow_apply_membership_call(
+        self, state: ResourceFlowState, name: str, args: list[str]
+    ) -> None:
+        configs = self.resource_membership_functions.get(name, [])
+        if isinstance(configs, dict):
+            configs = [configs]
+        if not isinstance(configs, list):
+            return
+        for config in configs:
+            if not isinstance(config, dict):
+                continue
+            resource_expr = self._membership_expr(config, args, "resource")
+            aggregate_expr = self._membership_expr(config, args, "aggregate")
+            if not resource_expr or not aggregate_expr:
+                continue
+            relation = str(config.get("relation", "")).strip() or str(
+                config.get("membership_relation", "")
+            ).strip()
+            resource_type = str(config.get("resource_type", "")).strip()
+            aggregate_id = norm_resource_expr(_strip_address(aggregate_expr))
+            matched_resource_ids = self._membership_resource_ids(
+                state, resource_expr, resource_type
+            )
+            if not matched_resource_ids:
+                continue
+            memberships = set(state.aggregate_memberships)
+            for resource_id in matched_resource_ids:
+                memberships.add((resource_id, aggregate_id, relation))
+                resource, resource_state = state.resources[resource_id]
+                if not resource.aggregate_id:
+                    resource.aggregate_id = aggregate_id
+                if relation and not resource.membership_relation:
+                    resource.membership_relation = relation
+                state.resources[resource_id] = (resource, resource_state)
+                self._record_trace(
+                    state,
+                    {
+                        "event": "aggregate_membership",
+                        "anchor": True,
+                        "resource_id": resource_id,
+                        "aggregate_id": aggregate_id,
+                        "relation": relation,
+                    },
+                )
+            state.aggregate_memberships = frozenset(memberships)
+
+    @staticmethod
+    def _membership_expr(
+        config: dict[str, Any], args: list[str], prefix: str
+    ) -> str:
+        template = str(config.get(f"{prefix}_expr", "")).strip()
+        if template:
+            value = template
+            for index, arg in enumerate(args):
+                value = value.replace(f"{{arg{index}}}", arg.strip())
+            return value
+        arg_key = f"{prefix}_arg"
+        if arg_key not in config:
+            return ""
+        try:
+            index = int(config[arg_key])
+        except (TypeError, ValueError):
+            return ""
+        if index >= len(args):
+            return ""
+        return args[index].strip()
+
+    def _membership_resource_ids(
+        self, state: ResourceFlowState, expression: str, resource_type: str
+    ) -> list[str]:
+        target = norm_resource_expr(_strip_address(expression))
+        resolved = self._resolve_alias(state, target)
+        if resolved in state.resources:
+            resource, _resource_state = state.resources[resolved]
+            if resource_type and resource.resource_type != resource_type:
+                return []
+            return [resolved]
+        matched: list[str] = []
+        for resource_id, (resource, _resource_state) in state.resources.items():
+            if resource_type and resource.resource_type != resource_type:
+                continue
+            if same_resource_expr(target, resource.var) or same_resource_expr(
+                resolved, resource.var
+            ):
+                matched.append(resource_id)
+        return matched
+
+    def _direct_release_target(
+        self, name: str, args: list[str], resource: HeldResource
+    ) -> str:
+        if name not in resource.release_functions:
+            if name == "kmem_cache_free" and "kmem_cache_free" in resource.release_functions:
+                pass
+            else:
+                return ""
+        if name == "kmem_cache_free" and "kmem_cache_free" in resource.release_functions:
+            return args[1] if len(args) >= 2 else (args[0] if args else "")
+        index = resource.release_arg_index
+        if len(args) > index:
+            return args[index]
+        return args[0] if args else ""
+
+    def _call_releases_with_membership(
+        self,
+        state: ResourceFlowState,
+        name: str,
+        args: list[str],
+        resource: HeldResource,
+        resource_id: str,
+    ) -> bool:
+        if (
+            resource.multiplicity == "many"
+            and resource.release_cardinality == "all"
+            and resource.membership_relation
+        ):
+            target = self._direct_release_target(name, args, resource)
+            return bool(
+                target
+                and self._release_target_matches_membership(
+                    state, resource_id, target, resource.membership_relation
+                )
+            )
+        return call_releases_resource(name, args, resource)
+
+    def _release_target_matches_membership(
+        self,
+        state: ResourceFlowState,
+        resource_id: str,
+        target: str,
+        relation: str = "",
+    ) -> bool:
+        normalized_target = norm_resource_expr(_strip_address(target))
+        for member_resource_id, aggregate_id, member_relation in state.aggregate_memberships:
+            if member_resource_id != resource_id:
+                continue
+            if relation and member_relation and member_relation != relation:
+                continue
+            if same_resource_expr(normalized_target, aggregate_id):
+                return True
+        return False
 
     def _flow_apply_indirect_call(
         self,
@@ -1664,6 +2065,7 @@ class ResourceTracker:
         current_state: ResourceState,
         discharged_state: ResourceState,
         effect_cardinality: str = "one",
+        aggregate_target: str = "",
     ) -> None:
         if current_state not in {
             ResourceState.ACQUIRED,
@@ -1676,8 +2078,76 @@ class ResourceTracker:
                 resource,
                 ResourceState.MAY_ACQUIRED,
             )
+            self._record_trace(
+                state,
+                {
+                    "event": "cardinality_blocked",
+                    "anchor": True,
+                    "resource_id": resource_id,
+                    "multiplicity": resource.multiplicity,
+                    "effect_cardinality": effect_cardinality,
+                    "state": ResourceState.MAY_ACQUIRED.value,
+                },
+            )
+            return
+        if (
+            resource.multiplicity == "many"
+            and effect_cardinality == "all"
+            and resource.membership_relation
+            and not self._release_target_matches_membership(
+                state, resource_id, aggregate_target, resource.membership_relation
+            )
+        ):
+            self._add_uncertainty(resource, "aggregate_membership_unresolved")
+            state.resources[resource_id] = (
+                resource,
+                ResourceState.MAY_ACQUIRED,
+            )
+            self._record_trace(
+                state,
+                {
+                    "event": "aggregate_membership_unresolved",
+                    "anchor": True,
+                    "resource_id": resource_id,
+                    "multiplicity": resource.multiplicity,
+                    "effect_cardinality": effect_cardinality,
+                    "state": ResourceState.MAY_ACQUIRED.value,
+                },
+            )
+            return
+        if (
+            resource.multiplicity == "many"
+            and effect_cardinality == "all"
+            and not resource.aggregate_id
+        ):
+            self._add_uncertainty(resource, "aggregate_identity_unresolved")
+            state.resources[resource_id] = (
+                resource,
+                ResourceState.MAY_ACQUIRED,
+            )
+            self._record_trace(
+                state,
+                {
+                    "event": "aggregate_identity_unresolved",
+                    "anchor": True,
+                    "resource_id": resource_id,
+                    "multiplicity": resource.multiplicity,
+                    "effect_cardinality": effect_cardinality,
+                    "state": ResourceState.MAY_ACQUIRED.value,
+                },
+            )
             return
         state.resources[resource_id] = (resource, discharged_state)
+        self._record_trace(
+            state,
+            {
+                "event": discharged_state.value.lower(),
+                "anchor": True,
+                "resource_id": resource_id,
+                "effect_cardinality": effect_cardinality,
+                "state": discharged_state.value,
+            },
+        )
 
     @staticmethod
     def _summary_action_state(action: str) -> ResourceState:
@@ -1793,6 +2263,11 @@ class ResourceTracker:
         function_targets: dict[str, frozenset[str]] = {}
         function_target_complete: dict[str, bool] = {}
         definition_versions: dict[str, int] = {}
+        symbol_ids = {
+            key: value
+            for key, value in left.symbol_ids.items()
+            if right.symbol_ids.get(key) == value
+        }
         for name in set(left.function_targets) | set(right.function_targets):
             left_targets = left.function_targets.get(name)
             right_targets = right.function_targets.get(name)
@@ -1818,6 +2293,9 @@ class ResourceTracker:
             for pending in left.pending_summary_effects
             if pending in right.pending_summary_effects
         )
+        aggregate_memberships = (
+            left.aggregate_memberships & right.aggregate_memberships
+        )
         common_scope_frames: list[ScopeFrame] = []
         for left_frame, right_frame in zip(
             left.scope_frames, right.scope_frames
@@ -1832,10 +2310,16 @@ class ResourceTracker:
             function_targets=function_targets,
             function_target_complete=function_target_complete,
             definition_versions=definition_versions,
+            symbol_ids=symbol_ids,
+            next_symbol_id=max(left.next_symbol_id, right.next_symbol_id),
             scope_frames=tuple(common_scope_frames),
             pending_summary_effects=pending_effects,
             unresolved_indirect_calls=unresolved,
             path_facts=facts,
+            aggregate_memberships=aggregate_memberships,
+            trace=left.trace or right.trace,
+            trace_total_events=max(left.trace_total_events, right.trace_total_events),
+            trace_anchors=left.trace_anchors or right.trace_anchors,
         )
 
     def _filter_held_resources(
@@ -1858,7 +2342,6 @@ class ResourceTracker:
             ):
                 continue
             if self._resource_ownership_transfer_hint(function_name, res):
-                res.ownership_state = ResourceState.MAY_ACQUIRED.value
                 self._add_uncertainty(
                     res, "unreviewed_ownership_transfer_hint"
                 )
@@ -2006,15 +2489,22 @@ class ResourceTracker:
         releases = cfg.get("release", [])
         if isinstance(releases, str):
             releases = [releases]
+        resource_id = f"{norm_resource_expr(var)}@{line}:{acquire_func}#{generation}"
+        aggregate_id = str(cfg.get("aggregate_id", "")).strip()
+        if aggregate_id:
+            aggregate_id = (
+                aggregate_id.replace("{var}", norm_resource_expr(var))
+                .replace("{resource_id}", resource_id)
+            )
+            if same_resource_expr(aggregate_id, var):
+                aggregate_id = resource_id
         return HeldResource(
             var=var,
             acquire_func=acquire_func,
             resource_type=cfg.get("resource_type", "unknown"),
             release_functions=list(releases),
             acquire_line=line,
-            resource_id=(
-                f"{norm_resource_expr(var)}@{line}:{acquire_func}#{generation}"
-            ),
+            resource_id=resource_id,
             generation=generation,
             release_cardinality=str(cfg.get("release_cardinality", "one")),
             validity_guard=validity_guard,
@@ -2027,6 +2517,9 @@ class ResourceTracker:
             release_suggestion_template=str(cfg.get("release_suggestion", "")),
             scope_cleanup_function=scope_cleanup[0] if scope_cleanup else "",
             scope_cleanup_decl_line=scope_cleanup[1] if scope_cleanup else None,
+            aggregate_id=aggregate_id,
+            container_owner=str(cfg.get("container_owner", "")),
+            membership_relation=str(cfg.get("membership_relation", "")),
         )
 
     @staticmethod

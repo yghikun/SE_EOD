@@ -203,7 +203,9 @@ def task_from_candidate(
             questions.append(question)
 
     return {
-        "task_id": _task_id(row),
+        "task_id": ranked_evidence.get("llm_task_id", _task_id(row))
+        if ranked_evidence
+        else _task_id(row),
         "file": row.get("file", ""),
         "function": row.get("function", ""),
         "candidate_type": row.get("candidate_type", ""),
@@ -252,6 +254,15 @@ def task_from_candidate(
         "path_candidate_id": ranked_evidence.get("path_candidate_id", "")
         if ranked_evidence
         else "",
+        "obligation_id": ranked_evidence.get("obligation_id", "")
+        if ranked_evidence
+        else "",
+        "resource_id": ranked_evidence.get("resource_id", "")
+        if ranked_evidence
+        else "",
+        "missing_cleanup": ranked_evidence.get("missing_cleanup", "")
+        if ranked_evidence
+        else "",
         "obligation_candidate_ids": ranked_evidence.get(
             "obligation_candidate_ids", []
         )
@@ -283,20 +294,29 @@ def build_llm_review_tasks(
     tasks_path = Path(tasks_out)
     tasks_path.parent.mkdir(parents=True, exist_ok=True)
     ranked_index = load_ranked_candidates_index(ranked_candidates_jsonl)
+    ranked_items = _read_ranked_candidates(ranked_candidates_jsonl)
 
     total_candidates = 0
     total_tasks = 0
     filtered_by_score = 0
     unavailable_contexts = 0
     tasks_with_protocols = 0
-    with candidates_path.open(newline="", encoding="utf-8") as input_fh, tasks_path.open(
-        "w", encoding="utf-8"
-    ) as output_fh:
-        for row in csv.DictReader(input_fh):
+    with tasks_path.open("w", encoding="utf-8") as output_fh:
+        if ranked_items:
+            source_rows = [
+                (_row_from_ranked_candidate(item), item) for item in ranked_items
+            ]
+        else:
+            with candidates_path.open(newline="", encoding="utf-8") as input_fh:
+                source_rows = []
+                for row in csv.DictReader(input_fh):
+                    ranked_evidence = ranked_index.get(_task_id(row)) or ranked_index.get(
+                        _legacy_task_id(row)
+                    )
+                    source_rows.append((row, ranked_evidence))
+
+        for row, ranked_evidence in source_rows:
             total_candidates += 1
-            ranked_evidence = ranked_index.get(_task_id(row)) or ranked_index.get(
-                _legacy_task_id(row)
-            )
             if min_evidence_score is not None:
                 score = _int_or_zero(
                     ranked_evidence.get("evidence_score") if ranked_evidence else None
@@ -323,6 +343,74 @@ def build_llm_review_tasks(
     }
 
 
+def _read_ranked_candidates(path: str | Path | None) -> list[dict[str, Any]]:
+    if not path:
+        return []
+    source = Path(path)
+    if not source.exists():
+        return []
+    items: list[dict[str, Any]] = []
+    try:
+        lines = source.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict):
+            items.append(item)
+    return items
+
+
+def _row_from_ranked_candidate(item: dict[str, Any]) -> dict[str, str]:
+    static_evidence = item.get("static_evidence", {})
+    if not isinstance(static_evidence, dict):
+        static_evidence = {}
+    return {
+        "file": str(item.get("file", "")),
+        "function": str(item.get("function", "")),
+        "candidate_type": str(item.get("candidate_type", "")),
+        "severity": str(item.get("severity", "")),
+        "error_line": str(item.get("error_line", "")),
+        "condition": str(item.get("condition", "")),
+        "branch_taken": str(item.get("branch_taken", "")),
+        "condition_start_byte": "",
+        "condition_end_byte": "",
+        "cfg_edge_id": str(item.get("cfg_edge_id", "")),
+        "cfg_source_block": str(item.get("cfg_source_block", "")),
+        "cfg_target_block": str(item.get("cfg_target_block", "")),
+        "cfg_edge_kind": str(item.get("cfg_edge_kind", "")),
+        "cfg_witness": json.dumps(item.get("cfg_witness", {}), ensure_ascii=False),
+        "resource_analysis": str(item.get("resource_analysis", "")),
+        "error_source_expr": str(static_evidence.get("error_source_expr", "")),
+        "held_resources": json.dumps(
+            static_evidence.get("held_resources", []), ensure_ascii=False
+        ),
+        "cleanup_calls": json.dumps(
+            static_evidence.get("cleanup_calls", []), ensure_ascii=False
+        ),
+        "missing_cleanup_candidates": json.dumps(
+            static_evidence.get("missing_cleanup_candidates", []),
+            ensure_ascii=False,
+        ),
+        "released_cleanup_candidates": json.dumps(
+            static_evidence.get("released_cleanup_candidates", []),
+            ensure_ascii=False,
+        ),
+        "partial_cleanup": str(
+            bool(static_evidence.get("partial_cleanup", False))
+        ).lower(),
+        "final_return_expr": str(item.get("final_return_expr", "")),
+        "reason": "; ".join(
+            str(part) for part in item.get("score_explanation", [])
+        ),
+    }
+
+
 def _deepseek_prompt(task: dict[str, Any]) -> str:
     file_value = str(task.get("file", ""))
     path_parts = Path(file_value).parts
@@ -334,6 +422,9 @@ def _deepseek_prompt(task: dict[str, Any]) -> str:
         f"file: {task.get('file')}\n"
         f"function: {task.get('function')}\n"
         f"candidate_type: {task.get('candidate_type')}\n"
+        f"obligation_id: {task.get('obligation_id')}\n"
+        f"resource_id: {task.get('resource_id')}\n"
+        f"missing_cleanup: {task.get('missing_cleanup')}\n"
         f"severity: {task.get('severity')}\n"
         f"error_line: {task.get('error_line')}\n"
         f"condition: {task.get('condition')}\n"

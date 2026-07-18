@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +24,10 @@ class SummaryEffect:
     return_guard: str = ""
     effect_cardinality: str = "one"
     must_reason: tuple[str, ...] = ()
+    origin_scc: str = ""
+    origin_kind: str = "automatic"
+    convergence_status: str = "converged"
+    propagation_depth: int = 0
     condition: str = "always"
     resource_type: str = ""
     release_functions: tuple[str, ...] = ()
@@ -169,6 +173,10 @@ def infer_function_summaries(
                             return_guard=callee_effect.return_guard,
                             effect_cardinality=callee_effect.effect_cardinality,
                             must_reason=callee_effect.must_reason,
+                            origin_scc=callee_effect.origin_scc,
+                            origin_kind=_propagated_origin_kind(callee_effect),
+                            convergence_status=callee_effect.convergence_status,
+                            propagation_depth=callee_effect.propagation_depth + 1,
                             condition=callee_effect.condition,
                             resource_type=callee_effect.resource_type,
                             release_functions=callee_effect.release_functions,
@@ -229,6 +237,10 @@ def infer_function_summaries(
                                 if strength == "must"
                                 else ()
                             ),
+                            origin_scc=callee_effect.origin_scc,
+                            origin_kind=_propagated_origin_kind(callee_effect),
+                            convergence_status=callee_effect.convergence_status,
+                            propagation_depth=callee_effect.propagation_depth + 1,
                             condition=_map_condition_to_caller(
                                 callee_effect.condition, args, caller.parameters
                             ),
@@ -244,12 +256,105 @@ def infer_function_summaries(
 
     for name in local_names:
         summaries[name].iterations = iterations
+    call_graph = {
+        name: tuple(summary.callees) for name, summary in summaries.items()
+    }
+    _annotate_effect_origins(summaries, _scc_labels(call_graph))
+    if not converged:
+        _downgrade_nonconverged_automatic_must_effects(summaries)
     return FunctionSummaryDB(
         summaries=summaries,
-        call_graph={name: tuple(summary.callees) for name, summary in summaries.items()},
+        call_graph=call_graph,
         converged=converged,
         iterations=iterations,
     )
+
+
+def _annotate_effect_origins(
+    summaries: dict[str, FunctionSummary], scc_labels: dict[str, str]
+) -> None:
+    for function, summary in summaries.items():
+        label = scc_labels.get(function, function)
+        summary.effects = sorted(
+            replace(effect, origin_scc=effect.origin_scc or label)
+            for effect in summary.effects
+        )
+
+
+def _propagated_origin_kind(effect: SummaryEffect) -> str:
+    if effect.origin_kind == "reviewed_seed":
+        return "derived_from_reviewed_seed"
+    return effect.origin_kind or "automatic"
+
+
+def _scc_labels(call_graph: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    index = 0
+    stack: list[str] = []
+    indices: dict[str, int] = {}
+    lowlinks: dict[str, int] = {}
+    on_stack: set[str] = set()
+    labels: dict[str, str] = {}
+
+    def strongconnect(node: str) -> None:
+        nonlocal index
+        indices[node] = index
+        lowlinks[node] = index
+        index += 1
+        stack.append(node)
+        on_stack.add(node)
+
+        for successor in call_graph.get(node, ()):
+            if successor not in call_graph:
+                continue
+            if successor not in indices:
+                strongconnect(successor)
+                lowlinks[node] = min(lowlinks[node], lowlinks[successor])
+            elif successor in on_stack:
+                lowlinks[node] = min(lowlinks[node], indices[successor])
+
+        if lowlinks[node] != indices[node]:
+            return
+        component: list[str] = []
+        while stack:
+            member = stack.pop()
+            on_stack.remove(member)
+            component.append(member)
+            if member == node:
+                break
+        label = "+".join(sorted(component))
+        for member in component:
+            labels[member] = label
+
+    for node in sorted(call_graph):
+        if node not in indices:
+            strongconnect(node)
+    return labels
+
+
+def _downgrade_nonconverged_automatic_must_effects(
+    summaries: dict[str, FunctionSummary],
+) -> None:
+    for summary in summaries.values():
+        downgraded: list[SummaryEffect] = []
+        for effect in summary.effects:
+            if effect.strength != "must" or effect.origin_kind == "reviewed_seed":
+                downgraded.append(effect)
+                continue
+            downgraded.append(
+                replace(
+                    effect,
+                    strength="may",
+                    must_reason=(),
+                    convergence_status="not_converged",
+                    origin_kind=effect.origin_kind,
+                    origin_scc=effect.origin_scc or "global_iteration",
+                    evidence=(
+                        "automatic must downgraded because summary fixed point did not converge",
+                        *effect.evidence,
+                    ),
+                )
+            )
+        summary.effects = sorted(downgraded)
 
 
 def _seed_effect_summaries(resource_map: dict[str, Any]) -> dict[str, FunctionSummary]:
@@ -300,6 +405,9 @@ def _seed_effect_summaries(resource_map: dict[str, Any]) -> dict[str, FunctionSu
                     return_guard=return_guard,
                     effect_cardinality=effect_cardinality,
                     must_reason=("reviewed_seed",) if strength == "must" else (),
+                    origin_scc=function.strip(),
+                    origin_kind="reviewed_seed",
+                    convergence_status="reviewed_seed",
                     condition=str(raw_effect.get("condition", "always")),
                     resource_type=str(raw_effect.get("resource_type", "")),
                     release_functions=tuple(str(name) for name in release_functions),
@@ -584,7 +692,10 @@ def _effect_executes_on_all_exits(
             if name != call_name or argument_index >= len(args):
                 continue
             if same_resource_expr(args[argument_index], resource_expression):
-                effect_blocks.add(block_id)
+                if _call_event_is_isolated(block.text, call):
+                    effect_blocks.add(block_id)
+                else:
+                    return "may"
     if not effect_blocks:
         return "may"
 
@@ -599,6 +710,20 @@ def _effect_executes_on_all_exits(
                 reachable.add(edge.target)
                 pending.append(edge.target)
     return "may" if cfg.exit in reachable else "must"
+
+
+def _call_event_is_isolated(block_text: str, call_expr: str) -> bool:
+    text = block_text.strip()
+    call = call_expr.strip()
+    if text == call or text == f"{call};":
+        return True
+    if re.fullmatch(rf"return\s+{re.escape(call)}\s*;", text):
+        return True
+    declaration_or_assignment = re.fullmatch(
+        rf"(?:[A-Za-z_][\w\s\*]*\s+)?[A-Za-z_]\w*\s*=\s*{re.escape(call)}\s*;",
+        text,
+    )
+    return bool(declaration_or_assignment)
 
 
 def _direct_release_strength(

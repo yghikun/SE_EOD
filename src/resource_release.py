@@ -49,6 +49,24 @@ def release_arg_requires_address(resource: Any) -> bool:
     return bool(getattr(resource, "release_arg_requires_address", False))
 
 
+def resource_aggregate_id(resource: Any) -> str:
+    if isinstance(resource, dict):
+        return str(resource.get("aggregate_id", "") or "")
+    return str(getattr(resource, "aggregate_id", "") or "")
+
+
+def resource_multiplicity(resource: Any) -> str:
+    if isinstance(resource, dict):
+        return str(resource.get("multiplicity", "one") or "one")
+    return str(getattr(resource, "multiplicity", "one") or "one")
+
+
+def resource_release_cardinality(resource: Any) -> str:
+    if isinstance(resource, dict):
+        return str(resource.get("release_cardinality", "one") or "one")
+    return str(getattr(resource, "release_cardinality", "one") or "one")
+
+
 def cleanup_call_releases_resource(call_expr: str, resource: Any) -> bool:
     name, args = call_name_and_args(call_expr)
     return call_releases_resource(name, args, resource)
@@ -76,7 +94,16 @@ def _action_releases_resource(name: str, args: list[str], resource: Any) -> bool
             target = target.strip()
             while target.startswith("&"):
                 target = target[1:].strip()
-        return same_resource_expr(target, var)
+        aggregate = resource_aggregate_id(resource)
+        if (
+            resource_multiplicity(resource) == "many"
+            and resource_release_cardinality(resource) == "all"
+            and aggregate
+        ):
+            return same_resource_expr(target, aggregate)
+        return same_resource_expr(target, var) or bool(
+            aggregate and same_resource_expr(target, aggregate)
+        )
 
     if name == "kmem_cache_free" and "kmem_cache_free" in releases:
         target = args[1] if len(args) >= 2 else first_arg

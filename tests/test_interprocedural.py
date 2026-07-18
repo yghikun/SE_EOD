@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 
 from src.error_condition import ConditionInfo
 from src.function_extractor import Function, extract_functions
-from src.function_summary import infer_function_summaries
+from src.function_summary import _call_event_is_isolated, infer_function_summaries
 from src.label_resolver import Statement
 from src.parser import parse_c_file
 from src.resource_state import (
@@ -14,6 +14,7 @@ from src.resource_state import (
     join_states,
     transition,
 )
+from src.resource_config_audit import audit_resource_map
 from src.resource_tracker import ResourceFlowState, ResourceTracker
 
 
@@ -122,6 +123,7 @@ def test_reviewed_release_all_cardinality_discharges_many_instances():
                 "resource_type": "memory",
                 "release": ["release_all"],
                 "release_cardinality": "all",
+                "aggregate_id": "items",
             }
         }
     }
@@ -143,6 +145,173 @@ def test_reviewed_release_all_cardinality_discharges_many_instances():
     tracker._flow_apply_call(state, "release_all", ["items"])
 
     assert state.resources[resource.resource_id][1] is ResourceState.RELEASED
+
+
+def test_release_all_without_aggregate_identity_stays_conservative():
+    resource_map = {
+        "acquire_functions": {
+            "allocate_many": {
+                "resource_type": "memory",
+                "release": ["release_all"],
+                "release_cardinality": "all",
+            }
+        }
+    }
+    tracker = ResourceTracker(resource_map)
+    resource = tracker._resource(
+        "items",
+        "allocate_many",
+        resource_map["acquire_functions"]["allocate_many"],
+        1,
+    )
+    resource.multiplicity = "many"
+    state = ResourceFlowState(
+        {resource.resource_id: (resource, ResourceState.MAY_ACQUIRED)},
+        {"items": resource.resource_id},
+        {},
+        {},
+    )
+
+    tracker._flow_apply_call(state, "release_all", ["items"])
+
+    kept_resource, kept_state = state.resources[resource.resource_id]
+    assert kept_state is ResourceState.MAY_ACQUIRED
+    assert "aggregate_identity_unresolved" in kept_resource.uncertainty_causes
+
+
+def test_release_all_with_aggregate_identity_requires_matching_aggregate():
+    resource_map = {
+        "acquire_functions": {
+            "allocate_many": {
+                "resource_type": "memory",
+                "release": ["release_all"],
+                "release_cardinality": "all",
+                "aggregate_id": "owned_items",
+            }
+        }
+    }
+    tracker = ResourceTracker(resource_map)
+    resource = tracker._resource(
+        "item",
+        "allocate_many",
+        resource_map["acquire_functions"]["allocate_many"],
+        1,
+    )
+    resource.multiplicity = "many"
+    state = ResourceFlowState(
+        {resource.resource_id: (resource, ResourceState.MAY_ACQUIRED)},
+        {"item": resource.resource_id},
+        {},
+        {},
+    )
+
+    tracker._flow_apply_call(state, "release_all", ["item"])
+    assert state.resources[resource.resource_id][1] is ResourceState.MAY_ACQUIRED
+
+    tracker._flow_apply_call(state, "release_all", ["owned_items"])
+    assert state.resources[resource.resource_id][1] is ResourceState.RELEASED
+
+
+def test_release_all_with_membership_relation_requires_state_fact():
+    resource_map = {
+        "acquire_functions": {
+            "allocate_item": {
+                "resource_type": "item",
+                "release": ["release_all"],
+                "release_cardinality": "all",
+                "membership_relation": "list_member",
+            }
+        },
+        "resource_membership_functions": {
+            "list_add": {
+                "resource_arg": 0,
+                "aggregate_arg": 1,
+                "resource_type": "item",
+                "relation": "list_member",
+            }
+        },
+    }
+    tracker = ResourceTracker(resource_map)
+    resource = tracker._resource(
+        "item",
+        "allocate_item",
+        resource_map["acquire_functions"]["allocate_item"],
+        1,
+    )
+    resource.multiplicity = "many"
+    state = ResourceFlowState(
+        {resource.resource_id: (resource, ResourceState.MAY_ACQUIRED)},
+        {"item": resource.resource_id},
+        {},
+        {},
+    )
+
+    tracker._flow_apply_call(state, "release_all", ["items"])
+    kept_resource, kept_state = state.resources[resource.resource_id]
+    assert kept_state is ResourceState.MAY_ACQUIRED
+    assert "aggregate_membership_unresolved" in kept_resource.uncertainty_causes
+
+    tracker._flow_apply_call(state, "list_add", ["&item", "&items"])
+    assert (
+        resource.resource_id,
+        "items",
+        "list_member",
+    ) in state.aggregate_memberships
+
+    tracker._flow_apply_call(state, "release_all", ["&items"])
+    assert state.resources[resource.resource_id][1] is ResourceState.RELEASED
+
+
+def test_conditional_membership_does_not_join_to_must_membership():
+    resource_map = {
+        "acquire_functions": {
+            "allocate_item": {
+                "resource_type": "item",
+                "release": ["release_all"],
+                "release_cardinality": "all",
+                "membership_relation": "list_member",
+            }
+        },
+        "resource_membership_functions": {
+            "list_add": {
+                "resource_arg": 0,
+                "aggregate_arg": 1,
+                "resource_type": "item",
+                "relation": "list_member",
+            }
+        },
+    }
+    tracker = ResourceTracker(resource_map)
+    resource = tracker._resource(
+        "item",
+        "allocate_item",
+        resource_map["acquire_functions"]["allocate_item"],
+        1,
+    )
+    resource.multiplicity = "many"
+    left = ResourceFlowState(
+        {resource.resource_id: (resource, ResourceState.MAY_ACQUIRED)},
+        {"item": resource.resource_id},
+        {},
+        {},
+        aggregate_memberships=frozenset(
+            {(resource.resource_id, "items", "list_member")}
+        ),
+    )
+    right = ResourceFlowState(
+        {resource.resource_id: (resource, ResourceState.MAY_ACQUIRED)},
+        {"item": resource.resource_id},
+        {},
+        {},
+    )
+
+    joined = tracker._join_flow_states(left, right)
+    assert joined.aggregate_memberships == frozenset()
+
+    tracker._flow_apply_call(joined, "release_all", ["items"])
+    kept_resource, kept_state = joined.resources[resource.resource_id]
+    assert kept_state is ResourceState.MAY_ACQUIRED
+    assert "aggregate_membership_unresolved" in kept_resource.uncertainty_causes
 
 
 def test_release_summary_propagates_to_fixed_point():
@@ -272,6 +441,117 @@ def test_recursive_call_graph_converges_without_duplicate_evidence_effects():
     assert db.iterations < 50
     assert len(db.find("cycle_a").effects) == 1
     assert len(db.find("cycle_b").effects) == 1
+    assert db.find("cycle_a").effects[0].origin_scc == "cycle_a+cycle_b"
+    assert db.find("cycle_b").effects[0].origin_scc == "cycle_a+cycle_b"
+
+
+def test_nonconverged_summary_downgrades_automatic_must_effects():
+    functions = [
+        function("leaf_free", "void *ptr", "kfree(ptr);"),
+        function("middle_free", "void *value", "leaf_free(value);"),
+        function("outer_free", "void *owned", "middle_free(owned);"),
+    ]
+
+    db = infer_function_summaries(functions, RESOURCE_MAP, max_iterations=1)
+
+    assert not db.converged
+    for summary in db.summaries.values():
+        for effect in summary.effects:
+            assert effect.strength == "may"
+            assert effect.must_reason == ()
+            assert effect.convergence_status == "not_converged"
+            assert effect.origin_scc
+
+
+def test_nonconverged_summary_downgrades_effects_derived_from_reviewed_seed():
+    resource_map = {
+        **RESOURCE_MAP,
+        "interprocedural_effect_seeds": {
+            "seed_new": {
+                "resource": "return",
+                "action": "acquire",
+                "strength": "must",
+                "resource_type": "memory",
+                "release_functions": ["kfree"],
+            }
+        },
+    }
+    db = infer_function_summaries(
+        [function("wrapper_new", "void", "return seed_new();")],
+        resource_map,
+        max_iterations=1,
+    )
+
+    seed_effect = db.find("seed_new").effects[0]
+    wrapper_effect = db.find("wrapper_new").effects[0]
+    assert seed_effect.strength == "must"
+    assert seed_effect.origin_kind == "reviewed_seed"
+    assert wrapper_effect.strength == "may"
+    assert wrapper_effect.origin_kind == "derived_from_reviewed_seed"
+    assert wrapper_effect.convergence_status == "not_converged"
+
+
+def test_must_proof_requires_isolated_call_event():
+    assert _call_event_is_isolated("kfree(ptr);", "kfree(ptr)")
+    assert _call_event_is_isolated("ret = load_item(&ptr);", "load_item(&ptr)")
+    assert not _call_event_is_isolated(
+        "kfree(ptr); if (retry) goto again;", "kfree(ptr)"
+    )
+
+
+def test_resource_config_audit_reports_compatibility_and_aggregate_risks():
+    audit = audit_resource_map(
+        {
+            "acquire_functions": {
+                "legacy_alloc": {"resource_type": "memory", "release": ["kfree"]},
+                "reviewed_alloc": {
+                    "resource_type": "memory",
+                    "release": ["drop_all"],
+                    "validity_guard": "{var} != NULL",
+                    "release_cardinality": "all",
+                },
+                "aggregate_alloc": {
+                    "resource_type": "memory",
+                    "release": ["drop_all"],
+                    "validity_guard": "{var} != NULL",
+                    "release_cardinality": "all",
+                    "aggregate_id": "items",
+                },
+            },
+            "interprocedural_effect_seeds": {
+                "drop_everything": {
+                    "resource": "arg0",
+                    "action": "release",
+                    "effect_cardinality": "all",
+                }
+            },
+        }
+    )
+
+    assert audit["compatibility_default_acquires"] == 1
+    assert audit["explicit_acquire_contracts"] == 2
+    assert audit["release_all_without_aggregate_identity"] == 1
+    assert audit["reviewed_all_effects_without_aggregate_identity"] == 1
+    assert audit["membership_relation_without_membership_api"] == 0
+
+
+def test_resource_config_audit_flags_membership_relation_without_api():
+    audit = audit_resource_map(
+        {
+            "acquire_functions": {
+                "allocate_item": {
+                    "resource_type": "item",
+                    "release": ["release_all"],
+                    "validity_guard": "{var} != NULL",
+                    "release_cardinality": "all",
+                    "membership_relation": "list_member",
+                }
+            }
+        }
+    )
+
+    assert audit["membership_relation_without_membership_api"] == 1
+    assert any("membership_relation has no membership API" in warning for warning in audit["warnings"])
 
 
 def test_unknown_parameter_call_is_recorded_without_assuming_safety():
@@ -520,6 +800,27 @@ def test_local_field_store_does_not_prove_ownership_transfer():
     assert [resource.var for resource in held] == ["ptr"]
 
 
+def test_compatibility_ownership_transfer_hint_does_not_change_static_state():
+    resource_map = {
+        **RESOURCE_MAP,
+        "resource_ownership_transfers": [
+            {
+                "function": "demo",
+                "resource_type": "memory",
+                "resource_expr": "ptr",
+            }
+        ],
+    }
+    tracker = ResourceTracker(resource_map)
+    statements = [Statement("ptr = kmalloc(8);", 1)]
+    condition = ConditionInfo("ret < 0", "negative_error", "ret", "high", "test")
+
+    held = tracker.held_before(statements, 2, condition, "ret", "demo")
+
+    assert held[0].ownership_state == ResourceState.ACQUIRED.value
+    assert held[0].uncertainty_causes == ["unreviewed_ownership_transfer_hint"]
+
+
 def test_local_dot_field_store_does_not_prove_ownership_transfer():
     tracker = ResourceTracker(RESOURCE_MAP)
     statements = [
@@ -685,6 +986,9 @@ def test_summary_serialization_preserves_propagation_evidence(tmp_path):
     assert payload["summaries"][0]["effects"][0]["must_reason"]
     assert payload["summaries"][0]["effects"][0]["exit_class"] == "any"
     assert payload["summaries"][0]["effects"][0]["return_guard"] == ""
+    assert payload["summaries"][0]["effects"][0]["origin_scc"] == "leaf_free"
+    assert payload["summaries"][0]["effects"][0]["convergence_status"] == "converged"
+    assert payload["summaries"][0]["effects"][0]["propagation_depth"] == 0
     assert payload["summaries"][0]["effects"][0]["evidence"]
 
 

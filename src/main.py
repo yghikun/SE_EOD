@@ -8,7 +8,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .api_drift_audit import (
+    audit_api_drift,
+    write_api_drift_csv,
+    write_api_drift_json,
+)
 from .candidate_checker import check_candidates
+from .candidate_checker import read_error_paths as read_csv_rows
 from .csv_writer import write_error_paths_csv
 from .error_path_extractor import ErrorPathExtractor
 from .evidence_ranker import rank_candidates_from_csv
@@ -134,6 +140,24 @@ def _candidate_input_for_current_run(args: argparse.Namespace) -> Path:
     return Path(args.candidates_in)
 
 
+def _quarantined_output_path(
+    configured: str | None, primary: Path, fallback_name: str
+) -> Path:
+    if configured:
+        return Path(configured)
+    if primary.name in {"error_paths.csv", "suspicious_candidates.csv"}:
+        return primary.with_name(fallback_name)
+    return primary.with_name(f"quarantined_{primary.name}")
+
+
+def _diagnostic_output_path(
+    configured: str | None, primary: Path, fallback_name: str
+) -> Path:
+    if configured:
+        return Path(configured)
+    return primary.with_name(fallback_name)
+
+
 def _rank_evidence(args: argparse.Namespace, candidates_in: Path) -> dict[str, int]:
     db = ResourceProtocolDB.load_from_dir(Path(args.protocols_dir))
     for warning in db.warnings:
@@ -180,6 +204,114 @@ def _rank_evidence(args: argparse.Namespace, candidates_in: Path) -> dict[str, i
     return stats
 
 
+def _write_api_drift_report(
+    args: argparse.Namespace,
+    functions: list,
+    resource_map: dict,
+    candidates_csv: Path | None = None,
+) -> dict[str, int]:
+    db = ResourceProtocolDB.load_from_dir(Path(args.protocols_dir))
+    wrapper_db = WrapperSummaryDB.load_from_file(Path(args.wrapper_summaries))
+    candidate_rows = read_csv_rows(candidates_csv) if candidates_csv else []
+    report = audit_api_drift(
+        functions,
+        resource_map,
+        protocols=db,
+        wrapper_db=wrapper_db,
+        candidate_rows=candidate_rows,
+    )
+    json_out = _diagnostic_output_path(
+        args.api_drift_json_out, Path(args.out), "api_drift_report.json"
+    )
+    csv_out = _diagnostic_output_path(
+        args.api_drift_csv_out, Path(args.out), "api_drift_report.csv"
+    )
+    write_api_drift_json(report, json_out)
+    csv_count = write_api_drift_csv(report, csv_out)
+    summary = report.get("summary", {}) if isinstance(report, dict) else {}
+    by_severity = summary.get("by_severity", {}) if isinstance(summary, dict) else {}
+    stats = {
+        "api_drift_observed_api_names": int(summary.get("observed_api_names", 0)),
+        "api_drift_configured_api_names": int(summary.get("configured_api_names", 0)),
+        "api_drift_issues": int(summary.get("issues", 0)),
+        "api_drift_high": int(by_severity.get("high", 0)),
+        "api_drift_medium": int(by_severity.get("medium", 0)),
+        "api_drift_low": int(by_severity.get("low", 0)),
+        "api_drift_csv_rows": csv_count,
+    }
+    for key, value in stats.items():
+        print(f"{key}={value}")
+    print(f"api_drift_json={json_out}")
+    print(f"api_drift_csv={csv_out}")
+    return stats
+
+
+def _path_has_uncertainty(path: object, cause: str) -> bool:
+    for resource in getattr(path, "held_resources", []):
+        if isinstance(resource, dict) and cause in resource.get(
+            "uncertainty_causes", []
+        ):
+            return True
+    return False
+
+
+def _quarantine_reasons(path: object) -> set[str]:
+    reasons: set[str] = set()
+    resource_analysis = str(getattr(path, "resource_analysis", ""))
+    path_reason = str(getattr(path, "reason", ""))
+    witness = getattr(path, "cfg_witness", {})
+    if not isinstance(witness, dict):
+        witness = {}
+
+    if resource_analysis.startswith("linear") or "degraded analysis quality" in path_reason:
+        reasons.add("parser")
+    if witness.get("cfg_slice_complete") is False:
+        reasons.add("cfg_slice")
+    if witness.get("widened_on_path") or witness.get("analysis_truncated"):
+        reasons.add("widening")
+    if _path_has_uncertainty(path, "unresolved_acquire_validity"):
+        reasons.add("unknown_guard")
+    if not reasons:
+        reasons.add("other")
+    return reasons
+
+
+def _quarantine_stats(paths: list[object], candidate_stats: dict[str, int] | None = None) -> dict[str, int]:
+    reason_sets = [_quarantine_reasons(path) for path in paths]
+    stats = {
+        "quarantined_error_paths": len(paths),
+        "low_due_to_parser": sum(1 for reasons in reason_sets if "parser" in reasons),
+        "low_due_to_cfg_slice": sum(
+            1 for reasons in reason_sets if "cfg_slice" in reasons
+        ),
+        "low_due_to_widening": sum(
+            1 for reasons in reason_sets if "widening" in reasons
+        ),
+        "low_due_to_unknown_guard": sum(
+            1 for reasons in reason_sets if "unknown_guard" in reasons
+        ),
+        "low_due_to_other": sum(1 for reasons in reason_sets if "other" in reasons),
+    }
+    if candidate_stats:
+        stats.update(
+            {
+                "quarantined_candidates": candidate_stats.get(
+                    "total_candidates", 0
+                ),
+                "quarantined_missing_cleanup_count": candidate_stats.get(
+                    "missing_cleanup_count", 0
+                ),
+                "quarantined_partial_cleanup_count": candidate_stats.get(
+                    "partial_cleanup_count", 0
+                ),
+                "quarantined_error_swallowed_count": candidate_stats.get(
+                    "error_swallowed_count", 0
+                ),
+            }
+        )
+    return stats
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Extract function-local filesystem error paths into CSV."
@@ -220,6 +352,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Output CSV path for suspicious candidates.",
     )
     parser.add_argument(
+        "--quarantined-error-paths-out",
+        default=None,
+        help=(
+            "Output CSV path for low/uncertain error paths excluded from the "
+            "default high/medium result set. Defaults to a quarantined_*.csv "
+            "file beside --out."
+        ),
+    )
+    parser.add_argument(
+        "--quarantined-candidates-out",
+        default=None,
+        help=(
+            "Output CSV path for review-only candidates derived from "
+            "--quarantined-error-paths-out when --check-candidates is used. "
+            "Defaults to a quarantined_*.csv file beside --candidates-out."
+        ),
+    )
+    parser.add_argument(
         "--build-llm-tasks",
         action="store_true",
         help="Build LLM review task JSONL from suspicious candidates.",
@@ -233,6 +383,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--rank-evidence",
         action="store_true",
         help="Rank suspicious candidates with API protocol and optional LLM evidence.",
+    )
+    parser.add_argument(
+        "--audit-api-drift",
+        action="store_true",
+        help=(
+            "Write a diagnostic report for lifecycle API configuration drift "
+            "against the scanned source tree."
+        ),
+    )
+    parser.add_argument(
+        "--api-drift-json-out",
+        default=None,
+        help="Output JSON path for --audit-api-drift. Defaults beside --out.",
+    )
+    parser.add_argument(
+        "--api-drift-csv-out",
+        default=None,
+        help="Output CSV path for --audit-api-drift. Defaults beside --out.",
     )
     parser.add_argument(
         "--protocols-dir",
@@ -372,6 +540,16 @@ def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
     linux_path = Path(args.linux).resolve()
     out_path = Path(args.out)
+    quarantined_error_paths_out = _quarantined_output_path(
+        args.quarantined_error_paths_out,
+        out_path,
+        "quarantined_error_paths.csv",
+    )
+    quarantined_candidates_out = _quarantined_output_path(
+        args.quarantined_candidates_out,
+        Path(args.candidates_out),
+        "quarantined_candidates.csv",
+    )
     resource_map_path = Path(args.resource_map)
     if not resource_map_path.is_absolute():
         resource_map_path = _project_root() / resource_map_path
@@ -382,6 +560,7 @@ def main(argv: list[str] | None = None) -> int:
         and not args.build_llm_tasks
         and not args.run_deepseek_review
         and not args.rank_evidence
+        and not args.audit_api_drift
     ):
         _write_deepseek_true_candidates(args)
         return 0
@@ -392,11 +571,12 @@ def main(argv: list[str] | None = None) -> int:
         and not args.build_llm_tasks
         and not args.run_deepseek_review
         and not args.extract_deepseek_true_candidates
+        and not args.audit_api_drift
     ):
         _rank_evidence(args, Path(args.candidates_in))
         return 0
 
-    if args.build_llm_tasks and not args.check_candidates:
+    if args.build_llm_tasks and not args.check_candidates and not args.audit_api_drift:
         candidates_in = _candidate_input_for_current_run(args)
         if args.rank_evidence:
             _rank_evidence(args, candidates_in)
@@ -475,7 +655,7 @@ def main(argv: list[str] | None = None) -> int:
 
     resource_tracker = ResourceTracker(resource_map, summary_db)
     extractor = ErrorPathExtractor(resource_tracker)
-    all_paths = []
+    extracted_paths = []
     for function in all_functions:
         try:
             paths = extractor.extract(function)
@@ -484,22 +664,33 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         for path in paths:
-            if not args.include_low_confidence and path.confidence not in {
-                "high",
-                "medium",
-            }:
-                continue
             path.linux_git_commit = commit
             path.linux_git_tag = tag
             try:
                 path.file = Path(path.file).resolve().relative_to(linux_path).as_posix()
             except ValueError:
                 path.file = Path(path.file).as_posix()
-            all_paths.append(path)
+            extracted_paths.append(path)
 
     scanned_functions = len(all_functions)
 
+    if args.include_low_confidence:
+        all_paths = extracted_paths
+        quarantined_paths = []
+    else:
+        all_paths = [
+            path
+            for path in extracted_paths
+            if path.confidence in {"high", "medium"}
+        ]
+        quarantined_paths = [
+            path
+            for path in extracted_paths
+            if path.confidence not in {"high", "medium"}
+        ]
+
     write_error_paths_csv(all_paths, out_path)
+    write_error_paths_csv(quarantined_paths, quarantined_error_paths_out)
 
     high = sum(1 for path in all_paths if path.confidence == "high")
     medium = sum(1 for path in all_paths if path.confidence == "medium")
@@ -535,16 +726,27 @@ def main(argv: list[str] | None = None) -> int:
         for path in suspicious_paths
         if bool(path.cfg_witness.get("widened_on_path"))
     )
+    quarantine_stats = _quarantine_stats(quarantined_paths)
 
     for warning in warnings:
         print(f"warning: {warning}", file=sys.stderr)
 
     print(f"scanned_files={scanned_files}")
     print(f"scanned_functions={scanned_functions}")
+    print(f"extracted_error_paths_before_filter={len(extracted_paths)}")
     print(f"extracted_error_paths={len(all_paths)}")
     print(f"high_confidence_paths={high}")
     print(f"medium_confidence_paths={medium}")
     print(f"low_confidence_paths={low}")
+    for key in [
+        "quarantined_error_paths",
+        "low_due_to_parser",
+        "low_due_to_cfg_slice",
+        "low_due_to_widening",
+        "low_due_to_unknown_guard",
+        "low_due_to_other",
+    ]:
+        print(f"{key}={quarantine_stats[key]}")
     print(f"suspicious_missing_cleanup_candidates={suspicious}")
     print(f"candidates_with_unknown_guard={candidates_with_unknown_guard}")
     print(
@@ -573,10 +775,37 @@ def main(argv: list[str] | None = None) -> int:
         "cfg_loop_multiplicity_resources="
         f"{cfg_diagnostics['loop_multiplicity_resources']}"
     )
+    config_audit = resource_tracker.config_audit
+    print(
+        "config_explicit_acquire_contracts="
+        f"{config_audit['explicit_acquire_contracts']}"
+    )
+    print(
+        "config_compatibility_default_acquires="
+        f"{config_audit['compatibility_default_acquires']}"
+    )
+    print(
+        "config_release_all_without_aggregate_identity="
+        f"{config_audit['release_all_without_aggregate_identity']}"
+    )
+    print(
+        "config_reviewed_all_effects_without_aggregate_identity="
+        f"{config_audit['reviewed_all_effects_without_aggregate_identity']}"
+    )
+    print(
+        "config_membership_relation_without_membership_api="
+        f"{config_audit['membership_relation_without_membership_api']}"
+    )
 
     if args.check_candidates:
         candidate_stats = check_candidates(
             out_path, Path(args.candidates_out), resource_map
+        )
+        quarantined_candidate_stats = check_candidates(
+            quarantined_error_paths_out,
+            quarantined_candidates_out,
+            resource_map,
+            include_low_confidence=True,
         )
         for key in [
             "total_error_paths",
@@ -589,6 +818,29 @@ def main(argv: list[str] | None = None) -> int:
             "P3_count",
         ]:
             print(f"{key}={candidate_stats[key]}")
+        quarantine_stats = _quarantine_stats(
+            quarantined_paths, quarantined_candidate_stats
+        )
+        for key in [
+            "quarantined_candidates",
+            "quarantined_missing_cleanup_count",
+            "quarantined_partial_cleanup_count",
+            "quarantined_error_swallowed_count",
+        ]:
+            print(f"{key}={quarantine_stats[key]}")
+
+    if args.audit_api_drift:
+        candidate_rows_path: Path | None = None
+        if args.check_candidates:
+            candidate_rows_path = Path(args.candidates_out)
+        elif Path(args.candidates_in).exists():
+            candidate_rows_path = Path(args.candidates_in)
+        _write_api_drift_report(
+            args,
+            all_functions,
+            resource_map,
+            candidate_rows_path,
+        )
 
     if args.rank_evidence:
         _rank_evidence(args, _candidate_input_for_current_run(args))

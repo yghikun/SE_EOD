@@ -793,6 +793,18 @@ class ErrorPathExtractor:
             condition_start_byte,
             condition_end_byte,
         )
+        if (
+            missing
+            and resource_analysis == "cfg"
+            and cfg_witness
+            and cfg_witness.get("cfg_slice_complete") is False
+        ):
+            confidence = "low"
+            unsupported = cfg_witness.get("unsupported_nodes_on_reachable_slice", [])
+            reason = (
+                f"{reason}; incomplete CFG on candidate slice"
+                + (f": {unsupported}" if unsupported else "")
+            )
 
         return ErrorPath(
             file=str(function.file),

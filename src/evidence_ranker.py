@@ -36,7 +36,10 @@ MISSING_EVIDENCE_V1 = [
 SUMMARY_COLUMNS = [
     "candidate_id",
     "path_candidate_id",
+    "obligation_id",
     "obligation_candidate_ids",
+    "resource_id",
+    "missing_cleanup",
     "legacy_candidate_id",
     "file",
     "function",
@@ -202,7 +205,17 @@ def _static_evidence(row: dict[str, str]) -> dict[str, Any]:
 def obligation_candidate_ids_for_row(
     row: dict[str, str], static_evidence: dict[str, Any]
 ) -> list[str]:
-    obligations: list[tuple[str, str]] = []
+    return [
+        obligation["obligation_id"]
+        for obligation in obligation_records_for_row(row, static_evidence)
+        if obligation.get("obligation_id")
+    ]
+
+
+def obligation_records_for_row(
+    row: dict[str, str], static_evidence: dict[str, Any]
+) -> list[dict[str, Any]]:
+    obligations: list[tuple[str, str, dict[str, Any] | None]] = []
     resources = [
         resource
         for resource in static_evidence.get("held_resources", [])
@@ -217,17 +230,18 @@ def obligation_candidate_ids_for_row(
             if missing_cleanup_matches_resource(name, argument, resource)
         ]
         if not matched:
-            obligations.append(("", action_text))
+            obligations.append(("", action_text, None))
             continue
         obligations.extend(
-            (str(resource.get("resource_id", "")), action_text)
+            (str(resource.get("resource_id", "")), action_text, resource)
             for resource in matched
         )
     if not obligations:
-        obligations.append(("", row.get("candidate_type", "")))
+        obligations.append(("", row.get("candidate_type", ""), None))
 
-    identifiers: list[str] = []
-    for resource_id, action in obligations:
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for resource_id, action, resource in obligations:
         raw = "|".join(
             [candidate_fingerprint(row), resource_id, action]
         )
@@ -235,9 +249,81 @@ def obligation_candidate_ids_for_row(
             raw.encode("utf-8", errors="replace")
         ).hexdigest()[:20]
         identifier = f"obligation_{digest}"
-        if identifier not in identifiers:
-            identifiers.append(identifier)
-    return identifiers
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+        records.append(
+            {
+                "obligation_id": identifier,
+                "resource_id": resource_id,
+                "missing_cleanup": action,
+                "resource": resource,
+                "is_resource_obligation": bool(missing_cleanup_matches_action(action)),
+            }
+        )
+    return records
+
+
+def missing_cleanup_matches_action(action: str) -> bool:
+    name, _argument = call_name_and_first_arg(action)
+    return bool(name and "(" in action and action.rstrip().endswith(")"))
+
+
+def _llm_task_id_for_obligation(
+    row: dict[str, str], obligation: dict[str, Any]
+) -> str:
+    raw = "|".join(
+        [
+            candidate_fingerprint(row),
+            str(obligation.get("resource_id", "")),
+            str(obligation.get("missing_cleanup", "")),
+            "llm",
+        ]
+    )
+    digest = hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()[:20]
+    return f"llm_review_{digest}"
+
+
+def _row_for_obligation(
+    row: dict[str, str],
+    static_evidence: dict[str, Any],
+    obligation: dict[str, Any],
+) -> dict[str, str]:
+    missing_cleanup = str(obligation.get("missing_cleanup", ""))
+    is_resource_obligation = bool(obligation.get("is_resource_obligation"))
+    resource = obligation.get("resource")
+    held_resources = [resource] if isinstance(resource, dict) else [
+        item
+        for item in static_evidence.get("held_resources", [])
+        if isinstance(item, dict)
+    ]
+    cleanup_calls = [
+        str(item) for item in static_evidence.get("cleanup_calls", []) if item is not None
+    ]
+    evidence = {
+        "acquired_resources": held_resources,
+        "missing_releases": [missing_cleanup] if is_resource_obligation else [],
+        "cleanup_calls": cleanup_calls,
+        "final_return_expr": row.get(
+            "final_return_expr", static_evidence.get("final_return_expr", "")
+        ),
+    }
+    scoped = dict(row)
+    scoped["held_resources"] = json.dumps(held_resources, ensure_ascii=False)
+    scoped["missing_cleanup_candidates"] = json.dumps(
+        [missing_cleanup] if is_resource_obligation else [], ensure_ascii=False
+    )
+    scoped["obligation_id"] = str(obligation.get("obligation_id", ""))
+    scoped["resource_id"] = str(obligation.get("resource_id", ""))
+    scoped["missing_cleanup"] = missing_cleanup if is_resource_obligation else ""
+    if isinstance(resource, dict):
+        scoped["resource_type"] = str(
+            resource.get("resource_type") or resource.get("resource_kind") or ""
+        )
+        scoped["acquire_func"] = str(resource.get("acquire_func", ""))
+    scoped["cleanup_calls"] = json.dumps(cleanup_calls, ensure_ascii=False)
+    scoped["evidence"] = json.dumps(evidence, ensure_ascii=False)
+    return scoped
 
 
 def load_deepseek_true_candidates(path: str | Path | None) -> dict[str, dict[str, Any]]:
@@ -478,8 +564,10 @@ def _score_dimensions(
             static_certainty = min(static_certainty, 40)
         elif isinstance(witness, dict) and witness.get("widened_on_path"):
             static_certainty = min(static_certainty, 60)
-        if isinstance(witness, dict) and witness.get("cfg_complete") is False:
+        if isinstance(witness, dict) and witness.get("cfg_slice_complete") is False:
             static_certainty = min(static_certainty, 35)
+        elif isinstance(witness, dict) and witness.get("cfg_complete") is False:
+            static_certainty = min(static_certainty, 65)
     else:
         static_certainty = 30
 
@@ -517,110 +605,146 @@ def rank_candidate_rows(
     llm_records = deepseek_true_candidates or {}
     ranked: list[dict[str, Any]] = []
     for row in rows:
-        static_evidence = _static_evidence(row)
-        ownership_hints = (
-            ownership_transfer_hints_for_candidate(
-                row,
-                linux_path or ".",
-                static_evidence.get("held_resources", []),
-            )
-            if enable_ownership_transfer_hints
-            else []
-        )
-        protocol_evidence = match_protocol_evidence(
-            row,
-            protocols,
-            wrapper_db=wrapper_db,
-            ownership_transfer_hints=ownership_hints,
-        )
-        task_id = llm_task_id_for_row(row)
-        legacy_task_id = legacy_llm_task_id_for_row(row)
-        candidate_id = candidate_id_for_row(row)
+        path_static_evidence = _static_evidence(row)
+        path_candidate_id = candidate_id_for_row(row)
         legacy_candidate_id = legacy_candidate_id_for_row(row)
-        obligation_candidate_ids = obligation_candidate_ids_for_row(
-            row, static_evidence
-        )
-        historical_fix_evidence = historical_fixes.match(row) if historical_fixes else []
-        manual_review = (
-            manual_reviews.find_any(
-                [
-                    *obligation_candidate_ids,
-                    candidate_id,
-                    legacy_candidate_id,
-                    task_id,
-                    legacy_task_id,
-                    row.get("path_id", ""),
-                ]
+        path_task_id = llm_task_id_for_row(row)
+        legacy_task_id = legacy_llm_task_id_for_row(row)
+        obligations = obligation_records_for_row(row, path_static_evidence)
+        legacy_lookup_allowed = len(obligations) == 1
+
+        for obligation in obligations:
+            obligation_row = _row_for_obligation(
+                row, path_static_evidence, obligation
             )
-            if manual_reviews
-            else None
-        )
-        llm_record = llm_records.get(task_id) or llm_records.get(legacy_task_id)
-        level = _evidence_level(
-            protocol_evidence, llm_record, historical_fix_evidence
-        )
-        score, score_explanation = _score(
-            row, protocol_evidence, llm_record, historical_fix_evidence
-        )
-        manual_adjustment, manual_explanation = manual_score_adjustment(manual_review)
-        score += manual_adjustment
-        score_explanation.extend(manual_explanation)
-        score_dimensions = _score_dimensions(
-            row,
-            static_evidence,
-            protocol_evidence,
-            llm_record,
-            historical_fix_evidence,
-            score,
-        )
-        wrapper_evidence = _wrapper_evidence(protocol_evidence)
-        exception_hints = _exception_hints(protocol_evidence, ownership_hints)
-        has_exception_hints = bool(exception_hints)
-        ranked.append(
-            {
-                "candidate_id": candidate_id,
-                "path_candidate_id": candidate_id,
-                "obligation_candidate_ids": obligation_candidate_ids,
-                "legacy_candidate_id": legacy_candidate_id,
-                "candidate_type": row.get("candidate_type", ""),
-                "severity": row.get("severity", ""),
-                "evidence_level": level,
-                "evidence_score": score,
-                "score_dimensions": score_dimensions,
-                "manual_review": manual_review.to_dict() if manual_review else {},
-                "manual_score_adjustment": manual_adjustment,
-                "static_evidence": static_evidence,
-                "protocol_evidence": protocol_evidence,
-                "historical_fix_evidence": historical_fix_evidence,
-                "wrapper_evidence": wrapper_evidence,
-                "ownership_transfer_hints": ownership_hints,
-                "has_exception_hints": has_exception_hints,
-                "exception_hints": exception_hints,
-                "score_explanation": score_explanation,
-                "llm_evidence": llm_record or {},
-                "missing_evidence": [
-                    item
-                    for item in MISSING_EVIDENCE_V1
-                    if not historical_fix_evidence
-                    or item not in {"repair_patch", "upstream_confirmation"}
-                ],
-                "file": row.get("file", ""),
-                "function": row.get("function", ""),
-                "path_id": row.get("path_id", ""),
-                "error_line": _int_or_zero(row.get("error_line", "")),
-                "condition": row.get("condition", ""),
-                "branch_taken": row.get("branch_taken", ""),
-                "cfg_edge_id": row.get("cfg_edge_id", ""),
-                "cfg_edge_kind": row.get("cfg_edge_kind", ""),
-                "cfg_source_block": row.get("cfg_source_block", ""),
-                "cfg_target_block": row.get("cfg_target_block", ""),
-                "cfg_witness": _json_value(row.get("cfg_witness", ""), {}),
-                "resource_analysis": row.get("resource_analysis", ""),
-                "final_return_expr": row.get("final_return_expr", ""),
-                "llm_task_id": task_id,
-                "legacy_llm_task_id": legacy_task_id,
-            }
-        )
+            static_evidence = _static_evidence(obligation_row)
+            ownership_hints = (
+                ownership_transfer_hints_for_candidate(
+                    obligation_row,
+                    linux_path or ".",
+                    static_evidence.get("held_resources", []),
+                )
+                if enable_ownership_transfer_hints
+                else []
+            )
+            protocol_evidence = match_protocol_evidence(
+                obligation_row,
+                protocols,
+                wrapper_db=wrapper_db,
+                ownership_transfer_hints=ownership_hints,
+            )
+            obligation_id = str(obligation.get("obligation_id", ""))
+            candidate_id = (
+                obligation_id
+                if obligation.get("is_resource_obligation")
+                else path_candidate_id
+            )
+            task_id = (
+                _llm_task_id_for_obligation(row, obligation)
+                if obligation.get("is_resource_obligation")
+                else path_task_id
+            )
+            historical_fix_evidence = (
+                historical_fixes.match(obligation_row) if historical_fixes else []
+            )
+            manual_lookup_ids = [candidate_id, task_id]
+            if legacy_lookup_allowed:
+                manual_lookup_ids.extend(
+                    [
+                        path_candidate_id,
+                        legacy_candidate_id,
+                        path_task_id,
+                        legacy_task_id,
+                        row.get("path_id", ""),
+                    ]
+                )
+            manual_review = (
+                manual_reviews.find_any(manual_lookup_ids)
+                if manual_reviews
+                else None
+            )
+            llm_record = llm_records.get(task_id)
+            if legacy_lookup_allowed:
+                llm_record = llm_record or llm_records.get(path_task_id) or llm_records.get(
+                    legacy_task_id
+                )
+            level = _evidence_level(
+                protocol_evidence, llm_record, historical_fix_evidence
+            )
+            score, score_explanation = _score(
+                obligation_row,
+                protocol_evidence,
+                llm_record,
+                historical_fix_evidence,
+            )
+            manual_adjustment, manual_explanation = manual_score_adjustment(
+                manual_review
+            )
+            score += manual_adjustment
+            score_explanation.extend(manual_explanation)
+            score_dimensions = _score_dimensions(
+                obligation_row,
+                static_evidence,
+                protocol_evidence,
+                llm_record,
+                historical_fix_evidence,
+                score,
+            )
+            wrapper_evidence = _wrapper_evidence(protocol_evidence)
+            exception_hints = _exception_hints(protocol_evidence, ownership_hints)
+            has_exception_hints = bool(exception_hints)
+            ranked.append(
+                {
+                    "candidate_id": candidate_id,
+                    "path_candidate_id": path_candidate_id,
+                    "obligation_id": obligation_id,
+                    "obligation_candidate_ids": [obligation_id]
+                    if obligation_id
+                    else [],
+                    "resource_id": obligation.get("resource_id", ""),
+                    "missing_cleanup": obligation.get("missing_cleanup", "")
+                    if obligation.get("is_resource_obligation")
+                    else "",
+                    "legacy_candidate_id": legacy_candidate_id,
+                    "candidate_type": obligation_row.get("candidate_type", ""),
+                    "severity": obligation_row.get("severity", ""),
+                    "evidence_level": level,
+                    "evidence_score": score,
+                    "score_dimensions": score_dimensions,
+                    "manual_review": manual_review.to_dict() if manual_review else {},
+                    "manual_score_adjustment": manual_adjustment,
+                    "static_evidence": static_evidence,
+                    "protocol_evidence": protocol_evidence,
+                    "historical_fix_evidence": historical_fix_evidence,
+                    "wrapper_evidence": wrapper_evidence,
+                    "ownership_transfer_hints": ownership_hints,
+                    "has_exception_hints": has_exception_hints,
+                    "exception_hints": exception_hints,
+                    "score_explanation": score_explanation,
+                    "llm_evidence": llm_record or {},
+                    "missing_evidence": [
+                        item
+                        for item in MISSING_EVIDENCE_V1
+                        if not historical_fix_evidence
+                        or item not in {"repair_patch", "upstream_confirmation"}
+                    ],
+                    "file": obligation_row.get("file", ""),
+                    "function": obligation_row.get("function", ""),
+                    "path_id": obligation_row.get("path_id", ""),
+                    "error_line": _int_or_zero(obligation_row.get("error_line", "")),
+                    "condition": obligation_row.get("condition", ""),
+                    "branch_taken": obligation_row.get("branch_taken", ""),
+                    "cfg_edge_id": obligation_row.get("cfg_edge_id", ""),
+                    "cfg_edge_kind": obligation_row.get("cfg_edge_kind", ""),
+                    "cfg_source_block": obligation_row.get("cfg_source_block", ""),
+                    "cfg_target_block": obligation_row.get("cfg_target_block", ""),
+                    "cfg_witness": _json_value(obligation_row.get("cfg_witness", ""), {}),
+                    "resource_analysis": obligation_row.get("resource_analysis", ""),
+                    "final_return_expr": obligation_row.get("final_return_expr", ""),
+                    "llm_task_id": task_id,
+                    "legacy_llm_task_id": legacy_task_id,
+                }
+            )
 
     ranked.sort(
         key=lambda item: (
@@ -629,6 +753,7 @@ def rank_candidate_rows(
             item.get("function", ""),
             item.get("error_line", 0),
             item.get("candidate_type", ""),
+            item.get("candidate_id", ""),
         )
     )
     return ranked
@@ -688,10 +813,13 @@ def write_candidates_with_evidence_csv(
                 {
                     "candidate_id": item.get("candidate_id", ""),
                     "path_candidate_id": item.get("path_candidate_id", ""),
+                    "obligation_id": item.get("obligation_id", ""),
                     "obligation_candidate_ids": json.dumps(
                         item.get("obligation_candidate_ids", []),
                         ensure_ascii=False,
                     ),
+                    "resource_id": item.get("resource_id", ""),
+                    "missing_cleanup": item.get("missing_cleanup", ""),
                     "legacy_candidate_id": item.get("legacy_candidate_id", ""),
                     "file": item.get("file", ""),
                     "function": item.get("function", ""),
