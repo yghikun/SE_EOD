@@ -1,6 +1,6 @@
 # Confirmed Bugs
 
-Date: 2026-07-11
+Date: 2026-07-19
 
 This file records the ext4, btrfs, and XFS issues that we have checked beyond raw
 static ranking.  "Confirmed" here means source-level confirmation plus either a
@@ -24,19 +24,19 @@ It does not mean upstream acceptance unless explicitly stated.
 | 11 | F2FS | `f2fs_rename()` with `RENAME_WHITEOUT` | `f2fs_filename` crypto / casefold buffer leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline calls `f2fs_free_filename(&fname)` after whiteout creation |
 | 12 | XFS | `xfs_qm_quotacheck_dqadjust()` | dquot reference leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline routes attach-buffer failure through `xfs_qm_dqrele(dqp)` |
 | 13 | XFS | `xfs_rtginode_ensure()` | swallowed `xfs_rtginode_load()` error | patch submitted | `[PATCH] xfs: propagate errors from xfs_rtginode_load`, linux-xfs thread shown in local submission screenshot |
-| 14 | F2FS | `f2fs_get_new_data_folio()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`, Message-ID `<20260713061601.712-1-3497809730@qq.com>` |
-| 15 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | patch submitted | `[PATCH] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260713063633.555-1-3497809730@qq.com>` |
-| 16 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, Message-ID `<20260713064043.1837-1-3497809730@qq.com>` |
-| 17 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch v2 submitted; Reviewed-by received | `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com` |
-| 18 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
-| 19 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
-| 20 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
+| 14 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | v2 submitted; Reviewed-by received | `[PATCH v2] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260719084514.586-1-3497809730@qq.com>` |
+| 15 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted; maintainer clarification pending | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, reply sent as plain text, Message-ID `<20260719090519.1473-1-3497809730@qq.com>` |
+| 16 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch v2 submitted; Reviewed-by received | `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com` |
+| 17 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
+| 18 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
+| 19 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
 
-As of 2026-07-14, 6 of the 20 confirmed bug records are already fixed
-upstream.  The other 14 records are covered by submitted patches or patch
+As of 2026-07-19, 6 of the 19 confirmed bug records are already fixed
+upstream.  The other 13 records are covered by submitted patches or patch
 series, but are not recorded here as upstream merged.  Bugs #1 and #2 share
-one ext4 patch, and bugs #18-#20 are covered by one 3-patch btrfs sprout
-rollback series.
+one ext4 patch, and bugs #17-#19 are covered by one 3-patch btrfs sprout
+rollback series.  Patch-email counts are intentionally not used as bug counts:
+one bug can produce multiple revisions, replies, or series patches.
 
 ## ext4
 
@@ -300,7 +300,7 @@ Status: confirmed cleanup-defect candidate under the tested fault-injection
 condition, with a follow-up fix locally validated and submitted upstream.  It
 is not yet recorded as upstream merged.
 
-### 17. `fs/btrfs/block-group.c::reserve_chunk_space`
+### 16. `fs/btrfs/block-group.c::reserve_chunk_space`
 
 Bug type: positive zoned activation success return skips chunk metadata
 reservation.
@@ -391,7 +391,7 @@ Submitted patch:
 Status: confirmed by targeted zoned-device reproduction on Linux 6.14 and
 patch v2 submitted.  Not recorded as upstream merged.
 
-### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 17. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: failed sprout device remains linked on the transaction device update
 list.
@@ -422,7 +422,7 @@ Status: confirmed by targeted seed/sprout fault injection and patch submitted
 as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
 recorded as upstream merged.
 
-### 19. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: active device pointers left on a failed sprout device.
 
@@ -445,7 +445,7 @@ Status: confirmed by targeted seed/sprout fault injection and patch submitted
 as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
 recorded as upstream merged.
 
-### 20. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 19. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: sprout `fs_devices` state is not rolled back after device-add
 failure.
@@ -580,30 +580,7 @@ mainline at the time of the 2026-07-13 recheck.
 
 ## F2FS
 
-### 14. `fs/f2fs/data.c::f2fs_get_new_data_folio`
-
-Bug type: `ifolio` reference leak on `f2fs_reserve_block()` failure.
-
-`f2fs_get_new_data_folio()` documents that `ifolio` is only set by
-`make_empty_dir()`, and that `ifolio` should be released by this function on
-any error.  The allocation-failure path already releases `ifolio`, but the
-`f2fs_reserve_block()` failure path only released the newly grabbed data folio.
-
-The submitted v2 fix releases `ifolio` only if `dn.inode_folio` is still set,
-so it avoids a double put when `f2fs_reserve_block()` has already cleared the
-dnode.
-
-Evidence:
-
-- Source-level confirmation in latest mainline sparse checkout based on
-  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
-- Patch v1 Message-ID: `<20260713055959.1865-1-3497809730@qq.com>`
-- Patch v2 Message-ID: `<20260713061601.712-1-3497809730@qq.com>`
-- Patch subject: `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`
-
-Status: confirmed and patch v2 submitted.
-
-### 15. `fs/f2fs/dir.c::find_in_level`
+### 14. `fs/f2fs/dir.c::find_in_level`
 
 Bug type: `dentry_folio` reference leak on `find_in_block()` error.
 
@@ -616,12 +593,15 @@ Evidence:
 
 - Source-level confirmation in latest mainline sparse checkout based on
   `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
-- Patch Message-ID: `<20260713063633.555-1-3497809730@qq.com>`
-- Patch subject: `[PATCH] f2fs: fix dentry folio leak in find_in_level`
+- v1 patch Message-ID: `<20260713063633.555-1-3497809730@qq.com>`
+- v2 patch Message-ID: `<20260719084514.586-1-3497809730@qq.com>`
+- Patch subject: `[PATCH v2] f2fs: fix dentry folio leak in find_in_level`
+- Chao Yu requested `Fixes` and `Cc: stable@vger.kernel.org` and provided
+  `Reviewed-by: Chao Yu <chao@kernel.org>`.
 
-Status: confirmed and patch submitted.
+Status: confirmed; v2 submitted with the requested metadata and Reviewed-by.
 
-### 16. `fs/f2fs/inline.c::f2fs_move_inline_dirents`
+### 15. `fs/f2fs/inline.c::f2fs_move_inline_dirents`
 
 Bug type: `ifolio` reference leak on `f2fs_reserve_block()` failure.
 
@@ -630,9 +610,9 @@ the function should release it on any error.  The cache-folio allocation
 failure path already releases `ifolio`, but the `f2fs_reserve_block()` failure
 path only released the newly grabbed folio through the shared `out` label.
 
-The submitted fix releases `ifolio` on this error path when `dn.inode_folio`
-is still set, matching the safer conditional-release shape used for
-`f2fs_get_new_data_folio()`.
+The submitted fix releases `ifolio` on this error path only while
+`dn.inode_folio` is still set.  The remaining review question is whether the
+callee or the enclosing inline-directory conversion already owns that cleanup.
 
 Evidence:
 
@@ -640,8 +620,11 @@ Evidence:
   `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
 - Patch Message-ID: `<20260713064043.1837-1-3497809730@qq.com>`
 - Patch subject: `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`
+- Chao Yu asked whether `f2fs_reserve_block()` already handles this error
+  case.  A plain-text reply explaining the caller-owned folio path was sent
+  with Message-ID `<20260719090519.1473-1-3497809730@qq.com>`.
 
-Status: confirmed and patch submitted.
+Status: confirmed source-level candidate; maintainer clarification is pending.
 
 ## ext4
 
@@ -697,6 +680,12 @@ for separate confirmation before being promoted here.
 ## Not Included As Confirmed Bugs
 
 The following candidates should not be presented as confirmed bugs yet:
+
+- `fs/f2fs/data.c::f2fs_get_new_data_folio`: maintainer review determined that
+  `make_empty_dir()` returns the error to `f2fs_init_inode_metadata()`, whose
+  caller owns the inode-folio cleanup.  The proposed patch was withdrawn and
+  must not be counted as a confirmed bug or submitted fix.  Chao Yu's review:
+  `https://lore.kernel.org/linux-f2fs-devel/bfb4dffb-e02a-480c-bb91-29cf97b48e66@kernel.org/`.
 
 - `fs/btrfs/zoned.c::btrfs_load_block_group_zone_info`: likely true from local
   cleanup structure, but still needs a reachability check for the zoned/RST

@@ -19,7 +19,8 @@ from .csv_writer import write_error_paths_csv
 from .error_path_extractor import ErrorPathExtractor
 from .evidence_ranker import rank_candidates_from_csv
 from .file_walker import iter_c_files
-from .function_extractor import extract_functions
+from .frontend.model import FRONTEND_IR_SCHEMA_VERSION
+from .frontend.tree_sitter_frontend import TreeSitterFrontend
 from .function_summary import FunctionSummaryDB, infer_function_summaries
 from .llm_task_builder import (
     DEFAULT_DEEPSEEK_MODEL,
@@ -28,7 +29,6 @@ from .llm_task_builder import (
     extract_deepseek_true_candidates,
     run_deepseek_review,
 )
-from .parser import parse_c_file
 from .protocol_db import ResourceProtocolDB
 from .resource_tracker import ResourceTracker, load_resource_map
 from .wrapper_summary import WrapperSummaryDB
@@ -628,13 +628,20 @@ def main(argv: list[str] | None = None) -> int:
     scanned_files = 0
     all_functions = []
     warnings: list[str] = []
+    frontend = TreeSitterFrontend(source_root=linux_path)
+    frontend_modes: dict[str, int] = {}
 
     for c_file in iter_c_files(linux_path, args.fs_subdir):
         scanned_files += 1
         try:
-            parsed = parse_c_file(c_file)
-            warnings.extend(f"{c_file}: {warning}" for warning in parsed.warnings)
-            functions = extract_functions(parsed)
+            translation_unit = frontend.parse(c_file)
+            warnings.extend(
+                f"{c_file}: {warning}" for warning in translation_unit.warnings
+            )
+            functions = translation_unit.functions
+            frontend_modes[translation_unit.frontend_mode] = (
+                frontend_modes.get(translation_unit.frontend_mode, 0) + 1
+            )
         except Exception as exc:
             warnings.append(f"{c_file}: parse/extract failed: {exc}")
             continue
@@ -733,6 +740,10 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"scanned_files={scanned_files}")
     print(f"scanned_functions={scanned_functions}")
+    print(f"frontend_ir_schema_version={FRONTEND_IR_SCHEMA_VERSION}")
+    print(f"frontend_translation_units={sum(frontend_modes.values())}")
+    for mode, count in sorted(frontend_modes.items()):
+        print(f"frontend_mode_{mode.replace('-', '_')}={count}")
     print(f"extracted_error_paths_before_filter={len(extracted_paths)}")
     print(f"extracted_error_paths={len(all_paths)}")
     print(f"high_confidence_paths={high}")

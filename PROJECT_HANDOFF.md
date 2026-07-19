@@ -1,608 +1,764 @@
-# SE-EOD 项目交接文档
+# SE-EOD 代码完善阶段交接文档
 
-更新时间：2026-07-14（当前状态以第 1、9、10、13 节为准；第 5、6、12 节保留历史执行记录）
-工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
+> 更新时间：2026-07-18
+>
+> 工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
+>
+> 当前阶段：优先补齐分析器代码能力，不启动论文 benchmark、正式 baseline、排名校准和论文表格工作。
 
-## 1. 当前一句话状态
+本文档是当前代码开发的第一入口。当前实现事实以 [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) 为准，完整项目闭合条件以 [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md) 为准。本交接文档只回答一个问题：**下一步怎样按顺序把分析器本身完善。**
 
-SE-EOD 当前已经完成论文核心方法的主要工程落地：CFG 路径敏感资源传播、跨函数摘要、简单函数指针/间接调用处理、retry/backedge 语义、`PTR_ERR` 路径事实、CFG 诊断、候选证据排序和 LLM review task 生成都已经接入主流程。
+---
 
-现在的工作重点不是继续增加候选，而是补齐论文可信度闭环：独立 benchmark、XFS 固定点收敛、B0--Full 消融、外部 baseline、正式指标和可复现 artifact。
+## 1. 当前阶段的一句话目标
 
-当前可核验快照：
+先完成闭合计划第 3.2 节定义的代码缺口 G1--G5：
 
-- Linux v6.8、v7.1、v6.14，目标文件系统为 ext4、btrfs、F2FS、XFS。
-- Linux v6.14 共生成 520 条 review task；ext4/XFS/F2FS 的 154 条已完成 DeepSeek 辅助 triage 和源码人工复核。
-- `outputs/confirmed_bugs.md` 当前记录 20 条 confirmed/reviewed bug records：6 条已由上游修复，其余 14 条由已提交 patch 或 patch series 覆盖，但尚未记为 upstream merged。
-- btrfs `reserve_chunk_space()` 修复已提交 v2，并获得 Reviewed-by；`btrfs_init_new_device()` sprout 回滚问题已提交 3-patch series。
-- 2026-07-14 修复 XFS 摘要收敛后全量测试结果为 `110 passed`。
-- Linux v6.14 XFS 原始 manifest 记录 50 轮未收敛；根因已定位为条件映射重复加括号，修复后 4 轮收敛且 69 条候选完全不变。诊断见 `outputs/linux-v6.14-xfs-convergence-check/xfs_convergence_report.md`。
-- XFS 仍有 1 个独立的 unresolved indirect call：`xfs_getfsmap` 中的函数指针 `fn`；它不影响摘要收敛，但需要作为保守边界披露。
-- 独立 benchmark 尚未建立。现有 30 条 ext4 v6.8 pilot 是开发集，不是 gold test set。
+```text
+G1  完整 switch/case/default CFG
+  -> G2  统一前端 IR + Kbuild/Clang compiled mode
+  -> G3  一般 callee CFG 的 success/error effect 自动推导
+  -> G4  有限字段路径和 alias
+  -> G5  可重建 predecessor witness
+  -> 配置生命周期与全链路工程加固
+```
 
-最重要的安全线：
+在 G1--G5 完成以前，暂不把以下事项作为主任务：
 
-1. 不要把 `linux-sources/` 推到 GitHub。
-2. 不要把 DeepSeek/LLM verdict 当成 gold label，只能作为 triage evidence。
-3. 不要压掉已知应该保留的 ext4 pilot 候选：`candidate_65d848d5f1fd`、`candidate_f3e8e44a00d3`。
-4. 不要执行 `git reset --hard` 或清理未确认输出目录。
+- 独立 gold benchmark；
+- 双 reviewer 标注和 Cohen's kappa；
+- Precision、Recall、F1、P@K；
+- Hector-like 或外部工具 baseline；
+- B0--Full 论文消融；
+- ranking 概率校准；
+- 新增 LLM 能力；
+- 论文表格、投稿文稿和 artifact release；
+- 扩展更多候选类型或更多文件系统。
 
-## 2. Linux 6.14 源码状态
+“暂不做 benchmark”不等于“不写测试”。每个代码阶段仍必须增加单元测试、端到端测试和真实 Linux 代码 golden fixture；这些属于工程正确性验证，不作为论文指标或 gold label。
 
-已经拉取 Linux v6.14 的四个文件系统目录，位置：
+---
 
-`E:\yanjiusheng\阅读论文\file_system\SE_EOD\linux-sources\linux-v6.14-fs`
+## 2. 当前可核验快照
 
-只包含：
+截至本次交接：
 
-- `fs/ext4`
-- `fs/btrfs`
-- `fs/f2fs`
-- `fs/xfs`
-
-来源 manifest：
-
-`E:\yanjiusheng\阅读论文\file_system\SE_EOD\linux-sources\linux-v6.14-fs\SOURCE_MANIFEST.json`
-
-基线信息：
-
-| 字段 | 值 |
+| 项目 | 当前值 |
 |---|---|
-| Linux tag | `v6.14` |
-| Commit | `38fec10eb60d687e30c8c6b5420d86e8149f7557` |
-| Source | `https://codeload.github.com/torvalds/linux/tar.gz/refs/tags/v6.14` |
-| Extracted at | `2026-07-13` |
-| Archive retained | `false` |
-
-`.gitignore` 已经包含 `/linux-sources/`，但提交前仍必须检查 `git status --short`，确认没有 Linux 源码被 staged。
-
-## 3. Linux 6.14 检查脚本
-
-新增脚本：
-
-`E:\yanjiusheng\阅读论文\file_system\SE_EOD\scripts\check_linux_v6_14_filesystems.py`
-
-对应测试：
-
-`E:\yanjiusheng\阅读论文\file_system\SE_EOD\tests\test_linux_v6_14_checker.py`
-
-脚本能力：
-
-- 默认检查 `ext4`、`btrfs`、`f2fs`、`xfs`
-- 开启 CFG 和 interprocedural analysis
-- 输出 error paths、候选、ranked evidence、function summaries
-- 为每个文件系统生成 `llm_review_tasks.jsonl`
-- 合并生成根目录 `llm_review_tasks.jsonl`
-- 可选 `--run-deepseek`
-- 支持 `--filesystem`、`--min-evidence-score`、`--deepseek-limit`
-
-基础运行命令：
-
-```powershell
-cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-
-python scripts/check_linux_v6_14_filesystems.py `
-  --source linux-sources/linux-v6.14-fs `
-  --output-root outputs/linux-v6.14-bug-check
-```
-
-只跑某个文件系统：
-
-```powershell
-python scripts/check_linux_v6_14_filesystems.py `
-  --source linux-sources/linux-v6.14-fs `
-  --output-root outputs/linux-v6.14-bug-check `
-  --filesystem ext4
-```
-
-## 4. 已完成的 Linux 6.14 检查结果
-
-输出根目录：
-
-`E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check`
-
-关键文件：
-
-- `check_manifest.json`
-- `llm_review_tasks.jsonl`
-- `ext4/llm_review_tasks.jsonl`
-- `btrfs/llm_review_tasks.jsonl`
-- `f2fs/llm_review_tasks.jsonl`
-- `xfs/llm_review_tasks.jsonl`
-
-合并后的 LLM 任务：
-
-```text
-manifest=E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check\check_manifest.json
-llm_tasks=520
-llm_input=E:\yanjiusheng\阅读论文\file_system\SE_EOD\outputs\linux-v6.14-bug-check\llm_review_tasks.jsonl
-```
-
-每个文件系统统计：
-
-| FS | Error paths | Candidates/Tasks | CFG functions | Summary iterations/converged | Truncated | Unresolved indirect calls |
-|---|---:|---:|---:|---|---:|---:|
-| ext4 | 2214 | 30 | 818 | 4 / true | 0 | 0 |
-| btrfs | 5026 | 366 | 1843 | 5 / true | 0 | 0 |
-| f2fs | 1614 | 55 | 677 | 3 / true | 0 | 0 |
-| xfs | 2023 | 69 | 869 | 50 / false（原始）；4 / true（修复后） | 0 | 1 |
-
-XFS 不收敛已确认不是调用图深度或 SCC 发散，而是 `_map_condition_to_caller()` 每轮为参数增加括号，导致条件字符串和 effect identity 持续变化。修复后完整 XFS pipeline 在 4 轮收敛，69 个 ranked candidate 行完全一致，运行时间由 27.898 秒降至 15.640 秒。
-
-优先级分布：
-
-| Priority | Count |
-|---|---:|
-| P1 | 34 |
-| P2 | 402 |
-| P3 | 84 |
-
-证据等级：
-
-| Evidence | Count |
-|---|---:|
-| E2 protocol-supported | 498 |
-| E0 static-only | 22 |
-
-按文件系统的 severity：
-
-| FS | P1 | P2 | P3 |
-|---|---:|---:|---:|
-| ext4 | 20 | 10 | 0 |
-| btrfs | 9 | 324 | 33 |
-| f2fs | 0 | 32 | 23 |
-| xfs | 5 | 36 | 28 |
-
-PowerShell 读取中文 review question 时要用 UTF-8：
-
-```powershell
-Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\ext4\llm_review_tasks.jsonl -TotalCount 1
-```
-
-## 5. 历史记录：ext4、XFS、F2FS 的 DeepSeek 命令
-
-本节任务已经完成，仅保留用于复现当时的执行方式。不要重复调用模型或把这些 verdict 当作 gold label。三者合计任务数是 154。
-
-运行前设置 API key：
-
-```powershell
-cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
-```
-
-执行：
-
-```powershell
-@'
-from pathlib import Path
-from src.llm_task_builder import (
-    run_deepseek_review,
-    extract_deepseek_true_candidates,
-)
-
-root = Path("outputs/linux-v6.14-bug-check")
-
-for filesystem in ("ext4", "xfs", "f2fs"):
-    output = root / filesystem
-    print(f"\n=== Reviewing {filesystem} ===")
-
-    stats = run_deepseek_review(
-        output / "llm_review_tasks.jsonl",
-        output / "deepseek_reviews.jsonl",
-    )
-    print(stats)
-
-    result = extract_deepseek_true_candidates(
-        output / "deepseek_reviews.jsonl",
-        output / "deepseek_true_candidates.jsonl",
-    )
-    print(result)
-'@ | python -
-```
-
-预期输出文件：
-
-- `outputs/linux-v6.14-bug-check/ext4/deepseek_reviews.jsonl`
-- `outputs/linux-v6.14-bug-check/ext4/deepseek_true_candidates.jsonl`
-- `outputs/linux-v6.14-bug-check/xfs/deepseek_reviews.jsonl`
-- `outputs/linux-v6.14-bug-check/xfs/deepseek_true_candidates.jsonl`
-- `outputs/linux-v6.14-bug-check/f2fs/deepseek_reviews.jsonl`
-- `outputs/linux-v6.14-bug-check/f2fs/deepseek_true_candidates.jsonl`
-
-如果 DeepSeek 中断，不要覆盖已完成 reviews。应使用已有函数的 `start_index` 和 `limit` 分段续跑，或先备份旧 `deepseek_reviews.jsonl`。
-
-## 6. 历史记录：DeepSeek 完成后的核验步骤
-
-以下步骤已经完成，仅作为审计流程记录：
-
-1. 统计每个 `deepseek_reviews.jsonl` 的成功数、失败数、解析失败数。
-2. 检查 review task id 是否和输入任务一一对应。
-3. 统计 verdict 分布。
-4. 读取 `deepseek_true_candidates.jsonl`，筛出 LLM 认为可能是真 bug 的候选。
-5. 对每个 true candidate 回到 Linux 6.14 源码看上下文，不直接相信 LLM。
-6. 生成 `ext4/xfs/f2fs` triage report，列出 candidate id、函数、资源、错误路径、LLM verdict、人工判断。
-
-建议生成的报告文件：
-
-`outputs/linux-v6.14-bug-check/reports/ext4_xfs_f2fs_deepseek_triage.md`
-
-## 7. 测试状态
-
-2026-07-14 在当前工作树执行全量测试：
-
-```text
-110 passed in 0.45s
-```
-
-接手后最小验证命令：
-
-```powershell
-cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-python -m pytest -q
-python -m pytest -q tests/test_linux_v6_14_checker.py
-```
-
-## 8. Git 和 GitHub 状态
-
-当前 SE_EOD 仓库已经完成本轮主分支同步：
-
-```text
-branch: main
-remote: https://github.com/yghikun/SE_EOD.git
-HEAD/origin-main: fb24038 验证bug
-status: main 与 origin/main 对齐；工作树存在 `outputs/confirmed_bugs.md` 的未提交状态更新，禁止覆盖
-```
-
-本轮已进入 `main` 并推送到 GitHub 的关键提交：
-
-- `156c461`：`Update handoff and confirmed bug status`
-- `6bc316b`：`Add Linux 6.14 filesystem checker`
-- `28c58df`：`Add Linux 6.14 bug-check outputs`
-- `fb24038`：`验证bug`
-
-对应的临时 PR：
-
-```text
-PR:    https://github.com/yghikun/SE_EOD/pull/1
-title: [codex] Update handoff and confirmed bug status
-state: MERGED
-mergedAt: 2026-07-13T07:17:27Z
-```
-
-PR 页面不能从 GitHub 历史中真正删除；它已经是 `MERGED` 状态。为避免后续误用，已删除对应的远端分支和本地临时分支：
-
-```text
-deleted remote branch: origin/codex/update-handoff-confirmed-bugs
-deleted local branch:  codex/update-handoff-confirmed-bugs
-```
-
-本轮重要文件已经纳入 GitHub：
-
-- `PROJECT_HANDOFF.md`
-- `outputs/confirmed_bugs.md`
-- `scripts/check_linux_v6_14_filesystems.py`
-- `tests/test_linux_v6_14_checker.py`
-- `outputs/linux-v6.14-bug-check/`
-
-注意：`outputs/linux-v6.14-bug-check/` 已作为本轮 artifact 上传，目录约 68 MB，单文件未超过 GitHub 100 MB 限制。`linux-sources/` 仍然没有上传，也不应上传。
-
-后续提交前仍需检查：
+| Git branch | `main` |
+| Git HEAD | `c5f8122` (`API 配置漂移审计`) |
+| 全量测试 | `186 passed` |
+| 主前端 | frontend IR schema v1 + tree-sitter adapter，文本 fallback |
+| CFG | 支持 if、loop、goto、return、break、continue 和普通 switch/case/default；GNU case range/prelude 精确降级 |
+| 跨函数 | effect summary、不动点、SCC provenance、reviewed seed、部分自动 wrapper |
+| 资源语义 | instance、validity、must/may、transfer/escape、multiplicity/cardinality、aggregate membership |
+| witness | snapshot、representative trace、anchors；不是完整 predecessor graph |
+| 配置防护 | resource config audit、API drift audit |
+
+当前工作树可能包含闭合计划和相关文档的未提交修改。接手时必须先执行：
 
 ```powershell
 git status --short
 git diff --stat
-git diff --cached --stat
+git diff -- PROJECT_HANDOFF.md docs/PROJECT_CLOSURE_PLAN.md docs/PROJECT_ARCHITECTURE.md
 ```
 
-仍然不要提交：
-
-- `linux-sources/`
-- `E:\kernel-work\...` 外部 Linux patch 工作树
-- 邮箱授权码、API key、SMTP 密码
-
-## 9. 论文路线图当前判断
-
-核心方法创新：已经工程实现到可跑 Linux 6.14 的程度。
-
-论文还没完全闭环的部分：
-
-1. 当前只有 30 条 ext4 v6.8 开发 pilot；尚无独立、冻结、双 reviewer 的 ground-truth benchmark，这是正式投稿的首要阻塞项。
-2. ext4/XFS/F2FS 的 154 条候选已经完成 DeepSeek/人工复核并沉淀到 `outputs/confirmed_bugs.md`；btrfs 366 条尚未完成同等粒度审计，应先聚类并优先处理 P1/高分/新候选族。
-3. Linux v6.14 XFS 摘要不收敛已修复并验证候选稳定；剩余 `xfs_getfsmap::fn` 间接调用是需要披露的保守边界。
-4. 已提交到内核邮件列表的 patch 仍只能标为 `submitted / under review`，不能写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
-5. 正式 Recall/F1、B0--Full 消融、外部 baseline、依赖锁定、CI 和论文表格生成仍需按 `PAPER_ROADMAP.md` 收尾。
-
-## 10. 接手优先级
-
-P0：扩展并冻结独立 benchmark：四文件系统 300--500 条样本、至少 100 个独立正例、dev/validation/test 隔离、双 reviewer、Cohen's kappa 和 adjudication。
-
-已完成：XFS 函数摘要在 4 轮收敛，69 个候选 ID 和 ranked rows 与修复前完全一致；后续只需将该修复纳入统一三版本最终重跑。
-
-P0：将 pilot 评估器升级为论文级评估入口，补 Recall、F1、分组指标、bootstrap 置信区间、CSV/JSON/Markdown/LaTeX 输出；随后运行 B0--Full 和至少一个外部工具 baseline。
-
-P1：把 `outputs/confirmed_bugs.md` 整理为论文表 7 的 CSV/JSON，并将 `/root/bug_submit/...` 替换为 lore URL 或仓库内公开材料。
-
-P1：对 btrfs 366 条候选先按函数、资源和路径族聚类，再优先人工复核 P1、高分和新候选族；LLM 仅可辅助排序。
-
-并行维护：继续跟踪 btrfs、ext4、XFS、F2FS 已提交 patch 的 mailing list / patchwork 回复；维护者要求调整时只沿对应线程发 v2/v3。
-
-## 11. 最小恢复命令
-
-新的接手者只要从这里开始：
-
-```powershell
-cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-
-Get-Content -Encoding UTF8 PROJECT_HANDOFF.md
-Get-Content -Encoding UTF8 outputs/linux-v6.14-bug-check\check_manifest.json -TotalCount 40
-
-git status --short
-python -m pytest -q
-```
-
-然后优先查看第 13 节当前状态与 `PAPER_ROADMAP.md` 的“2026-07-14 当前执行顺序”；第 5、6、12 节是历史执行记录，不要重复跑已完成的 ext4/XFS/F2FS 模型任务。
+不要覆盖、回退或清理不属于当前代码任务的用户修改。
 
 ---
 
-## 12. 2026-07-13 历史记录：人工复核与 patch 提交状态
+## 3. 当前能力边界
 
-本节保留 2026-07-13 的执行现场。凡与第 1、9、10、13 节冲突的状态，以 2026-07-14 当前状态为准。ext4、XFS、F2FS 的 154 条候选已经完成完整性核验和源码人工复核：
+### 3.1 已经完成的代码基础
 
-| FS | 候选数 | DeepSeek 判 true | 人工复核真候选 | 真 bug cluster |
-|---|---:|---:|---:|---:|
-| ext4 | 30 | 26 | 20 | 4 |
-| XFS | 69 | 7 | 5 | 3 |
-| F2FS | 55 | 19 | 18 | 4 |
-| 合计 | 154 | 52 | 43 | 11 |
+当前代码已经具备：
 
-已同步记录到：
+- tree-sitter 函数和 statement 抽取；
+- 函数内 CFG、label/goto 和 scope unwind；
+- 有界析取数据流、join、widening 和截断诊断；
+- acquire/release、acquire validity 和失败路径细化；
+- obligation 级资源 ID、generation 和局部 symbol ID；
+- `ACQUIRED/MAY_ACQUIRED/RELEASED/TRANSFERRED/ESCAPED` 生命周期；
+- 简单 alias、函数指针目标和未知间接调用保守处理；
+- summary effect 的 `must/may`、`success/error/any`、return guard 和 pending application；
+- 循环 multiplicity、release cardinality、aggregate identity 和 membership fact；
+- uncertainty cause、quarantine、CFG slice completeness 和 witness snapshot；
+- 静态语义与 protocol/history/LLM ranking 隔离；
+- API 配置漂移审计。
 
-- `outputs/confirmed_bugs.md`
+这些能力是 G1--G5 的基础，不应在后续重构中被削弱或重新实现成另一套平行逻辑。
 
-注意：本节当时只更新到 confirmed bug #16；当前 `outputs/confirmed_bugs.md` 已扩展到 #20。
+### 3.2 仍需完成的代码缺口
 
-### 12.1 最新 mainline 对照基线
+| 缺口 | 现状 | 目标 | 当前优先级 |
+|---|---|---|---|
+| G1 switch CFG | 已完成；普通 case/default/fallthrough/break/continue/no-match 和 10 个 ext4 golden | 保留 GNU case range/prelude 精确 unsupported | 已完成 |
+| G2-A 统一 IR | schema v1、tree-sitter adapter、稳定 ID、round-trip/golden/parity | 供 Clang adapter 复用 | 已完成 |
+| G2-B 编译上下文 | IR 预留 `compile_command=null`，尚不执行 Kbuild | 可重建 compile database 及覆盖诊断 | 当前立即执行 |
+| G3 callee effect | reviewed seed、简单 wrapper 和有限自动推导 | 从一般 callee return states 推导出口分类 effect | G2 后执行 |
+| G4 field/alias | 简单局部 alias 和保守 field escape | 有界 access path 和明确 unknown 降级 | G3 后执行 |
+| G5 witness | representative trace | 紧凑 predecessor state graph | G4 后执行 |
 
-最新版对照使用的是 Torvalds mainline HEAD：
+闭合计划中的 G6--G9 是 benchmark、baseline、artifact 和 related work 缺口，当前阶段明确延后。
+
+注意：这里的“缺口 G1--G5”来自闭合计划第 3.2 节，不要与闭合计划“工作流 G：工程与复现”中的 `G-01` 等任务编号混淆。
+
+---
+
+## 4. 不得破坏的分析不变量
+
+后续所有代码修改必须遵守以下规则：
+
+1. `cleanup_calls` 只用于展示，资源是否解除由 CFG 状态传播决定。
+2. protocol、wrapper hint、ownership hint、history、manual 和 LLM 不得修改静态资源状态。
+3. 未证明 release/transfer 时必须保留义务；未知不能解释为安全。
+4. CFG 不完整、summary may、未知 alias、widening 和未知 guard 必须保留 uncertainty provenance。
+5. 自动 `must` effect 必须有可审计证明；不满足条件时降级为 `may`。
+6. success/error effect 必须等待调用返回边事实证明，不能在 call block 提前应用。
+7. pending effect 必须绑定 call site、result symbol、definition version 和 scope。
+8. `multiplicity=many` 不能被普通 `cardinality=one/unknown` 全部解除。
+9. aggregate `all` release 必须有 reviewed aggregate identity 或已证明 membership fact。
+10. 一个错误路径上的多个 obligation 必须保持独立 ID，不能退回 path 级单候选。
+11. 主输出与 quarantine 必须继续分离；降级不能变成静默丢弃。
+12. 新前端必须复用同一资源状态和候选规则，不能产生 tree-sitter/Clang 两套语义实现。
+13. 输出 schema 或 ID 算法变化必须显式版本化，并说明迁移影响。
+14. 为减少候选而增加的 suppression 不能代替语义修复。
+
+如果某项修改与这些不变量冲突，应先修改设计，而不是放宽测试。
+
+---
+
+## 5. 代码执行总顺序
+
+严格按以下顺序推进：
+
+1. 建立当前代码快照和针对 G1 的失败测试。
+2. 完成 G1 switch CFG。
+3. 建立 G2 统一前端 IR，先迁移 tree-sitter。
+4. 接入 Kbuild compile commands。
+5. 实现 Clang compiled mode 和前端 coverage 诊断。
+6. 完成 G3 一般出口敏感 callee effect。
+7. 完成 G4 有限字段路径和 alias。
+8. 完成 G5 predecessor witness。
+9. 加固配置 lifecycle、determinism、schema 和端到端回归。
+10. 代码能力冻结后，再回到闭合计划处理 benchmark 和论文实验。
+
+不能为了追求“并行完成”同时重写 CFG、IR 和 resource tracker。每一步先建立适配层和回归边界，再进入下一步。
+
+---
+
+## 6. G1：完整 switch/case/default CFG
+
+**状态：已完成（2026-07-18）。** 实现位于 `src/cfg.py::_switch_statement()`，标准 case/default 不再仅因节点类型进入 unsupported。新增 edge kind 为 `switch_case/switch_default/switch_no_match/case_fallthrough`，资源边传播会保留标准 case/default 谓词。GNU case range 记录为 `case_range`，switch prelude/宏恢复残片记录为 `switch_prelude`。工程 golden 见 `tests/fixtures/switch_cfg_linux_ext4_v6_14.json` 和 `tests/test_switch_cfg_linux_golden.py`。
+
+### 6.1 当前实现位置
+
+主要文件：
+
+- `src/cfg.py`；
+- `tests/test_cfg.py`；
+- `tests/test_cfg_resource_flow.py`；
+- `src/resource_tracker.py`；
+- `src/error_path_extractor.py`。
+
+本节后续条目保留为 G1 的实现与验收记录，不再是待执行任务。
+
+### 6.2 实现要求
+
+G1 必须支持：
+
+- switch 条件只求值一次；
+- 每个 `case` 有独立入口；
+- `default` 有独立入口；
+- 多个 case 共享同一语句体；
+- case 到下一个 case 的 fallthrough；
+- 没有 default 时存在 no-match 出口；
+- `break` 跳到最近 switch 出口；
+- switch 中循环的 `continue` 仍指向循环 header；
+- 循环中的 switch `break` 只退出 switch；
+- 嵌套 switch 的 break target 正确；
+- case 内 `goto cleanup`、`return` 和 scope unwind 正确；
+- 暂时不能求值 case 值时保留所有可达分支；
+- GNU case range 等未支持结构继续进入精确 unsupported range。
+
+建议增加明确 edge kind：
 
 ```text
-a13c140cc289c0b7b3770bce5b3ad42ab35074aa
+switch_case
+switch_default
+switch_no_match
+case_fallthrough
 ```
 
-Windows 上完整 Linux checkout 会因为大小写冲突导致 netfilter 等文件显示 modified；后续做内核 patch 时要用 sparse checkout，避开大小写冲突。
+edge condition 应保留 switch expression 与 case value，例如 `mode == 1`。这些条件后续可以进入 path facts，但 G1 不需要实现一般 case 表达式求值器。
 
-已经使用的干净 sparse 工作树：
+### 6.3 推荐实现步骤
+
+1. 用小型测试打印 tree-sitter 的 switch/case AST，确认当前 tree-sitter-c 版本的真实节点层次。
+2. 在 `_CFGBuilder` 中增加独立 `_switch_statement()`，不要继续在通用 `_sequence()` 中靠字符串猜 case。
+3. 创建 switch condition block 和 switch exit block。
+4. 收集有序 case/default clauses，分别构建 clause body fragment。
+5. 将 switch condition 连到每个 case/default 入口。
+6. 将 clause 的 fallthrough exit 连到下一个 clause，而不是 switch exit。
+7. 将 clause 内 break target 绑定到当前 switch exit；continue target 原样继承外层循环。
+8. 没有 default 时增加 no-match edge。
+9. 保留 return/goto 等非 fallthrough exits。
+10. 删除已完整支持节点的 unsupported 标记，并保留仍未支持子结构的范围。
+
+### 6.4 必须新增或修改的测试
+
+至少覆盖：
+
+- 单 case 命中和 no-match；
+- 多 case + default；
+- 两个 case 共享 body；
+- 显式 fallthrough；
+- 每个 case 单独 break；
+- 嵌套 switch；
+- loop 内 switch；
+- switch 内 loop；
+- case 内 goto cleanup；
+- case 内 acquire，不同 case 分别 release/不 release；
+- case fallthrough 后 release；
+- switch 后统一 cleanup；
+- unsupported GNU case range 的精确降级；
+- 原有 `test_incomplete_cfg_on_candidate_slice_forces_low_confidence` 改为验证完整 switch 不再降级；
+- unrelated unsupported slice 的现有行为继续成立。
+
+### 6.5 G1 完成门禁
+
+以下条件已全部满足：
+
+- `switch_statement` 和普通 `case_statement` 不再出现在 unsupported nodes；
+- switch golden tests 覆盖上述控制流；
+- switch 中的资源状态候选符合人工预期；
+- 原有 169 个测试与 9 个 G1 新增测试全部通过（当前共 178 个）；
+- 对真实 Linux 文件系统至少 10 个 switch 函数建立工程 golden fixture；
+- 候选或置信度发生变化时有差分说明，不使用候选减少作为正确性证明；
+- `docs/PROJECT_ARCHITECTURE.md` 更新当前 switch 能力和残余边界。
+
+### 6.6 G1 禁止的捷径
+
+- 把整个 switch 当成一个顺序 compound block；
+- 所有 case 都直接连接 switch exit，丢失 fallthrough；
+- 把 switch 内所有 `break` 或 `continue` 都连到函数 exit；
+- 实现后直接删除 unsupported 标记但不增加资源流测试；
+- 通过扩大 quarantine 掩盖错误 CFG。
+
+---
+
+## 7. G2：统一前端 IR、Kbuild 和 Clang compiled mode
+
+G2 是一个大任务，必须拆成四个可独立验收的子阶段，不能直接把 `parser.py` 替换成 Clang 调用。
+
+### 7.1 G2-A：定义统一前端 IR
+
+**状态：已完成（2026-07-19）。** 实现位于 `src/frontend/`，主流程已切换为 `TreeSitterFrontend -> TranslationUnitIR -> FunctionIR`。`Function/AstNode` 保留兼容别名，CFG 数据类已是 `ControlFlowGraphIR/BasicBlockIR/CFGEdgeIR`。专门测试覆盖 schema 拒绝、JSON round-trip、跨 root 稳定 ID、symbol/call/access-path、ERROR/text fallback diagnostics、CFG 序列化、semantic golden 和旧/新候选/summary 逐字段等价。
+
+目标：资源分析不再直接依赖 tree-sitter 节点对象。
+
+建议新增：
 
 ```text
-E:\kernel-work\linux-f2fs-ifolio-sparse
+src/frontend/__init__.py
+src/frontend/model.py
+src/frontend/base.py
+src/frontend/tree_sitter_frontend.py
+tests/test_frontend_ir.py
 ```
 
-该工作树通过以下方式建立：
+IR 至少表达：
+
+- translation unit ID 和源码文件；
+- function ID、名称、参数、返回类型和 source range；
+- statement/expression kind；
+- normalized text 和 source spelling；
+- 直接调用、间接调用和可能目标；
+- declaration/local symbol/type identity；
+- lvalue/access path；
+- CFG block/edge/condition；
+- macro spelling/expansion location；
+- frontend quality、unsupported feature 和 diagnostic。
+
+实施约束：
+
+- 先写 tree-sitter adapter，使现有主流程使用 IR；
+- 保留兼容层，按模块逐步迁移；
+- 不在迁移时重写资源语义；
+- IR schema 必须有版本号；
+- IR 必须可序列化，便于前端 golden 和差分。
+
+G2-A 门禁：
+
+- tree-sitter 主流程完全通过统一 IR；
+- 现有候选和 summary 的差分为空或逐项解释；
+- resource tracker 不再读取 tree-sitter 私有节点字段；
+- IR round-trip 和 schema tests 通过。
+
+### 7.2 G2-B：Kbuild compile commands
+
+目标：获取真实内核构建参数，而不是自行拼 include/define。
+
+第一阶段只固定一个可重建环境：
+
+```text
+Linux tag: 先选择仓库已有且源码完整的一个版本
+Architecture: x86_64
+Compiler: 固定 Clang 主版本
+Config: 仓库保存 config 或生成步骤及 SHA-256
+```
+
+需要实现：
+
+- 生成或导入 `compile_commands.json`；
+- 规范化 command、directory 和 file；
+- 将 translation unit 映射到 compile command；
+- 记录没有进入当前 Kconfig build 的 `.c` 文件；
+- 输出 compiler/config/compile database hash；
+- 检查重复或缺失 command；
+- 在 Linux/WSL/容器中可重建。
+
+建议新增：
+
+```text
+src/compile_db.py
+scripts/prepare_kernel_compile_db.py
+tests/test_compile_db.py
+```
+
+Windows 可以继续开发 Python 主程序，但 Kbuild 与 Clang 集成验收必须在 Linux、WSL2 或固定容器中完成。
+
+### 7.3 G2-C：Clang frontend exporter
+
+最低闭合目标：
+
+- 使用 compile command 完成预处理和类型检查；
+- 导出 typed function、parameter、local declaration 和 call；
+- 导出 field/member/access path；
+- 导出函数内 CFG；
+- 保留 spelling 与 macro expansion location；
+- 区分直接调用和函数指针调用；
+- 转换为 G2-A 的统一 IR。
+
+推荐采用固定版本 Clang LibTooling 小型 exporter，不要求把整个项目迁移为 C++。Python 负责调度、读取 exporter JSON 和后续资源分析。
+
+失败策略：
+
+- exporter 失败不得静默回退；
+- 可回退 tree-sitter，但必须记录 `frontend_mode`、失败原因和受影响函数；
+- typed facts 缺失时不能伪造确定 alias 或 must effect；
+- macro/inline 来源必须可以在 witness 中定位。
+
+### 7.4 G2-D：前端覆盖和 parity
+
+每次 compiled run 至少输出：
+
+- 目标 `.c` 数；
+- 进入 Kbuild 的 translation unit 数；
+- compile command 成功/失败数；
+- Clang AST/CFG 成功/失败数；
+- tree-sitter fallback 函数数；
+- unsupported/diagnostic 分类；
+- tree-sitter 与 Clang 的函数、call、CFG 和候选差分。
+
+G2 完成门禁：
+
+- 统一 IR 稳定；
+- compile database 可重建；
+- Clang frontend 能分析选定文件系统的真实 translation units；
+- 失败和 fallback 可量化；
+- tree-sitter 保留为明确的 source-level/fallback mode；
+- 主资源传播只有一套实现；
+- 全量测试和 frontend golden 通过；
+- 架构文档更新两种 frontend 的能力边界。
+
+---
+
+## 8. G3：一般 callee CFG 的出口敏感 effect
+
+### 8.1 目标
+
+从 callee 的真实 CFG return states 自动推导：
+
+```text
+resource: argN | return | *argN | bounded field path
+action: acquire | release | transfer | escape
+strength: must | may
+exit_class: success | error | any | unknown
+return_guard: normalized predicate
+cardinality: one | all | unknown
+```
+
+### 8.2 主要修改位置
+
+- `src/function_summary.py`；
+- `src/resource_tracker.py`；
+- `src/resource_state.py`；
+- `src/dataflow.py`；
+- `tests/test_interprocedural.py`；
+- 新增独立 summary inference fixture/test 文件。
+
+### 8.3 推导规则
+
+1. 收集 callee 所有可达 return state。
+2. 将 return 分类为 success、error 或 unknown。
+3. 按出口类分别聚合参数、返回值和 out-parameter 的资源动作。
+4. 同一出口类所有可达状态都存在同一动作，且 CFG 完整、无 widening、映射精确时，才允许生成 `must`。
+5. 只有部分状态成立或存在不确定性时生成 `may`。
+6. 不同出口类的动作不得合并成无条件 `any must`。
+7. 调用点继续创建 pending effect，等待 caller edge fact 证明 return guard。
+8. result 变量重赋值、symbol version 改变或离开 scope 时，旧 pending effect 失效。
+9. reviewed seed 与自动推导冲突时输出 diagnostic，不能任意覆盖。
+10. SCC 未收敛时自动派生 must 降为 may，原始 reviewed seed 保留来源。
+
+### 8.4 必须覆盖的测试
+
+- success 才 transfer；
+- error 才 release；
+- success 和 error 都 release；
+- 两个 success return 只有一个 release；
+- return local variable；
+- 条件 return expression；
+- out-parameter acquisition；
+- non-first argument release；
+- wrapper 到 wrapper 的 guard remap；
+- alias 不精确时降为 may；
+- unsupported switch/CFG 时禁止自动 must；
+- recursive SCC 收敛和不收敛；
+- caller result 重赋值使 pending effect 失效；
+- reviewed/automatic effect 冲突诊断。
+
+### 8.5 G3 完成门禁
+
+- 自动 effect 有稳定 schema 和 provenance；
+- 每个自动 must 可以通过 callee return witness 重建；
+- 所有反例不会生成过强 must；
+- 关闭自动推导后能够做工程差分，但暂不要求论文消融指标；
+- 现有 reviewed seed 行为不回退；
+- 全量测试通过，架构文档更新。
+
+---
+
+## 9. G4：有限字段路径和 alias
+
+### 9.1 范围
+
+不实现完整 points-to，先实现有界、可解释的 access path：
+
+```text
+arg0
+arg0->field
+arg0->field.subfield
+local.field
+*arg1
+return
+```
+
+### 9.2 建议数据模型
+
+新增结构化 `AccessPath`，不要继续用任意字符串做字段匹配：
+
+```text
+root_kind: local | parameter | return | unknown
+root_id: symbol ID / arg index
+dereference_depth
+fields: ordered field names
+index: constant | normalized symbol | unknown
+casts: ignored-safe | type-changing | unknown
+precision: exact | bounded | unknown
+```
+
+最大字段深度必须配置化并进入运行 manifest。
+
+### 9.3 语义规则
+
+- 简单 `a = b` 传播 root identity；
+- `&obj->field` 与对应解引用规范化到相同 access path；
+- 常量数组索引可以精确，未知索引不得假装相同或不同；
+- 字段 store 默认保留 `MAY_ACQUIRED/field_store_without_contract`；
+- reviewed 或自动 summary 证明后才 transfer/release；
+- `container_of`、union、复杂 cast 和指针算术进入 explicit unknown；
+- join 时不同精确路径不能错误合并成已释放；
+- access path 必须映射到 obligation/resource ID，而不只映射 release 名称。
+
+### 9.4 主要修改位置
+
+- `src/resource_expr.py`；
+- `src/resource_release.py`；
+- `src/resource_tracker.py`；
+- `src/function_summary.py`；
+- G2 的 frontend IR；
+- 新增 `src/access_path.py` 和对应测试。
+
+### 9.5 G4 完成门禁
+
+- access path 有结构化 schema、canonical form 和测试；
+- struct member、nested field、out-parameter、取地址和简单 alias 正确；
+- unknown index/cast/container 不产生过强 release/transfer；
+- summary 可以表达 bounded field path；
+- exact/bounded/unknown 数量进入 diagnostics；
+- 全量测试通过，架构文档更新。
+
+---
+
+## 10. G5：可重建 predecessor witness
+
+### 10.1 目标
+
+给定一个 candidate/obligation ID，仅使用输出 artifact 就能回答：
+
+- 资源在哪里获取；
+- acquire validity 如何成立或为何未知；
+- 经过哪些 CFG edge；
+- 哪些调用产生 summary/pending effect；
+- 哪些分支发生 join；
+- 是否发生 widening/truncation；
+- 为什么到错误 return 时仍为 `ACQUIRED/MAY_ACQUIRED`。
+
+### 10.2 建议数据结构
+
+每个保留状态增加稳定 witness node：
+
+```text
+state_id
+block_id
+edge_id
+parent_state_ids
+transfer_event
+resource_state_digest
+path_fact_digest
+join_kind
+widening_metadata
+truncated
+```
+
+完整状态内容可以去重存储，witness node 只引用 digest，避免输出成倍膨胀。
+
+### 10.3 行为要求
+
+- 普通 transfer 保存单 parent；
+- join 保存所有参与当前结论的 parent IDs；
+- widening 保存被合并状态的摘要和阈值；
+- 每个候选输出至少一条 acquire-to-exit 持有链；
+- `MAY_ACQUIRED` 若来自 release/held 分歧，输出两条代表链；
+- pending effect 记录创建、证明应用或失效事件；
+- scope unwind 记录 binding 恢复；
+- 图大小有上限；达到上限时明确 `witness_truncated=true`；
+- representative trace 可保留作快速展示，但不能再冒充完整 witness。
+
+### 10.4 主要修改位置
+
+- `src/dataflow.py`；
+- `src/resource_tracker.py`；
+- `src/resource_state.py`；
+- `src/error_path_extractor.py`；
+- CSV/JSONL 输出 schema；
+- `tests/test_cfg_resource_flow.py`；
+- `tests/test_interprocedural.py`。
+
+### 10.5 G5 完成门禁
+
+- branch、join、loop、widening、pending effect、scope unwind 均有 witness 测试；
+- candidate 可重建 acquire-to-exit 链；
+- witness 截断不改变静态资源结论，只影响可解释性标记；
+- 输出增长有统计和上限；
+- ID 在相同输入和环境中确定；
+- 全量测试通过，架构文档更新。
+
+---
+
+## 11. G1--G5 后的代码加固
+
+G1--G5 完成后，先做一轮工程收口，再进入 benchmark。
+
+### 11.1 配置 lifecycle
+
+- resource map 增加 schema version；
+- semantic contract 记录来源、reviewer 和适用 Linux 范围；
+- API drift issue 支持 reviewed resolution 状态；
+- rename、alias、wrapper、removed、unrelated、unknown 分类稳定；
+- 配置变化输出机器可读 diff；
+- high severity drift 必须处理或显式接受；
+- hint 不能自动升级为 semantic effect。
+
+### 11.2 Determinism
+
+- 文件枚举顺序不影响 function/candidate/obligation ID；
+- summary effect 顺序稳定；
+- SCC 和 fixed-point 输出稳定；
+- repeated run 输出除时间字段外可比较；
+- schema 变化有迁移说明。
+
+### 11.3 性能边界
+
+- CFG state、summary effect、access path 和 witness node 均有独立上限；
+- 每种 widening/truncation 有统计；
+- 限制触发后采用 fail-open 状态，不静默解除资源；
+- 小型 fixture 保持快速，全量 Linux 扫描才允许较长运行。
+
+### 11.4 端到端 compiled-mode smoke
+
+至少固定：
+
+- 一个真实 Linux tag；
+- 一个文件系统；
+- 一组 Kbuild translation units；
+- tree-sitter 与 Clang 两种前端；
+- summary、candidate、quarantine、API drift 和 witness 输出。
+
+这一步只验证代码链路稳定，不进行正式 Precision/Recall 评估。
+
+---
+
+## 12. 测试与验证命令
+
+### 12.1 每次编辑后的最小检查
 
 ```powershell
-cd E:\kernel-work
-git clone --no-checkout --shared .\linux-f2fs-ifolio-clean linux-f2fs-ifolio-sparse
-cd linux-f2fs-ifolio-sparse
-git sparse-checkout init --cone
-git sparse-checkout set fs/f2fs scripts MAINTAINERS
-git checkout master
+python -m compileall -q src tests
+python -m pytest -q tests/test_cfg.py tests/test_cfg_resource_flow.py
+git diff --check
 ```
 
-### 12.2 已提交 patch，禁止重复提交
-
-这些已经发到对应 mailing list。不要重复投同一个 patch；后续只能基于维护者回复发 v2/v3 或 reply。
-
-#### btrfs：已提交
-
-- `__add_reloc_root()`
-  - Subject: `[PATCH v2] btrfs: free mapping node on duplicate reloc root insert`
-  - 状态：v2 submitted，Qu Wenruo 已回复；后续只在该线程继续修改或回复。
-- `btrfs_recover_relocation()`
-  - Subject: `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`
-  - From: Guanghui Yang
-  - 状态：patch submitted；本地 QEMU/fault-injection 已验证，但尚未记录为 upstream merged。
-
-#### btrfs：当时已确认、随后已提交
-
-- `reserve_chunk_space()`
-  - Bug：zoned `btrfs_zoned_activate_one_bg()` 成功返回 `1` 后，`ret` 未归零，导致后续 `if (!ret)` 跳过 `btrfs_block_rsv_add()` 和 `trans->chunk_bytes_reserved` 更新。
-  - 不是 `bg` 生命周期 bug，也不是缺 `btrfs_put_block_group()`；`btrfs_create_chunk()` 成功后 block group 已进入 btrfs / transaction 管理。
-  - 复现：host-managed zoned `null_blk`，`zone_size=256MiB`，`zone_max_active=8`；修复前日志显示 `zoned_activate ret=1` 且 `skip chunk_block_rsv_add`，归零后 `chunk_reserved=393216`。
-  - 修复方向：`ret = btrfs_zoned_activate_one_bg(...); if (ret < 0) return; ret = 0;`，或使用单独局部变量保存 zoned activation 返回值。
-  - 当前状态：Linux 6.14 本地复现确认；修复已提交 v2，lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com`，并获得 Johannes Thumshirn 的 Reviewed-by；尚未记录为 upstream merged。
-
-#### ext4：已提交
-
-- `ext4_fc_replay_add_range()` / `ext4_fc_replay_del_range()`
-  - Subject: `ext4: propagate errors from fast commit range replay`
-  - 状态：patch submitted，latest mainline 在 2026-07-13 检查时仍未合入。
-- `ext4_init_orphan_info()`
-  - Subject: `ext4: fix buffer_head leak in ext4_init_orphan_info`
-  - 状态：patch submitted，latest mainline `a13c140cc289...` 仍是旧的 `for (i--; i >= 0; i--)` cleanup 形态。
-- `ext4_expand_extra_isize_ea()`
-  - Subject: `ext4: clear error before retrying inode xattr space fallback`
-  - 状态：patch submitted / under review。
-
-#### XFS：已提交
-
-- `xfs_rtginode_ensure()`
-  - Subject: `[PATCH] xfs: propagate errors from xfs_rtginode_load`
-  - To: `linux-xfs@vger.kernel.org`
-  - 维护者/Reviewer：Carlos Maiolino、Darrick J. Wong、Christoph Hellwig
-  - Fixes: `aa897e0bed0f ("xfs: support creating per-RTG files in growfs")`
-  - 状态：patch submitted，latest mainline `a13c140cc289...` 检查时仍未合入。
-
-#### F2FS：已提交
-
-1. `f2fs_get_new_data_folio()`
-
-   - v1 Message-ID: `<20260713055959.1865-1-3497809730@qq.com>`
-   - v2 Message-ID: `<20260713061601.712-1-3497809730@qq.com>`
-   - v2 Subject: `[PATCH v2] f2fs: fix ifolio leak in f2fs_get_new_data_folio`
-   - 状态：v2 submitted。v1 已被 v2 supersede；后续回复应基于 v2 线程。
-
-2. `find_in_level()`
-
-   - Message-ID: `<20260713063633.555-1-3497809730@qq.com>`
-   - Subject: `[PATCH] f2fs: fix dentry folio leak in find_in_level`
-   - 状态：patch submitted。
-
-3. `f2fs_move_inline_dirents()`
-
-   - Message-ID: `<20260713064043.1837-1-3497809730@qq.com>`
-   - Subject: `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`
-   - 状态：patch submitted。
-
-F2FS 收件人使用：
-
-```text
-To: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Chao Yu <chao@kernel.org>
-Cc: linux-f2fs-devel@lists.sourceforge.net
-Cc: linux-kernel@vger.kernel.org
-```
-
-不要把 F2FS patch 发到 `linux-xfs@vger.kernel.org` 或 `linux-btrfs@vger.kernel.org`。
-
-### 12.3 F2FS patch 工作树分支
-
-外部 Linux sparse 工作树中用过的分支：
-
-```text
-E:\kernel-work\linux-f2fs-ifolio-sparse
-```
-
-- `f2fs-ifolio-leak-fix`
-  - commit: `a0c8c0e255c92ff3ebb9d188d6dd5266330ac7cc`
-  - patch dir: `patches-v2/`
-  - 已发 v2。
-- `f2fs-find-in-level-folio-leak`
-  - commit: `dd9b477726b2f52bf495f436e49baecfa0bcdaf3`
-  - patch dir: `patches-find/`
-  - 已发送。
-- `f2fs-move-inline-dirents-ifolio-leak`
-  - commit: `38c593752c0f45eea652d8adaa6a5f46ccdf799a`
-  - patch dir: `patches-inline/`
-  - 已发送。
-
-后续如果要发 v2/v3，先切到对应分支，`git commit --amend`，再用 `git format-patch -1 -v2` 或 `-v3`。需要回复旧线程时必须加 `--in-reply-to <Message-ID>`。
-
-### 12.4 当前不应再当作未提交项的 bug
-
-下面这些已经提交或已由上游修复，不要再作为“待提交新 bug”处理：
-
-- ext4 `ext4_ext_shift_extents()`：latest mainline 已修。
-- ext4 `ext4_fc_replay_inode()`：latest mainline 已修；已有 upstream commit `ec0a7500d8ea`。
-- ext4 `ext4_dx_add_entry()`：latest mainline 已修。
-- XFS `xfs_qm_quotacheck_dqadjust()`：latest mainline 已修。
-- XFS `xfs_rtcopy_summary()`：latest mainline 已修。
-- F2FS `f2fs_rename()` with `RENAME_WHITEOUT`：latest mainline 已修。
-- btrfs `__add_reloc_root()`：已提交 v2，且已有 Qu Wenruo 回复。
-- btrfs `btrfs_recover_relocation()`：已提交 patch。
-- XFS `xfs_rtginode_ensure()`：已提交 patch。
-- F2FS `f2fs_get_new_data_folio()`：已提交 v2。
-- F2FS `find_in_level()`：已提交。
-- F2FS `f2fs_move_inline_dirents()`：已提交。
-
-### 12.5 下一步优先事项
-
-以下是 2026-07-13 当时的优先事项，已由第 10、13 节取代。状态修正如下：
-
-1. btrfs `reserve_chunk_space()` 修复已经提交 v2 并获得 Reviewed-by，不再是“待提交”事项。
-2. 跟踪 btrfs 两个已提交 patch 的回复；`__add_reloc_root()` 后续修改必须基于已有 v2 线程。
-3. 跟踪 F2FS 三封 patch 在 `linux-f2fs-devel` / patchwork 上的回复。
-4. 跟踪 XFS `xfs_rtginode_ensure()` 回复，尤其是 Darrick/Christoph 是否要求调整 commit message 或 Fixes tag。
-5. 跟踪 ext4 已提交 patch 的 review/合入状态。
-6. 不要把 submitted patch 写成 upstream accepted；只有维护者 tree 或 mainline 出现对应 commit 后才能改状态。
-
-1. 把 `outputs/confirmed_bugs.md` 中所有外部路径、Message-ID、状态整理成论文表格可用格式。
-2. 如果需要继续挖 btrfs，先对 366 条候选聚类，再做优先级人工 triage；不要把 DeepSeek verdict 当作标签。
-3. 运行全量测试：
+### 12.2 G2/G3/G4/G5 对应测试
 
 ```powershell
-cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-python -m pytest -q
+python -m pytest -q tests/test_interprocedural.py
+python -m pytest -q tests/test_api_drift_audit.py tests/test_config_layout.py
+python -m pytest -q tests/test_demo.py
 ```
 
-### 12.6 当前仓库状态提醒
+### 12.3 每个阶段退出前
 
-本轮 SE_EOD 仓库更新已经合并到 `main` 并推送到 GitHub。最终主分支包含：
+```powershell
+python -m compileall -q src tests scripts
+python -m pytest -q
+git diff --check
+git status --short
+```
 
-- `PROJECT_HANDOFF.md`：交接补充。
-- `outputs/confirmed_bugs.md`：当前 confirmed/reviewed bug #1--#20、已修复项、已提交 patch 状态。
-- `outputs/linux-v6.14-bug-check/`：Linux 6.14 分析输出 artifact。
-- `scripts/check_linux_v6_14_filesystems.py`
-- `tests/test_linux_v6_14_checker.py`
+如果测试数或候选 schema 发生变化，在本文件“当前可核验快照”中更新，不继续引用旧的 `110 passed` 或其他历史数字。
 
-2026-07-14 最终核验过的全量测试：
+Clang/Kbuild 测试需要 Linux/WSL/容器时，应同时保留：
+
+- 执行命令；
+- Clang 版本；
+- kernel tag/config hash；
+- compile database hash；
+- 成功和失败 translation unit 清单。
+
+---
+
+## 13. 每个代码任务的完成格式
+
+每个 G1--G5 子任务完成时记录：
 
 ```text
-python -m pytest -q
-110 passed in 0.45s
+Task ID:
+Problem:
+Supported semantics:
+Explicitly unsupported semantics:
+Files changed:
+Tests added/changed:
+Diagnostics/schema changes:
+Behavioral diff:
+Known limitations:
+Verification commands and result:
+Architecture documentation updated:
 ```
 
-最终 GitHub 状态：
+不能只写“实现完成”。至少要说明支持范围、反例、降级策略和测试证据。
 
-```text
-artifact push range: ab5b3f3..28c58df
-PR #1: MERGED
-remote branch codex/update-handoff-confirmed-bugs: deleted
-local branch codex/update-handoff-confirmed-bugs: deleted
-```
+---
 
-后续提交 SE_EOD 仓库前仍必须检查：
+## 14. 当前暂停区
+
+以下已有材料继续保留，但当前不主动扩展：
+
+- `benchmark/`：保留现有 30 条 ext4 pilot 和脚本，不把它升级为最终 benchmark；
+- `outputs/confirmed_bugs.md`：保留状态，不把 finding 跟踪作为代码主线；
+- `scripts/evaluate_benchmark.py` 等评估脚本：不做论文级扩展；
+- historical fixes：继续作为 ranking evidence，不用于修改静态语义；
+- DeepSeek/LLM：不新增调用、不调 prompt、不做概率校准；
+- submitted kernel patches：可在维护者明确回复时单独处理，但不改变 G1--G5 顺序；
+- `PAPER_ROADMAP.md`：保留历史和后续论文任务，暂不按其 benchmark 优先级执行。
+
+暂停不代表删除。不得清理这些目录或重写已有标签。
+
+---
+
+## 15. 安全与仓库规则
+
+1. 不提交 `linux-sources/`。
+2. 不提交 API key、邮箱凭据或个人密钥。
+3. 不执行 `git reset --hard`、`git checkout --` 或清理未确认输出。
+4. 不覆盖现有 dirty worktree 中不属于当前任务的修改。
+5. 不把 LLM verdict 当作静态语义或 gold label。
+6. 不把 patch submitted/Reviewed-by 写成 upstream accepted。
+7. 不为通过测试而放宽 fail-open 语义。
+8. 不在 G2 中删除 tree-sitter fallback；先完成 parity 再决定长期维护方式。
+9. 不在没有 schema version 的情况下改变候选或 witness 字段含义。
+10. 每次提交前检查：
 
 ```powershell
 git status --short
 git diff --stat
+git diff --check
 git diff --cached --stat
 ```
 
-仍然不要 stage 或提交：
-
-- `linux-sources/`
-- `E:\kernel-work\...` 外部 Linux patch 工作树
-- 邮箱授权码、API key、SMTP 密码
-
 ---
 
-## 13. 2026-07-14 当前权威状态
+## 16. 下一次接手应立即做什么
 
-### 13.1 投稿阻塞项
+下一项唯一主任务是 **G2-B：接入并验证 Kbuild compile database**。
 
-| 顺序 | 阻塞项 | 当前证据 | 完成标准 |
-|---:|---|---|---|
-| 1 | 独立 benchmark | 仅有 30 条 ext4 v6.8 开发 pilot | 四文件系统 300--500 条、至少 100 正例、冻结 test split、双 reviewer、kappa、adjudication |
-| 2 | 论文级指标 | 当前 evaluator 主要输出 precision 与 Precision@K | Recall、F1、分组指标、置信区间、人工成本和论文表格格式 |
-| 3 | Baseline/消融 | 已有 ext4 开发集局部消融 | 相同 benchmark 上 B0--Full、pattern baseline、至少一个外部工具 baseline |
-| 4 | Artifact | 有 runner/manifest，无打包、CI 和开源元数据 | 统一命令、稳定 manifest schema、依赖锁、CI、LICENSE、CITATION、干净环境复现 |
-
-已解除的阻塞项：XFS 摘要条件规范化已修复，4 轮收敛，候选稳定；`xfs_getfsmap::fn` 作为单独的保守间接调用边界保留。
-
-### 13.2 Bug 与 upstream 状态
-
-- `outputs/confirmed_bugs.md` 共 20 条记录。
-- 6 条已在上游修复；其余 14 条由已提交 patch 或 patch series 覆盖。
-- `reserve_chunk_space()`：v2 submitted，Reviewed-by received，未记录为 upstream merged。
-- `btrfs_init_new_device()`：3-patch sprout rollback series submitted，未记录为 upstream merged。
-- 所有状态更新必须带最后核验日期、公开 lore/commit 链接和 E0--E5 证据等级。
-- 继续跟踪邮件列表是并行维护任务，不能替代 benchmark 和正式评估主线。
-
-### 13.3 工作树与测试
-
-```text
-branch: main
-HEAD: fb24038
-origin/main: fb24038
-tests: 110 passed in 0.45s
-dirty: 包含用户的 outputs/confirmed_bugs.md 状态更新，以及本轮 XFS 收敛修复和文档；禁止覆盖用户修改
-```
-
-接手后的第一组命令：
+恢复命令：
 
 ```powershell
 cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
+
+Get-Content -Encoding UTF8 PROJECT_HANDOFF.md -TotalCount 260
+Get-Content -Encoding UTF8 docs\PROJECT_CLOSURE_PLAN.md -TotalCount 360
+
 git status --short
 python -m pytest -q
-Get-Content -Encoding UTF8 PAPER_ROADMAP.md -TotalCount 130
+
+Get-Content -Encoding UTF8 src\frontend\model.py -TotalCount 220
+Get-Content -Encoding UTF8 src\frontend\tree_sitter_frontend.py -TotalCount 220
+Get-Content -Encoding UTF8 docs\PROJECT_CLOSURE_PLAN.md | Select-Object -Skip 220 -First 90
 ```
+
+第一轮 G2-B 步骤：
+
+1. 确认 Linux/WSL/容器中的内核 tag、architecture、Clang 版本和 `.config` 来源；
+2. 实现 compile database loader/normalizer，严格区分 `arguments` 与 `command`；
+3. 建立 translation unit 到唯一 compile command 的映射，重复/缺失显式报错；
+4. 将 `CompileCommandIR` 填入 `TranslationUnitIR`；
+5. 输出 config/compiler/compile-database hash 和 covered/uncovered 清单；
+6. 在干净 Linux/WSL/容器中验证可重建性。
+
+在 G2-B 完成前，不先写 Clang exporter，不伪造 compile flags，不开始 benchmark、LLM 或 ranking 工作。
+
+---
+
+## 17. 代码完善阶段 Definition of Done
+
+本阶段完成必须同时满足：
+
+- [x] G1：switch/case/default CFG 完整并有 10 个 ext4 v6.14 真实函数 golden；
+- [x] G2-A：frontend IR schema v1、tree-sitter adapter、round-trip/golden/parity 已完成；
+- [ ] G2：tree-sitter/Clang 使用同一 IR，Kbuild compile database 可重建；
+- [ ] G2：compiled mode 的成功、失败和 fallback 可量化；
+- [ ] G3：一般 callee CFG 可推导出口敏感 must/may effect；
+- [ ] G3：每个自动 must 有可重建证明；
+- [ ] G4：有限字段路径和 alias 有结构化模型与保守降级；
+- [ ] G5：candidate 有 acquire-to-exit predecessor witness；
+- [ ] 配置 lifecycle、determinism、schema version 和资源上限完成；
+- [ ] 所有新增能力有正例、反例、unknown 和 regression tests；
+- [ ] tree-sitter fallback、quarantine 和 uncertainty provenance 未被破坏；
+- [ ] 全量测试、compileall 和 diff check 通过；
+- [ ] `PROJECT_ARCHITECTURE.md` 与代码一致；
+- [ ] 本文件更新为新的代码快照。
+
+达到这些条件后，分析器代码主线才算完善。届时再按照 `PROJECT_CLOSURE_PLAN.md` 从 G6 开始处理独立 benchmark、baseline、正式评估、artifact 和论文闭合。

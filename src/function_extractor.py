@@ -4,60 +4,13 @@ from __future__ import annotations
 
 import bisect
 import re
-from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
+from .frontend.model import AstPoint, FrontendNode, FunctionIR
 from .parser import ParsedFile, compact_ws, mask_comments_and_strings, split_args
 
-
-@dataclass
-class AstPoint:
-    row: int
-    column: int = 0
-
-
-@dataclass
-class AstNode:
-    type: str
-    text: str
-    start_byte: int
-    end_byte: int
-    start_line: int
-    end_line: int
-    children: list["AstNode"] = field(default_factory=list)
-    field_map: dict[str, "AstNode"] = field(default_factory=dict)
-
-    @property
-    def start_point(self) -> AstPoint:
-        return AstPoint(self.start_line - 1)
-
-    @property
-    def end_point(self) -> AstPoint:
-        return AstPoint(self.end_line - 1)
-
-    def child_by_field_name(self, name: str) -> "AstNode | None":
-        return self.field_map.get(name)
-
-
-@dataclass
-class Function:
-    file: Path
-    name: str
-    signature: str
-    source: str
-    body: str
-    start_line: int
-    end_line: int
-    body_start_line: int
-    ast_node: Any | None = None
-    body_node: Any | None = None
-    parse_tree: Any | None = None
-    source_start_byte: int = 0
-    body_start_byte: int = 0
-    file_bytes: bytes = b""
-    parameters: set[str] = field(default_factory=set)
-    analysis_quality: str = "tree-sitter"
+AstNode = FrontendNode
+Function = FunctionIR
 
 
 CONTROL_KEYWORDS = {"if", "for", "while", "switch", "return", "sizeof"}
@@ -154,8 +107,10 @@ def _node_text(source_bytes: bytes, node: Any) -> str:
     return source_bytes[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
 
-def _copy_ast_node(source_bytes: bytes, node: Any) -> AstNode:
-    copied_children = [_copy_ast_node(source_bytes, child) for child in node.children]
+def _copy_ast_node(source_bytes: bytes, node: Any, source_file: str = "") -> AstNode:
+    copied_children = [
+        _copy_ast_node(source_bytes, child, source_file) for child in node.children
+    ]
     field_map: dict[str, AstNode] = {}
     for idx, child in enumerate(copied_children):
         try:
@@ -171,8 +126,12 @@ def _copy_ast_node(source_bytes: bytes, node: Any) -> AstNode:
         end_byte=node.end_byte,
         start_line=node.start_point.row + 1,
         end_line=node.end_point.row + 1,
+        start_column=node.start_point.column,
+        end_column=node.end_point.column,
         children=copied_children,
         field_map=field_map,
+        source_file=source_file,
+        normalized_text=compact_ws(_node_text(source_bytes, node)),
     )
 
 
@@ -250,7 +209,7 @@ def _extract_functions_from_ast(parsed: ParsedFile) -> list[Function]:
                 node, "compound_statement"
             )
             if name and body_node is not None:
-                ast_node = _copy_ast_node(source_bytes, node)
+                ast_node = _copy_ast_node(source_bytes, node, parsed.path.as_posix())
                 copied_body_node = ast_node.child_by_field_name("body") or _find_child_type(
                     ast_node, "compound_statement"
                 )

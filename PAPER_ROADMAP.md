@@ -1,5 +1,7 @@
 # 已完成进度（2026-07-14）
 
+> 本文档保留历史进度和投稿路线。自 2026-07-18 起，跨工程、实验、论文和复现的统一完成门禁以 [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md) 为准；当前代码事实以 [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) 为准。
+
 以下任务已经完成并有仓库内产物；未列出的原路线图任务仍视为未完成。
 
 - [x] 补全 Linux v6.8 与 v7.1 的 ext4、btrfs、XFS、F2FS 源码快照及来源 manifest（`linux-sources/`）。

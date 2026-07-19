@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .function_extractor import Function
+from .frontend.model import FunctionIR as Function
 from .parser import compact_ws, extract_call_expressions, extract_return_expr
 
 

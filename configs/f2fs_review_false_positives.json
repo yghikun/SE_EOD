@@ -114,6 +114,17 @@
       "description": "Explicitly reviewed false-positive paths; matching uses stable file/function/candidate identity across kernel versions; recorded source lines are provenance only."
     },
     {
+      "rule_id": "f2fs.reviewed.f2fs_get_new_data_folio.missing_cleanup",
+      "file": "fs/f2fs/data.c",
+      "function": "f2fs_get_new_data_folio",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        1479
+      ],
+      "reason_code": "upstream_maintainer_false_positive",
+      "description": "Upstream F2FS maintainer review confirmed that the caller handles the caller-provided inode folio when f2fs_reserve_block() fails. The submitted patch was withdrawn on 2026-07-19."
+    },
+    {
       "rule_id": "f2fs.reviewed.f2fs_bmap_compress.error_swallowed",
       "file": "fs/f2fs/data.c",
       "function": "f2fs_bmap_compress",

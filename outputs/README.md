@@ -7,6 +7,8 @@ snapshots cannot overwrite or mix with each other.
 ## Root
 
 - `confirmed_bugs.md`: all confirmed bugs across filesystems.
+- `f2fs_maintainer_feedback.md`: upstream review outcomes for the July 2026
+  F2FS folio-lifetime submissions, including withdrawn and pending findings.
 - `linux-v6.8/`: results produced from `linux-sources/linux-v6.8-fs`.
 - `linux-v7.1/`: results produced from `linux-sources/linux-v7.1-fs`.
 

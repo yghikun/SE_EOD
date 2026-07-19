@@ -1,0 +1,16 @@
+{
+  "linux_version": "v6.14",
+  "filesystem": "ext4",
+  "functions": [
+    {"file": "acl.c", "function": "ext4_acl_from_disk", "switches": 1, "cases": 6, "defaults": 1},
+    {"file": "acl.c", "function": "ext4_acl_to_disk", "switches": 1, "cases": 6, "defaults": 1},
+    {"file": "acl.c", "function": "ext4_get_acl", "switches": 1, "cases": 2, "defaults": 1},
+    {"file": "acl.c", "function": "__ext4_set_acl", "switches": 1, "cases": 2, "defaults": 1},
+    {"file": "fast_commit.c", "function": "ext4_fc_replay_scan", "switches": 1, "cases": 9, "defaults": 1},
+    {"file": "fast_commit.c", "function": "ext4_fc_replay", "switches": 1, "cases": 9, "defaults": 1},
+    {"file": "file.c", "function": "ext4_llseek", "switches": 1, "cases": 2, "defaults": 1},
+    {"file": "hash.c", "function": "__ext4fs_dirhash", "switches": 1, "cases": 7, "defaults": 1},
+    {"file": "indirect.c", "function": "ext4_ind_truncate", "switches": 1, "cases": 3, "defaults": 1},
+    {"file": "indirect.c", "function": "ext4_ind_remove_space", "switches": 1, "cases": 3, "defaults": 1}
+  ]
+}

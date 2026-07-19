@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .cfg import build_cfg
-from .function_extractor import Function
+from .frontend.model import FunctionIR as Function
 from .parser import call_name_and_args, extract_call_expressions, split_args
 from .resource_expr import same_resource_expr
 from .resource_state import ResourceAction

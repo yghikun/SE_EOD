@@ -295,6 +295,7 @@ int work(int err, int mode)
         return -ENOMEM;
     if (err) {
         switch (mode) {
+        int switch_prelude = mode;
         case 1:
             return -EAGAIN;
         default:

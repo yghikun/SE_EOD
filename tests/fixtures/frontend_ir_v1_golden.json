@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "identity_path": "fs/ext4/frontend_ir.c",
+  "frontend_name": "tree-sitter",
+  "frontend_mode": "tree-sitter",
+  "compile_command": null,
+  "function": {
+    "name": "work",
+    "return_type": "int",
+    "symbols": [
+      ["obj", "parameter"],
+      ["callback", "parameter"],
+      ["err", "parameter"],
+      ["ptr", "local"]
+    ],
+    "calls": [
+      ["kmalloc", "direct"],
+      ["callback", "indirect"],
+      ["kfree", "direct"]
+    ],
+    "access_paths": [
+      ["obj->size", "rvalue", "exact"],
+      ["obj->field", "lvalue", "exact"]
+    ],
+    "cfg_edge_kinds": [
+      "fallthrough",
+      "false",
+      "return",
+      "true"
+    ]
+  }
+}

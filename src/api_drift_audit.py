@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from .function_extractor import Function
+from .frontend.model import FunctionIR as Function
 from .parser import call_name_and_args, extract_call_expressions
 from .protocol_db import ResourceProtocolDB
 from .wrapper_summary import WrapperSummaryDB

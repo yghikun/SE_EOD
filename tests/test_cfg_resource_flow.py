@@ -63,7 +63,7 @@ int work(int release, int err)
     assert error.missing_cleanup_candidates == ["kfree(ptr)"]
 
 
-def test_incomplete_cfg_on_candidate_slice_forces_low_confidence(tmp_path: Path):
+def test_supported_switch_on_candidate_slice_preserves_cfg_confidence(tmp_path: Path):
     rows = _strict_rows(
         tmp_path,
         """
@@ -88,19 +88,14 @@ int work(int err, int mode)
     )
 
     error = next(row for row in rows if row.condition == "err")
-    assert error.confidence == "low"
-    assert error.cfg_witness["cfg_complete"] is False
-    assert error.cfg_witness["cfg_slice_complete"] is False
-    assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == [
-        "switch_statement"
-    ]
-    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"]
-    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"][0]["type"] == (
-        "switch_statement"
-    )
+    assert error.confidence == "high"
+    assert error.cfg_witness["cfg_complete"] is True
+    assert error.cfg_witness["cfg_slice_complete"] is True
+    assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == []
+    assert error.cfg_witness["unsupported_ranges_on_reachable_slice"] == []
 
 
-def test_unrelated_unsupported_cfg_does_not_force_path_low_confidence(
+def test_unrelated_supported_switch_keeps_function_cfg_complete(
     tmp_path: Path,
 ):
     rows = _strict_rows(
@@ -130,10 +125,104 @@ int work(int err, int mode)
 
     error = next(row for row in rows if row.condition == "err")
     assert error.confidence == "high"
-    assert error.cfg_witness["cfg_complete"] is False
+    assert error.cfg_witness["cfg_complete"] is True
     assert error.cfg_witness["cfg_slice_complete"] is True
     assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == []
     assert error.cfg_witness["unsupported_ranges_on_reachable_slice"] == []
+
+
+def test_switch_case_resource_flow_preserves_only_unreleased_case(tmp_path: Path):
+    rows = _strict_rows(
+        tmp_path,
+        """
+int work(int mode)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    switch (mode) {
+    case 1:
+        kfree(ptr);
+        return -EIO;
+    case 2:
+        return -EAGAIN;
+    default:
+        kfree(ptr);
+        break;
+    }
+    return 0;
+}
+""",
+    )
+
+    case_one = next(row for row in rows if row.final_return_expr == "-EIO")
+    case_two = next(row for row in rows if row.final_return_expr == "-EAGAIN")
+    assert case_one.missing_cleanup_candidates == []
+    assert case_two.missing_cleanup_candidates == ["kfree(ptr)"]
+    assert case_two.cfg_witness["cfg_complete"] is True
+
+
+def test_switch_fallthrough_and_post_switch_cleanup_release_resource(tmp_path: Path):
+    rows = _strict_rows(
+        tmp_path,
+        """
+int work(int mode, int err)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    switch (mode) {
+    case 1:
+        prepare(ptr);
+    case 2:
+        kfree(ptr);
+        break;
+    default:
+        break;
+    }
+    if (err)
+        return err;
+    kfree(ptr);
+    return 0;
+}
+""",
+    )
+
+    error = next(row for row in rows if row.condition == "err")
+    assert error.missing_cleanup_candidates == ["kfree(ptr)"]
+    assert error.cfg_witness["cfg_complete"] is True
+
+
+def test_gnu_case_range_on_candidate_slice_remains_low_confidence(tmp_path: Path):
+    rows = _strict_rows(
+        tmp_path,
+        """
+int work(int mode, int err)
+{
+    void *ptr = kmalloc(8);
+    if (!ptr)
+        return -ENOMEM;
+    if (err) {
+        switch (mode) {
+        case 1 ... 3:
+            return -EIO;
+        default:
+            break;
+        }
+        return err;
+    }
+    kfree(ptr);
+    return 0;
+}
+""",
+    )
+
+    error = next(row for row in rows if row.condition == "err")
+    assert error.confidence == "low"
+    assert error.cfg_witness["cfg_complete"] is False
+    assert error.cfg_witness["unsupported_nodes_on_reachable_slice"] == [
+        "case_range"
+    ]
 
 
 def test_cfg_does_not_treat_conditional_label_cleanup_as_must_release(

@@ -21,8 +21,9 @@ from .false_positive_model import (
 from .resource_release import call_releases_resource, cleanup_call_releases_resource
 from .resource_expr import norm_resource_expr, same_resource_expr
 from .function_summary import FunctionSummaryDB, SummaryEffect
+from .frontend.model import FunctionIR
 from .resource_state import ResourceAction, ResourceState, join_states
-from .cfg import BasicBlock, CFGEdge, build_cfg
+from .cfg import BasicBlock, CFGEdge, ControlFlowGraph, build_cfg
 from .dataflow import DisjunctiveDataflowResult, solve_forward_disjunctive
 from .resource_config_audit import audit_resource_map
 
@@ -498,13 +499,14 @@ class ResourceTracker:
         self.function_summaries = function_summaries or FunctionSummaryDB()
         self.release_functions_by_type = self._release_functions_by_type()
         self._cfg_cache: dict[
-            tuple[str, int], tuple[Any, DisjunctiveDataflowResult[ResourceFlowState]]
+            tuple[str, int],
+            tuple[ControlFlowGraph, DisjunctiveDataflowResult[ResourceFlowState]],
         ] = {}
         self._cfg_function_names: dict[tuple[str, int], str] = {}
 
     def held_before_cfg(
         self,
-        function: Any,
+        function: FunctionIR,
         error_line: int,
         condition: ConditionInfo,
         error_source_expr: str,
@@ -574,8 +576,8 @@ class ResourceTracker:
         )
 
     def _cfg_analysis(
-        self, function: Any
-    ) -> tuple[Any, DisjunctiveDataflowResult[ResourceFlowState]]:
+        self, function: FunctionIR
+    ) -> tuple[ControlFlowGraph, DisjunctiveDataflowResult[ResourceFlowState]]:
         cache_key = (str(function.file), function.start_line)
         cached = self._cfg_cache.get(cache_key)
         if cached is not None:
@@ -600,7 +602,7 @@ class ResourceTracker:
 
     def missing_cleanup_candidates_cfg(
         self,
-        function: Any,
+        function: FunctionIR,
         error_line: int,
         condition: ConditionInfo,
         target_label: str,
@@ -613,7 +615,7 @@ class ResourceTracker:
 
     def cleanup_outcome_cfg(
         self,
-        function: Any,
+        function: FunctionIR,
         error_line: int,
         condition: ConditionInfo,
         target_label: str,
@@ -874,7 +876,7 @@ class ResourceTracker:
 
     def cfg_edge_witness(
         self,
-        function: Any,
+        function: FunctionIR,
         error_line: int,
         branch_taken: str,
         condition_start_byte: int = 0,
@@ -1142,15 +1144,34 @@ class ResourceTracker:
     def _transfer_cfg_block(
         self, block: BasicBlock, state: ResourceFlowState, function_name: str
     ) -> ResourceFlowState:
-        if block.kind == "scope_enter":
+        if block.kind in {"scope_enter", "switch_dispatch"}:
             self._enter_scope(state)
-            self._record_trace(state, {"event": "scope_enter", "block": block.id})
+            self._record_trace(
+                state,
+                {
+                    "event": "scope_enter",
+                    "block": block.id,
+                    "construct": "switch" if block.kind == "switch_dispatch" else "compound",
+                },
+            )
             return state
         if block.kind == "scope_exit":
             self._leave_scope(state)
             self._record_trace(state, {"event": "scope_exit", "block": block.id})
             return state
-        if block.kind in {"entry", "exit", "empty", "condition", "loop_condition", "loop_exit", "label"}:
+        if block.kind in {
+            "entry",
+            "exit",
+            "empty",
+            "condition",
+            "loop_condition",
+            "loop_exit",
+            "label",
+            "switch_condition",
+            "switch_case",
+            "switch_default",
+            "switch_exit",
+        }:
             return state
         text = block.text
         self._record_trace(
@@ -1470,10 +1491,17 @@ class ResourceTracker:
                 )
             )
             return state
-        if edge.kind not in {"true", "false"} or not edge.condition:
+        condition_edge_truth = {
+            "true": True,
+            "false": False,
+            "switch_case": True,
+            "switch_default": True,
+            "switch_no_match": True,
+        }.get(edge.kind)
+        if condition_edge_truth is None or not edge.condition:
             return state
         edge_facts = self._facts_with_symbol_ids(
-            state, _condition_facts(edge.condition, edge.kind == "true")
+            state, _condition_facts(edge.condition, condition_edge_truth)
         )
         if not edge_facts:
             return state

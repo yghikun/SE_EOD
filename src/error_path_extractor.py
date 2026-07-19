@@ -15,7 +15,7 @@ from .error_condition import (
     return_expr_type,
     strip_outer_parens,
 )
-from .function_extractor import Function
+from .frontend.model import FunctionIR as Function
 from .label_resolver import Statement, parse_statements, resolve_label
 from .parser import (
     compact_ws,

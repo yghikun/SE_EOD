@@ -40,7 +40,12 @@ export DEEPSEEK_API_KEY="..."
 
 ## 快速入口
 
+当前代码完善阶段的执行顺序和交接：[`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md)
+
 论文投稿与项目升级的完整任务路线图：[`PAPER_ROADMAP.md`](PAPER_ROADMAP.md)
+
+项目从当前原型走到工程、实验、论文和复现全部闭合的统一验收计划：
+[`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md)
 
 准备 Linux 源码：
 
