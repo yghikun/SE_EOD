@@ -1,5 +1,7 @@
 # CFG-added Candidate Triage
 
+> MOCC-SE migration note (2026-07-21): these candidates belong to the SE-EOD development baseline. Resource findings can support regression testing, but only protocol-labelled metadata operations belong to the MOCC-SE core result set.
+
 Generated: 2026-07-12T17:02:59.280550+00:00
 
 Inputs:

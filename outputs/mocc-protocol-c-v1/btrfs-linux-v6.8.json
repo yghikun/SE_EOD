@@ -1,0 +1,497 @@
+[
+  {
+    "protocol_id": "mocc.protocol_c.activation_accounting",
+    "operation_id": "btrfs_chunk_activation_reservation",
+    "function": "reserve_chunk_space",
+    "source_file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+    "source_version": "linux-v6.8",
+    "events": [
+      {
+        "event_id": "mev_565aae2b4ff34c666d07",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "info",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 128936,
+          "end_byte": 128999,
+          "start_line": 4191,
+          "end_line": 4191,
+          "start_column": 1,
+          "end_column": 64,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "info = btrfs_find_space_info(fs_info, BTRFS_BLOCK_GROUP_SYSTEM)"
+      },
+      {
+        "event_id": "mev_c08e8db229f5d4b82a38",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "left",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 129027,
+          "end_byte": 129087,
+          "start_line": 4193,
+          "end_line": 4193,
+          "start_column": 1,
+          "end_column": 61,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "left = info->total_bytes - btrfs_space_info_used(info, true)"
+      },
+      {
+        "event_id": "mev_9794c24cb7d93878cbb5",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bg",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 129685,
+          "end_byte": 129722,
+          "start_line": 4212,
+          "end_line": 4212,
+          "start_column": 2,
+          "end_column": 39,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "bg = btrfs_create_chunk(trans, flags)"
+      },
+      {
+        "event_id": "mev_cb6cb3293dee110992ef",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 129747,
+          "end_byte": 129764,
+          "start_line": 4214,
+          "end_line": 4214,
+          "start_column": 3,
+          "end_column": 20,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(bg)"
+      },
+      {
+        "event_id": "mev_b8b2759ea6334b2f5a03",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 129876,
+          "end_byte": 129930,
+          "start_line": 4220,
+          "end_line": 4220,
+          "start_column": 3,
+          "end_column": 57,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_zoned_activate_one_bg(fs_info, info, true)"
+      },
+      {
+        "event_id": "mev_e1921703e049bfac4470",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_info",
+          "expression": "fs_info",
+          "identity": "EXACT",
+          "symbol_id": "sym_2f4a3f43e72bfb4e4264"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "ret > 0",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 129882,
+          "end_byte": 129930,
+          "start_line": 4220,
+          "end_line": 4220,
+          "start_column": 9,
+          "end_column": 57,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "chunk_activation",
+        "callee": "btrfs_zoned_activate_one_bg",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "btrfs.activation.failure",
+          "btrfs.activation.no_change",
+          "btrfs.activation.changed"
+        ],
+        "necessary": true,
+        "effect_spec_id": "btrfs.chunk_metadata_pending",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "btrfs_zoned_activate_one_bg"
+      },
+      {
+        "event_id": "mev_b87bc1486ca06555bc1f",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 130493,
+          "end_byte": 130599,
+          "start_line": 4239,
+          "end_line": 4241,
+          "start_column": 2,
+          "end_column": 37,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_block_rsv_add(fs_info, &fs_info->chunk_block_rsv, bytes, BTRFS_RESERVE_NO_FLUSH)"
+      },
+      {
+        "event_id": "mev_552e108ff05d80715ac1",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "RESERVATION_UPDATE",
+        "object_ref": {
+          "role": "fs_info",
+          "expression": "fs_info",
+          "identity": "EXACT",
+          "symbol_id": "sym_2f4a3f43e72bfb4e4264"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "ret == 0",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 130499,
+          "end_byte": 130599,
+          "start_line": 4239,
+          "end_line": 4241,
+          "start_column": 8,
+          "end_column": 37,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "btrfs_block_rsv_add",
+        "result_symbol": "ret",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "btrfs.chunk_metadata_reserved",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "btrfs_block_rsv_add"
+      },
+      {
+        "event_id": "mev_d8a99f7bfa8f58da5083",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "trans->chunk_bytes_reserved",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "chunk_bytes_reserved",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "start_byte": 130616,
+          "end_byte": 130652,
+          "start_line": 4243,
+          "end_line": 4243,
+          "start_column": 3,
+          "end_column": 39,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "trans->chunk_bytes_reserved += bytes"
+      }
+    ],
+    "candidates": [
+      {
+        "candidate_id": "moc_a8a79a6939915ed9bd6c",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "violation_type": "metadata_state_divergence",
+        "exit_kind": "success",
+        "exit_id": "btrfs.success",
+        "principal_objects": [
+          {
+            "role": "fs_info",
+            "expression": "fs_info",
+            "identity": "EXACT",
+            "symbol_id": "sym_2f4a3f43e72bfb4e4264"
+          }
+        ],
+        "open_effects": [],
+        "unresolved_failures": [],
+        "accounting_state": [
+          {
+            "obligation_id": "btrfs.pending_requires_reservation",
+            "subject": {
+              "role": "fs_info",
+              "expression": "fs_info",
+              "identity": "EXACT",
+              "symbol_id": "sym_2f4a3f43e72bfb4e4264"
+            },
+            "required_condition": "pending metadata work exists => matching reservation exists",
+            "observed_state": "pending_without_reservation",
+            "satisfied": false
+          }
+        ],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "btrfs_zoned_activate_one_bg starts chunk_activation@1",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "contract btrfs.activation.changed: ret > 0",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "effect_created",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "btrfs.chunk_metadata_pending",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "accounting_check",
+            "source": "fs_info",
+            "detail": "btrfs.pending_requires_reservation: pending_without_reservation",
+            "line": 0,
+            "event_id": ""
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "<implicit return>",
+            "line": 4245,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "chunk_activation@1",
+        "return_provenance": "contract:btrfs.activation.changed"
+      }
+    ],
+    "unknown": [
+      {
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "btrfs_chunk_activation_reservation",
+        "exit_kind": "success",
+        "exit_id": "",
+        "classification": "ANALYSIS_UNKNOWN",
+        "reasons": [
+          "return_outcome_unknown"
+        ],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "btrfs_zoned_activate_one_bg starts chunk_activation@1",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "contract btrfs.activation.failure: ret < 0",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "btrfs_zoned_activate_one_bg -> ret < 0 (chunk_activation@1)",
+            "line": 4220,
+            "event_id": "mev_e1921703e049bfac4470"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+            "detail": "return;",
+            "line": 4222,
+            "event_id": ""
+          }
+        ]
+      }
+    ],
+    "cfg_snapshot": {
+      "entry": 0,
+      "exit": 1,
+      "blocks": 47,
+      "edges": 52,
+      "unsupported_nodes": [],
+      "unsupported_blocks": {},
+      "complete": true
+    }
+  }
+]

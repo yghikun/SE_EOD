@@ -1,5 +1,7 @@
 # Benchmark Taxonomy
 
+> MOCC-SE migration note (2026-07-21): this taxonomy describes the SE-EOD resource/error-path pilot. MOCC-SE adds protocol labels, effect scopes, legal completion modes, and the three metadata violation classes; those labels require a separately frozen dataset.
+
 > Based on the first source-review pass; use for development prioritization, not final paper claims.
 
 - Samples: 30

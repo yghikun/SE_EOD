@@ -1,5 +1,7 @@
 # Linux v7.1 btrfs 95-Candidate Audit
 
+> MOCC-SE migration note (2026-07-21): this source audit is historical evidence. The `btrfs_recover_relocation()` records motivate effect ownership and incomplete failure completion, but remain part of the protocol development set.
+
 ## Verdict
 
 - Confirmed bugs: **4**

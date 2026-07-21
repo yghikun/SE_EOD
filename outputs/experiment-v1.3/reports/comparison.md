@@ -1,5 +1,7 @@
 # SE-EOD Experiment v1.3 Comparison
 
+> MOCC-SE migration note (2026-07-21): this immutable numerical report is an SE-EOD baseline. Candidate counts below do not measure MOCC-SE protocol precision or recall.
+
 Generated: 2026-07-12T12:17:34.543651+00:00
 
 The v1.3 runs use static analysis, protocol evidence, wrapper summaries, and ownership hints. Historical LLM verdicts and manual-review scores are excluded.

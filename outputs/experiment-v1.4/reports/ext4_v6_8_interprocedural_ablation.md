@@ -1,5 +1,7 @@
 # Interprocedural Ablation
 
+> MOCC-SE migration note (2026-07-21): this development-pilot ablation covers SE-EOD function summaries. MOCC-SE will separately ablate return contracts, effect ownership, completion handlers, and accounting obligations.
+
 Generated: 2026-07-12T15:07:27.929055+00:00
 
 | Baseline | Interprocedural | Retained | Removed | Added | Reduction |

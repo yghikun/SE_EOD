@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "protocol_version": "1.0.0",
+  "protocol_id": "mocc.invalid.duplicate_event",
+  "filesystems": ["ext4"],
+  "linux_versions": ["6.8"],
+  "phases": ["ENTRY", "COMPLETE", "FAILED"],
+  "operations": [
+    {
+      "operation_id": "replay",
+      "entry_functions": ["replay_entry"],
+      "principal_objects": [{"role": "inode", "selector": "arg0"}],
+      "callee_roles": []
+    }
+  ],
+  "return_contracts": [
+    {
+      "contract_id": "return.success",
+      "operation_id": "replay",
+      "guard": "ret == 0",
+      "outcome": "success"
+    },
+    {
+      "contract_id": "return.failure",
+      "operation_id": "replay",
+      "guard": "ret < 0",
+      "outcome": "failure"
+    }
+  ],
+  "effects": [
+    {
+      "event_id": "duplicate.event",
+      "effect_id": "inode.update",
+      "operation_id": "replay",
+      "kind": "METADATA_UPDATE",
+      "object": {"role": "inode", "selector": "arg0"},
+      "scope": "PERSISTENT",
+      "owner": "replay",
+      "phase": "ENTRY"
+    }
+  ],
+  "compensations": [
+    {
+      "event_id": "duplicate.event",
+      "compensation_id": "inode.rollback",
+      "operation_id": "replay",
+      "target_effect_id": "inode.update",
+      "object": {"role": "inode", "selector": "arg0"},
+      "guard": "rollback_done",
+      "phase": "FAILED"
+    }
+  ],
+  "handlers": [],
+  "accounting_constraints": [],
+  "legal_exits": [
+    {
+      "exit_id": "success",
+      "operation_id": "replay",
+      "kind": "success",
+      "phases": ["COMPLETE"],
+      "completion_modes": ["COMMITTED"],
+      "return_outcomes": ["success"]
+    },
+    {
+      "exit_id": "failure",
+      "operation_id": "replay",
+      "kind": "failure",
+      "phases": ["FAILED"],
+      "completion_modes": ["ROLLED_BACK"],
+      "return_outcomes": ["failure"]
+    }
+  ]
+}

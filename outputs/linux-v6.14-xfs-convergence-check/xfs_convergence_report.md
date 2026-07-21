@@ -1,5 +1,7 @@
 # XFS Function-Summary Convergence Diagnosis
 
+> MOCC-SE migration note (2026-07-21): this engineering diagnosis validates the shared interprocedural summary infrastructure. It does not evaluate the MOCC-SE protocol rules.
+
 Date: 2026-07-14
 
 ## Root cause

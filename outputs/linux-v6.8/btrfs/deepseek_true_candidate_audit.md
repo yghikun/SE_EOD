@@ -1,5 +1,7 @@
 # Btrfs DeepSeek True-Candidate Static Audit
 
+> MOCC-SE migration note (2026-07-21): this LLM-assisted audit is historical triage, not ground truth. Metadata protocol development may use its reviewed cases, but frozen MOCC-SE evaluation must be independent.
+
 Input: `outputs/linux-v6.8/btrfs/deepseek_true_candidates.jsonl` (`32` records).
 
 This is a source-level triage pass, not upstream confirmation. I classify a record as:

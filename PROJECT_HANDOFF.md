@@ -1,634 +1,543 @@
-# SE-EOD 代码完善阶段交接文档
+# MOCC-SE 实施交接文档
 
-> 更新时间：2026-07-18
+> 更新时间：2026-07-21
+>
+> 当前主任务：M0-M6 已完成；Protocol A/B/C 均通过独立 CLI 输出版本化 JSON witness，下一步进入冻结评估准备或跨函数 summary 增强。
 >
 > 工作目录：`E:\yanjiusheng\阅读论文\file_system\SE_EOD`
->
-> 当前阶段：优先补齐分析器代码能力，不启动论文 benchmark、正式 baseline、排名校准和论文表格工作。
 
-本文档是当前代码开发的第一入口。当前实现事实以 [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) 为准，完整项目闭合条件以 [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md) 为准。本交接文档只回答一个问题：**下一步怎样按顺序把分析器本身完善。**
+本文档是下一步编码的唯一执行入口。文档职责如下：
 
----
+- [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md)：当前已经实现的代码事实；
+- [`docs/MOCC_SE_FULL_ARCHITECTURE.md`](docs/MOCC_SE_FULL_ARCHITECTURE.md)：MOCC-SE 目标方法和完整数据模型；
+- [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md)：工程、实验、论文和复现的完成门禁；
+- 本文档：当前迭代具体做什么、按什么顺序做、如何验收。
 
-## 1. 当前阶段的一句话目标
+发生冲突时，先以代码和测试确认当前事实，再依次更新上述文档，不能用计划文字宣布尚未实现的能力。
 
-先完成闭合计划第 3.2 节定义的代码缺口 G1--G5：
+## 1. 当前目标
+
+当前不继续以“增加资源泄漏候选”为主线，也不先实现完整 Clang/Kbuild 前端。当前目标是建立一个最小但完整的 MOCC-SE 分析链：
 
 ```text
-G1  完整 switch/case/default CFG
-  -> G2  统一前端 IR + Kbuild/Clang compiled mode
-  -> G3  一般 callee CFG 的 success/error effect 自动推导
-  -> G4  有限字段路径和 alias
-  -> G5  可重建 predecessor witness
-  -> 配置生命周期与全链路工程加固
+协议定义
+  -> 元数据事件
+  -> failure/effect/accounting 状态传播
+  -> 合法出口检查
+  -> 协议违规候选
+  -> representative witness
 ```
 
-在 G1--G5 完成以前，暂不把以下事项作为主任务：
+第一个纵向协议只处理 replay/recovery：
 
-- 独立 gold benchmark；
-- 双 reviewer 标注和 Cohen's kappa；
-- Precision、Recall、F1、P@K；
-- Hector-like 或外部工具 baseline；
-- B0--Full 论文消融；
-- ranking 概率校准；
-- 新增 LLM 能力；
-- 论文表格、投稿文稿和 artifact release；
-- 扩展更多候选类型或更多文件系统。
+> 必要元数据恢复步骤失败后，必须传播错误、成功重试、事务中止或明确交给恢复机制；不能无处理地到达成功出口。
 
-“暂不做 benchmark”不等于“不写测试”。每个代码阶段仍必须增加单元测试、端到端测试和真实 Linux 代码 golden fixture；这些属于工程正确性验证，不作为论文指标或 gold label。
+开发回归样例为 #1、#2、#5、#8、#13。它们是协议开发集，不是独立评估集。
 
----
+## 2. 当前可复用基础
 
-## 2. 当前可核验快照
+截至 2026-07-21，现有 SE-EOD 基线提供：
 
-截至本次交接：
+| 能力 | 现状 | MOCC-SE 用途 |
+|---|---|---|
+| 源码前端 | frontend IR schema v1、tree-sitter adapter、文本 fallback | 提供统一函数和语句输入 |
+| CFG | `if`、循环、`goto`、`return`、`break`、`continue`、普通 switch | 提供错误路径和出口 |
+| 数据流 | 有界析取、join、widening、路径事实 | 承载协议状态 |
+| 错误条件 | errno、负值、NULL、ERR_PTR 等启发式分类 | 生成 failure event |
+| 跨函数摘要 | must/may、exit class、return guard、固定点传播 | 承载协议 effect summary |
+| 对象信息 | 局部 symbol、参数、简单 alias、有限字段信息 | 建立 principal object identity |
+| witness | representative trace、anchors、CFG snapshot | 生成第一版协议 witness |
+| 证据层 | history、manual、LLM、reviewed exception | 只用于排序和复核 |
 
-| 项目 | 当前值 |
-|---|---|
-| Git branch | `main` |
-| Git HEAD | `c5f8122` (`API 配置漂移审计`) |
-| 全量测试 | `186 passed` |
-| 主前端 | frontend IR schema v1 + tree-sitter adapter，文本 fallback |
-| CFG | 支持 if、loop、goto、return、break、continue 和普通 switch/case/default；GNU case range/prelude 精确降级 |
-| 跨函数 | effect summary、不动点、SCC provenance、reviewed seed、部分自动 wrapper |
-| 资源语义 | instance、validity、must/may、transfer/escape、multiplicity/cardinality、aggregate membership |
-| witness | snapshot、representative trace、anchors；不是完整 predecessor graph |
-| 配置防护 | resource config audit、API drift audit |
+全量测试基线为 `256 passed`（历史 SE-EOD 186 项，M0-M4 新增 53 项，M5 新增 9 项，M6 新增 8 项）。开始任何代码任务前重新运行测试，不能只依赖该历史数字。
 
-当前工作树可能包含闭合计划和相关文档的未提交修改。接手时必须先执行：
+## 3. 当前尚未实现的 MOCC-SE 能力
 
-```powershell
-git status --short
-git diff --stat
-git diff -- PROJECT_HANDOFF.md docs/PROJECT_CLOSURE_PLAN.md docs/PROJECT_ARCHITECTURE.md
-```
+M0-M5 已分别实现于 `metadata_protocol.py`、`metadata_event.py`、
+`metadata_tracker.py`、`metadata_candidate_rules.py` 和
+`metadata_protocol_analyzer.py`。Protocol A 使用独立 CLI 输出专用 JSON，尚未接入旧
+`src.main` 默认流水线，因此不得宣称旧 SE-EOD CSV/JSONL 已经自动包含 MOCC-SE 结果。
+Protocol B MVP 已通过独立 CLI 生成版本化结果。Protocol C、完整跨函数 handler summary 和冻结集评估仍未实现。
 
-不要覆盖、回退或清理不属于当前代码任务的用户修改。
-
----
-
-## 3. 当前能力边界
-
-### 3.1 已经完成的代码基础
-
-当前代码已经具备：
-
-- tree-sitter 函数和 statement 抽取；
-- 函数内 CFG、label/goto 和 scope unwind；
-- 有界析取数据流、join、widening 和截断诊断；
-- acquire/release、acquire validity 和失败路径细化；
-- obligation 级资源 ID、generation 和局部 symbol ID；
-- `ACQUIRED/MAY_ACQUIRED/RELEASED/TRANSFERRED/ESCAPED` 生命周期；
-- 简单 alias、函数指针目标和未知间接调用保守处理；
-- summary effect 的 `must/may`、`success/error/any`、return guard 和 pending application；
-- 循环 multiplicity、release cardinality、aggregate identity 和 membership fact；
-- uncertainty cause、quarantine、CFG slice completeness 和 witness snapshot；
-- 静态语义与 protocol/history/LLM ranking 隔离；
-- API 配置漂移审计。
-
-这些能力是 G1--G5 的基础，不应在后续重构中被削弱或重新实现成另一套平行逻辑。
-
-### 3.2 仍需完成的代码缺口
-
-| 缺口 | 现状 | 目标 | 当前优先级 |
-|---|---|---|---|
-| G1 switch CFG | 已完成；普通 case/default/fallthrough/break/continue/no-match 和 10 个 ext4 golden | 保留 GNU case range/prelude 精确 unsupported | 已完成 |
-| G2-A 统一 IR | schema v1、tree-sitter adapter、稳定 ID、round-trip/golden/parity | 供 Clang adapter 复用 | 已完成 |
-| G2-B 编译上下文 | IR 预留 `compile_command=null`，尚不执行 Kbuild | 可重建 compile database 及覆盖诊断 | 当前立即执行 |
-| G3 callee effect | reviewed seed、简单 wrapper 和有限自动推导 | 从一般 callee return states 推导出口分类 effect | G2 后执行 |
-| G4 field/alias | 简单局部 alias 和保守 field escape | 有界 access path 和明确 unknown 降级 | G3 后执行 |
-| G5 witness | representative trace | 紧凑 predecessor state graph | G4 后执行 |
-
-闭合计划中的 G6--G9 是 benchmark、baseline、artifact 和 related work 缺口，当前阶段明确延后。
-
-注意：这里的“缺口 G1--G5”来自闭合计划第 3.2 节，不要与闭合计划“工作流 G：工程与复现”中的 `G-01` 等任务编号混淆。
-
----
+现有 `ResourceFlowState` 不能直接改名后冒充上述模型。资源生命周期应作为 metadata effect 的兼容特化逐步接入。
 
 ## 4. 不得破坏的分析不变量
 
-后续所有代码修改必须遵守以下规则：
+所有实现必须遵守：
 
-1. `cleanup_calls` 只用于展示，资源是否解除由 CFG 状态传播决定。
-2. protocol、wrapper hint、ownership hint、history、manual 和 LLM 不得修改静态资源状态。
-3. 未证明 release/transfer 时必须保留义务；未知不能解释为安全。
-4. CFG 不完整、summary may、未知 alias、widening 和未知 guard 必须保留 uncertainty provenance。
-5. 自动 `must` effect 必须有可审计证明；不满足条件时降级为 `may`。
-6. success/error effect 必须等待调用返回边事实证明，不能在 call block 提前应用。
-7. pending effect 必须绑定 call site、result symbol、definition version 和 scope。
-8. `multiplicity=many` 不能被普通 `cardinality=one/unknown` 全部解除。
-9. aggregate `all` release 必须有 reviewed aggregate identity 或已证明 membership fact。
-10. 一个错误路径上的多个 obligation 必须保持独立 ID，不能退回 path 级单候选。
-11. 主输出与 quarantine 必须继续分离；降级不能变成静默丢弃。
-12. 新前端必须复用同一资源状态和候选规则，不能产生 tree-sitter/Clang 两套语义实现。
-13. 输出 schema 或 ID 算法变化必须显式版本化，并说明迁移影响。
-14. 为减少候选而增加的 suppression 不能代替语义修复。
+1. 静态语义决定候选是否生成；history、manual、LLM 和 ranking 不得修改协议状态。
+2. 未证明 compensation、commit 或 handler ownership 时，开放 effect 不能被视为完成。
+3. `ABORT` 只关闭明确属于 `TRANSACTION_SCOPED` 的 effect。
+4. `RECOVERY_DELEGATED` 和 `DEFERRED` 必须有对象绑定、guard 和 handler 证据。
+5. `ret > 0` 不能默认解释为失败；返回语义由 return contract 决定。
+6. retry 开始新的 `attempt_id`；旧 failure 不能污染新 attempt 的最终结果。
+7. `must` event 只有在对象、guard、CFG 和调用摘要均可证明时才能应用。
+8. alias、间接调用、CFG 或 handler 不确定时保留 uncertainty，不能解释为安全。
+9. `PARTIAL_UNRESOLVED` 与 `ANALYSIS_UNKNOWN` 必须分开。
+10. 输出仍是待人工复核候选，不是 confirmed bug。
+11. 现有 SE-EOD 输出 schema 和历史实验默认行为不能被静默改变。
+12. 每个协议规则必须来自可复用语义，不允许只按具体函数名硬编码已知 bug。
 
-如果某项修改与这些不变量冲突，应先修改设计，而不是放宽测试。
+## 5. 实施顺序
 
----
-
-## 5. 代码执行总顺序
-
-严格按以下顺序推进：
-
-1. 建立当前代码快照和针对 G1 的失败测试。
-2. 完成 G1 switch CFG。
-3. 建立 G2 统一前端 IR，先迁移 tree-sitter。
-4. 接入 Kbuild compile commands。
-5. 实现 Clang compiled mode 和前端 coverage 诊断。
-6. 完成 G3 一般出口敏感 callee effect。
-7. 完成 G4 有限字段路径和 alias。
-8. 完成 G5 predecessor witness。
-9. 加固配置 lifecycle、determinism、schema 和端到端回归。
-10. 代码能力冻结后，再回到闭合计划处理 benchmark 和论文实验。
-
-不能为了追求“并行完成”同时重写 CFG、IR 和 resource tracker。每一步先建立适配层和回归边界，再进入下一步。
-
----
-
-## 6. G1：完整 switch/case/default CFG
-
-**状态：已完成（2026-07-18）。** 实现位于 `src/cfg.py::_switch_statement()`，标准 case/default 不再仅因节点类型进入 unsupported。新增 edge kind 为 `switch_case/switch_default/switch_no_match/case_fallthrough`，资源边传播会保留标准 case/default 谓词。GNU case range 记录为 `case_range`，switch prelude/宏恢复残片记录为 `switch_prelude`。工程 golden 见 `tests/fixtures/switch_cfg_linux_ext4_v6_14.json` 和 `tests/test_switch_cfg_linux_golden.py`。
-
-### 6.1 当前实现位置
-
-主要文件：
-
-- `src/cfg.py`；
-- `tests/test_cfg.py`；
-- `tests/test_cfg_resource_flow.py`；
-- `src/resource_tracker.py`；
-- `src/error_path_extractor.py`。
-
-本节后续条目保留为 G1 的实现与验收记录，不再是待执行任务。
-
-### 6.2 实现要求
-
-G1 必须支持：
-
-- switch 条件只求值一次；
-- 每个 `case` 有独立入口；
-- `default` 有独立入口；
-- 多个 case 共享同一语句体；
-- case 到下一个 case 的 fallthrough；
-- 没有 default 时存在 no-match 出口；
-- `break` 跳到最近 switch 出口；
-- switch 中循环的 `continue` 仍指向循环 header；
-- 循环中的 switch `break` 只退出 switch；
-- 嵌套 switch 的 break target 正确；
-- case 内 `goto cleanup`、`return` 和 scope unwind 正确；
-- 暂时不能求值 case 值时保留所有可达分支；
-- GNU case range 等未支持结构继续进入精确 unsupported range。
-
-建议增加明确 edge kind：
+当前实现分为七个里程碑：
 
 ```text
-switch_case
-switch_default
-switch_no_match
-case_fallthrough
+M0  协议核心数据模型
+ -> M1  元数据事件提取
+ -> M2  协议状态传播
+ -> M3  合法出口与候选生成
+ -> M4  Protocol A replay/recovery 闭环
+ -> M5  Protocol B device/topology rollback
+ -> M6  Protocol C activation/reservation/accounting
 ```
 
-edge condition 应保留 switch expression 与 case value，例如 `mode == 1`。这些条件后续可以进入 path facts，但 G1 不需要实现一般 case 表达式求值器。
+每个里程碑必须先通过单元测试和现有回归，再进入下一项。不要同时重写 CFG、前端和协议引擎。
 
-### 6.3 推荐实现步骤
+## 6. M0：协议核心数据模型
 
-1. 用小型测试打印 tree-sitter 的 switch/case AST，确认当前 tree-sitter-c 版本的真实节点层次。
-2. 在 `_CFGBuilder` 中增加独立 `_switch_statement()`，不要继续在通用 `_sequence()` 中靠字符串猜 case。
-3. 创建 switch condition block 和 switch exit block。
-4. 收集有序 case/default clauses，分别构建 clause body fragment。
-5. 将 switch condition 连到每个 case/default 入口。
-6. 将 clause 的 fallthrough exit 连到下一个 clause，而不是 switch exit。
-7. 将 clause 内 break target 绑定到当前 switch exit；continue target 原样继承外层循环。
-8. 没有 default 时增加 no-match edge。
-9. 保留 return/goto 等非 fallthrough exits。
-10. 删除已完整支持节点的 unsupported 标记，并保留仍未支持子结构的范围。
+### 6.1 目标
 
-### 6.4 必须新增或修改的测试
-
-至少覆盖：
-
-- 单 case 命中和 no-match；
-- 多 case + default；
-- 两个 case 共享 body；
-- 显式 fallthrough；
-- 每个 case 单独 break；
-- 嵌套 switch；
-- loop 内 switch；
-- switch 内 loop；
-- case 内 goto cleanup；
-- case 内 acquire，不同 case 分别 release/不 release；
-- case fallthrough 后 release；
-- switch 后统一 cleanup；
-- unsupported GNU case range 的精确降级；
-- 原有 `test_incomplete_cfg_on_candidate_slice_forces_low_confidence` 改为验证完整 switch 不再降级；
-- unrelated unsupported slice 的现有行为继续成立。
-
-### 6.5 G1 完成门禁
-
-以下条件已全部满足：
-
-- `switch_statement` 和普通 `case_statement` 不再出现在 unsupported nodes；
-- switch golden tests 覆盖上述控制流；
-- switch 中的资源状态候选符合人工预期；
-- 原有 169 个测试与 9 个 G1 新增测试全部通过（当前共 178 个）；
-- 对真实 Linux 文件系统至少 10 个 switch 函数建立工程 golden fixture；
-- 候选或置信度发生变化时有差分说明，不使用候选减少作为正确性证明；
-- `docs/PROJECT_ARCHITECTURE.md` 更新当前 switch 能力和残余边界。
-
-### 6.6 G1 禁止的捷径
-
-- 把整个 switch 当成一个顺序 compound block；
-- 所有 case 都直接连接 switch exit，丢失 fallthrough；
-- 把 switch 内所有 `break` 或 `continue` 都连到函数 exit；
-- 实现后直接删除 unsupported 标记但不增加资源流测试；
-- 通过扩大 quarantine 掩盖错误 CFG。
-
----
-
-## 7. G2：统一前端 IR、Kbuild 和 Clang compiled mode
-
-G2 是一个大任务，必须拆成四个可独立验收的子阶段，不能直接把 `parser.py` 替换成 Clang 调用。
-
-### 7.1 G2-A：定义统一前端 IR
-
-**状态：已完成（2026-07-19）。** 实现位于 `src/frontend/`，主流程已切换为 `TreeSitterFrontend -> TranslationUnitIR -> FunctionIR`。`Function/AstNode` 保留兼容别名，CFG 数据类已是 `ControlFlowGraphIR/BasicBlockIR/CFGEdgeIR`。专门测试覆盖 schema 拒绝、JSON round-trip、跨 root 稳定 ID、symbol/call/access-path、ERROR/text fallback diagnostics、CFG 序列化、semantic golden 和旧/新候选/summary 逐字段等价。
-
-目标：资源分析不再直接依赖 tree-sitter 节点对象。
+建立与具体文件系统无关、可序列化、可验证的数据结构，不接入候选生成。
 
 建议新增：
 
 ```text
-src/frontend/__init__.py
-src/frontend/model.py
-src/frontend/base.py
-src/frontend/tree_sitter_frontend.py
-tests/test_frontend_ir.py
+src/metadata_protocol.py
+tests/test_metadata_protocol.py
+configs/metadata_protocols/
 ```
 
-IR 至少表达：
-
-- translation unit ID 和源码文件；
-- function ID、名称、参数、返回类型和 source range；
-- statement/expression kind；
-- normalized text 和 source spelling；
-- 直接调用、间接调用和可能目标；
-- declaration/local symbol/type identity；
-- lvalue/access path；
-- CFG block/edge/condition；
-- macro spelling/expansion location；
-- frontend quality、unsupported feature 和 diagnostic。
-
-实施约束：
-
-- 先写 tree-sitter adapter，使现有主流程使用 IR；
-- 保留兼容层，按模块逐步迁移；
-- 不在迁移时重写资源语义；
-- IR schema 必须有版本号；
-- IR 必须可序列化，便于前端 golden 和差分。
-
-G2-A 门禁：
-
-- tree-sitter 主流程完全通过统一 IR；
-- 现有候选和 summary 的差分为空或逐项解释；
-- resource tracker 不再读取 tree-sitter 私有节点字段；
-- IR round-trip 和 schema tests 通过。
-
-### 7.2 G2-B：Kbuild compile commands
-
-目标：获取真实内核构建参数，而不是自行拼 include/define。
-
-第一阶段只固定一个可重建环境：
+`metadata_protocol.py` 至少定义：
 
 ```text
-Linux tag: 先选择仓库已有且源码完整的一个版本
-Architecture: x86_64
-Compiler: 固定 Clang 主版本
-Config: 仓库保存 config 或生成步骤及 SHA-256
+EffectKind
+EffectScope
+EffectStatus
+CompletionMode
+ReturnOutcome
+ViolationType
+ObjectRef
+ReturnContract
+EffectSpec
+CompensationSpec
+HandlerSpec
+AccountingConstraint
+MetadataProtocol
 ```
 
-需要实现：
+枚举初始范围：
 
-- 生成或导入 `compile_commands.json`；
-- 规范化 command、directory 和 file；
-- 将 translation unit 映射到 compile command；
-- 记录没有进入当前 Kconfig build 的 `.c` 文件；
-- 输出 compiler/config/compile database hash；
-- 检查重复或缺失 command；
-- 在 Linux/WSL/容器中可重建。
+```text
+EffectScope:
+  LOCAL
+  IN_MEMORY_GLOBAL
+  TRANSACTION_SCOPED
+  PERSISTENT
+  RECOVERY_OWNED
+  DEFERRED_OWNED
+
+EffectStatus:
+  OPEN
+  COMPENSATED
+  TRANSFERRED
+  COMMITTED
+  UNKNOWN
+
+CompletionMode:
+  COMMITTED
+  ROLLED_BACK
+  ABORTED
+  RECOVERY_DELEGATED
+  DEFERRED
+  PARTIAL_UNRESOLVED
+  ANALYSIS_UNKNOWN
+```
+
+### 6.2 Schema 要求
+
+协议配置必须能够表达：
+
+- operation entry；
+- principal object roles；
+- metadata events；
+- return outcome guards；
+- effect scope 和 owner；
+- compensation relation；
+- abort/recovery/deferred handler ownership；
+- legal success/failure exits；
+- accounting constraints；
+- Linux 版本和文件系统适用范围；
+- schema version 和 protocol version。
+
+加载器必须拒绝：
+
+- 未知枚举；
+- 重复 event ID；
+- 指向不存在 effect 的 compensation；
+- 没有 scope 的 effect；
+- 没有 owner 的 handler transfer；
+- 互相重叠且没有优先级的 return contracts；
+- 未定义的 legal phase/completion mode。
+
+### 6.3 M0 完成门禁
+
+- 数据模型可 JSON round-trip；
+- 合法和非法协议 fixture 均有测试；
+- 协议 ID 和 event ID 稳定；
+- schema/version 错误明确报告；
+- 不改变现有候选输出；
+- 全量测试通过。
+
+## 7. M1：元数据事件提取
+
+### 7.1 目标
+
+将 IR 中的调用、赋值、字段更新和容器操作规范化为事件：
+
+```text
+METADATA_UPDATE
+POINTER_UPDATE
+MEMBERSHIP_ADD
+MEMBERSHIP_REMOVE
+FLAG_SET
+FLAG_CLEAR
+COUNTER_UPDATE
+RESERVATION_UPDATE
+COMMIT
+COMPENSATE
+ABORT
+RECOVERY_DELEGATE
+DEFER_CLEANUP
+```
 
 建议新增：
 
 ```text
-src/compile_db.py
-scripts/prepare_kernel_compile_db.py
-tests/test_compile_db.py
+src/metadata_event.py
+tests/test_metadata_event.py
 ```
 
-Windows 可以继续开发 Python 主程序，但 Kbuild 与 Clang 集成验收必须在 Linux、WSL2 或固定容器中完成。
-
-### 7.3 G2-C：Clang frontend exporter
-
-最低闭合目标：
-
-- 使用 compile command 完成预处理和类型检查；
-- 导出 typed function、parameter、local declaration 和 call；
-- 导出 field/member/access path；
-- 导出函数内 CFG；
-- 保留 spelling 与 macro expansion location；
-- 区分直接调用和函数指针调用；
-- 转换为 G2-A 的统一 IR。
-
-推荐采用固定版本 Clang LibTooling 小型 exporter，不要求把整个项目迁移为 C++。Python 负责调度、读取 exporter JSON 和后续资源分析。
-
-失败策略：
-
-- exporter 失败不得静默回退；
-- 可回退 tree-sitter，但必须记录 `frontend_mode`、失败原因和受影响函数；
-- typed facts 缺失时不能伪造确定 alias 或 must effect；
-- macro/inline 来源必须可以在 witness 中定位。
-
-### 7.4 G2-D：前端覆盖和 parity
-
-每次 compiled run 至少输出：
-
-- 目标 `.c` 数；
-- 进入 Kbuild 的 translation unit 数；
-- compile command 成功/失败数；
-- Clang AST/CFG 成功/失败数；
-- tree-sitter fallback 函数数；
-- unsupported/diagnostic 分类；
-- tree-sitter 与 Clang 的函数、call、CFG 和候选差分。
-
-G2 完成门禁：
-
-- 统一 IR 稳定；
-- compile database 可重建；
-- Clang frontend 能分析选定文件系统的真实 translation units；
-- 失败和 fallback 可量化；
-- tree-sitter 保留为明确的 source-level/fallback mode；
-- 主资源传播只有一套实现；
-- 全量测试和 frontend golden 通过；
-- 架构文档更新两种 frontend 的能力边界。
-
----
-
-## 8. G3：一般 callee CFG 的出口敏感 effect
-
-### 8.1 目标
-
-从 callee 的真实 CFG return states 自动推导：
+每个事件必须包含：
 
 ```text
-resource: argN | return | *argN | bounded field path
-action: acquire | release | transfer | escape
+event_id
+protocol_id
+operation_id
+kind
+object_ref
+container_ref
+field_or_member
+guard
 strength: must | may
-exit_class: success | error | any | unknown
-return_guard: normalized predicate
-cardinality: one | all | unknown
+source_location
+uncertainty_causes
 ```
 
-### 8.2 主要修改位置
+### 7.2 对象身份
 
-- `src/function_summary.py`；
-- `src/resource_tracker.py`；
-- `src/resource_state.py`；
-- `src/dataflow.py`；
-- `tests/test_interprocedural.py`；
-- 新增独立 summary inference fixture/test 文件。
-
-### 8.3 推导规则
-
-1. 收集 callee 所有可达 return state。
-2. 将 return 分类为 success、error 或 unknown。
-3. 按出口类分别聚合参数、返回值和 out-parameter 的资源动作。
-4. 同一出口类所有可达状态都存在同一动作，且 CFG 完整、无 widening、映射精确时，才允许生成 `must`。
-5. 只有部分状态成立或存在不确定性时生成 `may`。
-6. 不同出口类的动作不得合并成无条件 `any must`。
-7. 调用点继续创建 pending effect，等待 caller edge fact 证明 return guard。
-8. result 变量重赋值、symbol version 改变或离开 scope 时，旧 pending effect 失效。
-9. reviewed seed 与自动推导冲突时输出 diagnostic，不能任意覆盖。
-10. SCC 未收敛时自动派生 must 降为 may，原始 reviewed seed 保留来源。
-
-### 8.4 必须覆盖的测试
-
-- success 才 transfer；
-- error 才 release；
-- success 和 error 都 release；
-- 两个 success return 只有一个 release；
-- return local variable；
-- 条件 return expression；
-- out-parameter acquisition；
-- non-first argument release；
-- wrapper 到 wrapper 的 guard remap；
-- alias 不精确时降为 may；
-- unsupported switch/CFG 时禁止自动 must；
-- recursive SCC 收敛和不收敛；
-- caller result 重赋值使 pending effect 失效；
-- reviewed/automatic effect 冲突诊断。
-
-### 8.5 G3 完成门禁
-
-- 自动 effect 有稳定 schema 和 provenance；
-- 每个自动 must 可以通过 callee return witness 重建；
-- 所有反例不会生成过强 must；
-- 关闭自动推导后能够做工程差分，但暂不要求论文消融指标；
-- 现有 reviewed seed 行为不回退；
-- 全量测试通过，架构文档更新。
-
----
-
-## 9. G4：有限字段路径和 alias
-
-### 9.1 范围
-
-不实现完整 points-to，先实现有界、可解释的 access path：
+第一阶段只支持：
 
 ```text
-arg0
-arg0->field
-arg0->field.subfield
-local.field
-*arg1
-return
+EXACT       同一局部 symbol、argN、return 或明确字段
+NORMALIZED  由 reviewed wrapper/summary 映射
+UNKNOWN     无法证明同一对象
 ```
 
-### 9.2 建议数据模型
+`UNKNOWN` 事件可以保留证据，但不能关闭一个精确 effect。
 
-新增结构化 `AccessPath`，不要继续用任意字符串做字段匹配：
+### 7.3 M1 完成门禁
+
+- 直接调用、字段赋值、list add/del 和 counter update 均有 fixture；
+- may/unknown 不会被升级为 must；
+- 同一源码输入生成确定的 event ID；
+- 事件提取与现有 resource tracker 并行运行时不改变旧结果；
+- 全量测试通过。
+
+## 8. M2：协议状态传播
+
+### 8.1 建议新增
 
 ```text
-root_kind: local | parameter | return | unknown
-root_id: symbol ID / arg index
-dereference_depth
-fields: ordered field names
-index: constant | normalized symbol | unknown
-casts: ignored-safe | type-changing | unknown
-precision: exact | bounded | unknown
+src/metadata_tracker.py
+tests/test_metadata_tracker.py
 ```
 
-最大字段深度必须配置化并进入运行 manifest。
-
-### 9.3 语义规则
-
-- 简单 `a = b` 传播 root identity；
-- `&obj->field` 与对应解引用规范化到相同 access path；
-- 常量数组索引可以精确，未知索引不得假装相同或不同；
-- 字段 store 默认保留 `MAY_ACQUIRED/field_store_without_contract`；
-- reviewed 或自动 summary 证明后才 transfer/release；
-- `container_of`、union、复杂 cast 和指针算术进入 explicit unknown；
-- join 时不同精确路径不能错误合并成已释放；
-- access path 必须映射到 obligation/resource ID，而不只映射 release 名称。
-
-### 9.4 主要修改位置
-
-- `src/resource_expr.py`；
-- `src/resource_release.py`；
-- `src/resource_tracker.py`；
-- `src/function_summary.py`；
-- G2 的 frontend IR；
-- 新增 `src/access_path.py` 和对应测试。
-
-### 9.5 G4 完成门禁
-
-- access path 有结构化 schema、canonical form 和测试；
-- struct member、nested field、out-parameter、取地址和简单 alias 正确；
-- unknown index/cast/container 不产生过强 release/transfer；
-- summary 可以表达 bounded field path；
-- exact/bounded/unknown 数量进入 diagnostics；
-- 全量测试通过，架构文档更新。
-
----
-
-## 10. G5：可重建 predecessor witness
-
-### 10.1 目标
-
-给定一个 candidate/obligation ID，仅使用输出 artifact 就能回答：
-
-- 资源在哪里获取；
-- acquire validity 如何成立或为何未知；
-- 经过哪些 CFG edge；
-- 哪些调用产生 summary/pending effect；
-- 哪些分支发生 join；
-- 是否发生 widening/truncation；
-- 为什么到错误 return 时仍为 `ACQUIRED/MAY_ACQUIRED`。
-
-### 10.2 建议数据结构
-
-每个保留状态增加稳定 witness node：
+核心状态：
 
 ```text
-state_id
-block_id
-edge_id
-parent_state_ids
-transfer_event
-resource_state_digest
-path_fact_digest
-join_kind
-widening_metadata
-truncated
+MetadataOperationInstance
+├── protocol_id
+├── principal_objects
+├── phase_facts
+├── effect_ledger
+├── failure_tokens
+├── accounting_obligations
+├── completion_mode
+└── uncertainty_causes
 ```
 
-完整状态内容可以去重存储，witness node 只引用 digest，避免输出成倍膨胀。
+### 8.2 Failure epoch
 
-### 10.3 行为要求
+failure token 至少包含：
 
-- 普通 transfer 保存单 parent；
-- join 保存所有参与当前结论的 parent IDs；
-- widening 保存被合并状态的摘要和阈值；
-- 每个候选输出至少一条 acquire-to-exit 持有链；
-- `MAY_ACQUIRED` 若来自 release/held 分歧，输出两条代表链；
-- pending effect 记录创建、证明应用或失效事件；
-- scope unwind 记录 binding 恢复；
-- 图大小有上限；达到上限时明确 `witness_truncated=true`；
-- representative trace 可保留作快速展示，但不能再冒充完整 witness。
+```text
+failure_id
+attempt_id
+source_event
+error_class
+resolution
+status_origin
+```
 
-### 10.4 主要修改位置
+以下操作可以关闭 failure：
 
-- `src/dataflow.py`；
-- `src/resource_tracker.py`；
-- `src/resource_state.py`；
-- `src/error_path_extractor.py`；
-- CSV/JSONL 输出 schema；
-- `tests/test_cfg_resource_flow.py`；
-- `tests/test_interprocedural.py`。
+- 明确传播为失败返回；
+- protocol 允许的 sentinel handling；
+- 新 attempt 的成功结果覆盖；
+- 事务 abort；
+- 恢复机制接管。
 
-### 10.5 G5 完成门禁
+只有在协议明确允许时才关闭；简单的 `goto retry` 本身不能证明重试成功。
 
-- branch、join、loop、widening、pending effect、scope unwind 均有 witness 测试；
-- candidate 可重建 acquire-to-exit 链；
-- witness 截断不改变静态资源结论，只影响可解释性标记；
-- 输出增长有统计和上限；
-- ID 在相同输入和环境中确定；
-- 全量测试通过，架构文档更新。
+### 8.3 Effect ownership
 
----
+状态转移必须区分：
 
-## 11. G1--G5 后的代码加固
+```text
+effect created
+effect compensated
+effect transferred to handler
+effect committed
+effect becomes unknown
+```
 
-G1--G5 完成后，先做一轮工程收口，再进入 benchmark。
+`abort_transaction()` 不允许批量关闭 `IN_MEMORY_GLOBAL` effect。该反例必须有测试。
 
-### 11.1 配置 lifecycle
+### 8.4 Join 和 widening
 
-- resource map 增加 schema version；
-- semantic contract 记录来源、reviewer 和适用 Linux 范围；
-- API drift issue 支持 reviewed resolution 状态；
-- rename、alias、wrapper、removed、unrelated、unknown 分类稳定；
-- 配置变化输出机器可读 diff；
-- high severity drift 必须处理或显式接受；
-- hint 不能自动升级为 semantic effect。
+- 相同 effect 在所有输入状态都完成，才能得到 definite completed；
+- 一条路径 OPEN、一条路径完成，join 后为 `UNKNOWN/MAY_OPEN`；
+- 不同 attempt 的 failure token 不得按文本错误码直接合并；
+- widening 必须记录丢失的 phase/effect/accounting 精度；
+- 达到上限时 fail-open，不能静默删除 obligation。
 
-### 11.2 Determinism
+### 8.5 M2 完成门禁
 
-- 文件枚举顺序不影响 function/candidate/obligation ID；
-- summary effect 顺序稳定；
-- SCC 和 fixed-point 输出稳定；
-- repeated run 输出除时间字段外可比较；
-- schema 变化有迁移说明。
+- branch、join、retry、abort、handler transfer 和 widening 均有测试；
+- #4 的 stale failure epoch 能在最小 fixture 中表达；
+- #17 类型的 global effect 不会被 abort 错误关闭；
+- uncertainty provenance 可序列化；
+- 全量测试通过。
 
-### 11.3 性能边界
+## 9. M3：合法出口和候选生成
 
-- CFG state、summary effect、access path 和 witness node 均有独立上限；
-- 每种 widening/truncation 有统计；
-- 限制触发后采用 fail-open 状态，不静默解除资源；
-- 小型 fixture 保持快速，全量 Linux 扫描才允许较长运行。
+建议新增：
 
-### 11.4 端到端 compiled-mode smoke
+```text
+src/metadata_candidate_rules.py
+tests/test_metadata_candidate_rules.py
+```
 
-至少固定：
+### 9.1 成功出口
 
-- 一个真实 Linux tag；
-- 一个文件系统；
-- 一组 Kbuild translation units；
-- tree-sitter 与 Clang 两种前端；
-- summary、candidate、quarantine、API drift 和 witness 输出。
+必须满足：
 
-这一步只验证代码链路稳定，不进行正式 Precision/Recall 评估。
+```text
+没有 unresolved necessary failure
+phase 属于 legal success
+required effects 已 committed/transferred
+accounting constraints 成立
+返回值来自当前 attempt 的成功 outcome
+```
 
----
+### 9.2 失败出口
 
-## 12. 测试与验证命令
+每个 OPEN effect 必须满足至少一种合法完成方式：
 
-### 12.1 每次编辑后的最小检查
+```text
+COMPENSATED
+由匹配对象和 scope 的 ABORT handler 接管
+RECOVERY_DELEGATED
+DEFERRED
+```
+
+### 9.3 候选分类
+
+只生成：
+
+```text
+failure_reported_as_success
+incomplete_failure_completion
+metadata_state_divergence
+```
+
+无法证明的状态进入 `ANALYSIS_UNKNOWN` 隔离输出，不与高置信违规混合。
+
+### 9.4 M3 完成门禁
+
+- 三类候选各有正例、反例和 unknown fixture；
+- candidate 包含 protocol、operation、对象、开放 effect 和出口；
+- ranking/LLM 不参与候选存在性判断；
+- 现有 SE-EOD CSV/JSONL 默认不变；
+- 全量测试通过。
+
+## 10. M4：Protocol A replay/recovery
+
+### 10.1 开发范围
+
+第一版协议只覆盖已知的两类控制语义：
+
+```text
+普通必要步骤：ret < 0 或 ret != 0 表示失败
+sentinel 步骤：只有 -ENOENT 等特定结果允许 fallback/create
+```
+
+开发函数：
+
+```text
+ext4_fc_replay_add_range
+ext4_fc_replay_del_range
+ext4_fc_replay_inode
+xfs_rtcopy_summary
+xfs_rtginode_ensure
+```
+
+函数名只用于选择开发 fixture；真正协议必须通过 operation entry、callee role 和 return contract 匹配，不能写成“遇到这五个函数就报告”。
+
+### 10.2 协议义务
+
+```text
+necessary replay/load/copy step fails
+AND failure is not resolved by retry/sentinel/abort/recovery
+AND function reaches success exit
+=> failure_reported_as_success
+```
+
+### 10.3 必须覆盖的反例
+
+- `-ENOENT` 后合法创建；
+- 第一次失败、第二次 retry 成功；
+- 失败被上层事务 abort 接管；
+- cleanup label 返回原错误；
+- 非必要的 best-effort 调用失败后允许继续；
+- unresolved indirect call 进入 unknown，而非直接报告。
+
+### 10.4 M4 完成门禁
+
+- 五个开发函数均生成可解释结果；
+- 已修复版本不再生成同一违规，或者差异有明确版本解释；
+- 每个候选保留“必要步骤 -> failure -> handler/无 handler -> exit” witness；
+- Protocol A 在至少一个未参与设计的函数或版本上完成冻结验证；
+- 不将这五个开发 bug 计入无偏 precision/recall；
+- 全量测试通过。
+
+## 11. M5：Protocol B device/topology rollback
+
+M4 闭合后再实现：
+
+```text
+fs_root->reloc_root
+device list membership
+post_commit_list membership
+s_bdev/latest_dev
+fs_devices seed/sprout topology
+```
+
+重点不是一般内存释放，而是 effect scope、compensation 和 handler ownership。开发回归样例为 #7、#17、#18、#19。
+
+完成要求：
+
+- `ABORT` 不能误关全局拓扑 effect；
+- 多个 principal object 能独立跟踪；
+- pointer、membership、flag/counter compensation 可配；
+- 未完整回滚时生成 `incomplete_failure_completion`；
+- fault-injection evidence 只用于验证和排序。
+
+当前状态：M5 MVP 已完成。Protocol B v1 配置覆盖 relocation root、device/list
+membership、post-commit may summary、active pointer 和 seed/sprout topology；9 项
+专项测试覆盖修复反例、多 principal object、ABORT scope、pointer/membership/
+flag/counter compensation 和 unknown 隔离。v6.8/v6.14 输出与命令保存在
+`outputs/mocc-protocol-b-v1/`。这些输入属于开发与版本一致性检查，不是无偏评估集。
+
+## 12. M6：Protocol C activation/reservation/accounting
+
+当前状态：M6 MVP 已完成。Protocol C v1 配置覆盖 ext4 extra-isize fallback
+stale return provenance，以及 Btrfs zoned chunk activation 的 boolean
+reservation accounting。v6.8/v6.14/v7.1 的 ext4/Btrfs 输出与命令保存在
+`outputs/mocc-protocol-c-v1/`。这些输入属于开发与版本一致性检查，不是无偏评估集。
+
+已实现：
+
+- 多值 return outcome；
+- fallback attempt 和 stale result provenance；
+- reservation/counter obligation；
+- phase 与 accounting 的关系约束。
+
+开发回归样例为 #4、#15。
+
+第一版只证明布尔关系：
+
+```text
+pending metadata work exists
+=> matching reservation exists
+```
+
+不在第一版实现任意元数据算术求解。
+
+## 13. 旧 G1-G5 工作的定位
+
+旧交接文档中的基础设施任务调整为 supporting backlog：
+
+| 旧任务 | 当前状态 | 新定位 |
+|---|---|---|
+| G1 switch CFG | 已完成 | 保持回归 |
+| G2-A frontend IR | 已完成 | MOCC-SE 统一输入 |
+| G2-B Kbuild compile DB | 未完成 | Protocol A MVP 后增强编译真实性 |
+| G2-C Clang exporter | 未完成 | 编译感知扩展，不阻塞第一版协议 |
+| G3 callee effect inference | 部分完成 | 在 M1/M2 中按协议 summary 需要扩展 |
+| G4 bounded field/alias | 部分完成 | Protocol B 的前置增强 |
+| G5 predecessor witness | 部分完成 | M3 先复用 representative trace，后续增强 |
+
+这些任务仍重要，但不能继续让通用前端工程无限推迟元数据协议原型。
+
+## 14. Benchmark 和数据泄漏规则
+
+现有材料分为：
+
+```text
+Protocol development set:
+  outputs/confirmed_bugs.md
+  ext4 v6.8 pilot
+  已知修复和已提交补丁
+
+Frozen evaluation set:
+  协议冻结后采集
+  不参与 schema、事件或规则设计
+```
+
+正式评估前必须记录：
+
+- protocol version；
+- 开发集函数和 commit；
+- 冻结时间；
+- test set 采样规则；
+- reviewer 和 adjudication；
+- unsupported/unknown 比例。
+
+不得用已知 11 个元数据 bug 同时设计协议并报告无偏 recall。
+
+## 15. 测试命令
+
+每次编辑后：
 
 ```powershell
 python -m compileall -q src tests
-python -m pytest -q tests/test_cfg.py tests/test_cfg_resource_flow.py
+python -m pytest -q tests/test_metadata_protocol.py
 git diff --check
 ```
 
-### 12.2 G2/G3/G4/G5 对应测试
-
-```powershell
-python -m pytest -q tests/test_interprocedural.py
-python -m pytest -q tests/test_api_drift_audit.py tests/test_config_layout.py
-python -m pytest -q tests/test_demo.py
-```
-
-### 12.3 每个阶段退出前
+每个里程碑退出前：
 
 ```powershell
 python -m compileall -q src tests scripts
@@ -637,128 +546,70 @@ git diff --check
 git status --short
 ```
 
-如果测试数或候选 schema 发生变化，在本文件“当前可核验快照”中更新，不继续引用旧的 `110 passed` 或其他历史数字。
+Protocol A 集成后还必须保存：
 
-Clang/Kbuild 测试需要 Linux/WSL/容器时，应同时保留：
+- 分析命令；
+- Linux source version；
+- protocol/schema version；
+- candidate 和 unknown 数量；
+- 每个开发函数的 witness；
+- 修复前后差分。
 
-- 执行命令；
-- Clang 版本；
-- kernel tag/config hash；
-- compile database hash；
-- 成功和失败 translation unit 清单。
+## 16. 当前暂停项
 
----
+完成 M0-M5 后仍暂不开展：
 
-## 13. 每个代码任务的完成格式
+- Protocol C 之外的新协议实现；
+- 大规模独立 benchmark 标注；
+- 新增 LLM 调用或 prompt 调优；
+- ranking 概率校准；
+- GUI、自动补丁或完整 SMT；
+- 全文件系统 Clang compiled-mode 覆盖；
+- 正式论文表格。
 
-每个 G1--G5 子任务完成时记录：
+历史 outputs、patch evidence 和 benchmark 文件不得删除或改写原始数字。
 
-```text
-Task ID:
-Problem:
-Supported semantics:
-Explicitly unsupported semantics:
-Files changed:
-Tests added/changed:
-Diagnostics/schema changes:
-Behavioral diff:
-Known limitations:
-Verification commands and result:
-Architecture documentation updated:
-```
+## 17. 下一次接手立即执行
 
-不能只写“实现完成”。至少要说明支持范围、反例、降级策略和测试证据。
+M6 Protocol C activation/reservation/accounting 已完成。Protocol A/B/C 的开发 finding 均不得用于报告无偏 precision/recall。
 
----
-
-## 14. 当前暂停区
-
-以下已有材料继续保留，但当前不主动扩展：
-
-- `benchmark/`：保留现有 30 条 ext4 pilot 和脚本，不把它升级为最终 benchmark；
-- `outputs/confirmed_bugs.md`：保留状态，不把 finding 跟踪作为代码主线；
-- `scripts/evaluate_benchmark.py` 等评估脚本：不做论文级扩展；
-- historical fixes：继续作为 ranking evidence，不用于修改静态语义；
-- DeepSeek/LLM：不新增调用、不调 prompt、不做概率校准；
-- submitted kernel patches：可在维护者明确回复时单独处理，但不改变 G1--G5 顺序；
-- `PAPER_ROADMAP.md`：保留历史和后续论文任务，暂不按其 benchmark 优先级执行。
-
-暂停不代表删除。不得清理这些目录或重写已有标签。
-
----
-
-## 15. 安全与仓库规则
-
-1. 不提交 `linux-sources/`。
-2. 不提交 API key、邮箱凭据或个人密钥。
-3. 不执行 `git reset --hard`、`git checkout --` 或清理未确认输出。
-4. 不覆盖现有 dirty worktree 中不属于当前任务的修改。
-5. 不把 LLM verdict 当作静态语义或 gold label。
-6. 不把 patch submitted/Reviewed-by 写成 upstream accepted。
-7. 不为通过测试而放宽 fail-open 语义。
-8. 不在 G2 中删除 tree-sitter fallback；先完成 parity 再决定长期维护方式。
-9. 不在没有 schema version 的情况下改变候选或 witness 字段含义。
-10. 每次提交前检查：
-
-```powershell
-git status --short
-git diff --stat
-git diff --check
-git diff --cached --stat
-```
-
----
-
-## 16. 下一次接手应立即做什么
-
-下一项唯一主任务是 **G2-B：接入并验证 Kbuild compile database**。
-
-恢复命令：
+执行前：
 
 ```powershell
 cd "E:\yanjiusheng\阅读论文\file_system\SE_EOD"
-
-Get-Content -Encoding UTF8 PROJECT_HANDOFF.md -TotalCount 260
-Get-Content -Encoding UTF8 docs\PROJECT_CLOSURE_PLAN.md -TotalCount 360
-
 git status --short
 python -m pytest -q
-
-Get-Content -Encoding UTF8 src\frontend\model.py -TotalCount 220
-Get-Content -Encoding UTF8 src\frontend\tree_sitter_frontend.py -TotalCount 220
-Get-Content -Encoding UTF8 docs\PROJECT_CLOSURE_PLAN.md | Select-Object -Skip 220 -First 90
+Get-Content -Encoding UTF8 docs\MOCC_SE_FULL_ARCHITECTURE.md -TotalCount 260
+Get-Content -Encoding UTF8 src\metadata_protocol.py -TotalCount 320
+Get-Content -Encoding UTF8 src\frontend\model.py -TotalCount 260
+Get-Content -Encoding UTF8 src\function_summary.py -TotalCount 220
 ```
 
-第一轮 G2-B 步骤：
+下一轮代码提交范围如继续推进，应严格限定为：
 
-1. 确认 Linux/WSL/容器中的内核 tag、architecture、Clang 版本和 `.config` 来源；
-2. 实现 compile database loader/normalizer，严格区分 `arguments` 与 `command`；
-3. 建立 translation unit 到唯一 compile command 的映射，重复/缺失显式报错；
-4. 将 `CompileCommandIR` 填入 `TranslationUnitIR`；
-5. 输出 config/compiler/compile-database hash 和 covered/uncovered 清单；
-6. 在干净 Linux/WSL/容器中验证可重建性。
+```text
+冻结评估准备、跨函数 handler/effect summary 增强、或文档/复现清理
+```
 
-在 G2-B 完成前，不先写 Clang exporter，不伪造 compile flags，不开始 benchmark、LLM 或 ranking 工作。
+旧 `src.main` 默认输出保持不变；Protocol A/B/C 继续通过独立入口运行。
 
----
+## 18. 当前阶段 Definition of Done
 
-## 17. 代码完善阶段 Definition of Done
+Protocol A/B 阶段完成必须满足：
 
-本阶段完成必须同时满足：
+- [x] M0：协议模型、schema、版本和非法配置校验完成（24 项专项测试）；
+- [x] M1：元数据事件及对象身份分级完成；
+- [x] M2：failure epoch、effect ownership、join/widening 完成；
+- [x] M3：合法出口和三类候选框架完成；
+- [x] M4：replay/recovery 协议 MVP 端到端完成；
+- [x] M5：device/topology rollback、scope ownership、对象级 compensation 和 may unknown 隔离完成；
+- [x] M6：activation/reservation/accounting、stale return provenance 和 boolean reservation obligation 完成；
+- [x] 五个开发函数均有稳定 witness；
+- [x] 合法 retry、sentinel、abort 和 best-effort 反例不误报；
+- [x] `ANALYSIS_UNKNOWN` 与真实 violation 分离；
+- [x] Protocol A v1 冻结后在未参与设计的 Linux v6.14 `xfs_rtcopy_summary` 上完成版本验证；协议 SHA-256 和结果保存在 `outputs/mocc-protocol-a-v1/README.md`；
+- [x] 现有 SE-EOD 默认输出和历史 186-test 基线不回退；当前全量 256 tests；
+- [x] 新增能力有正例、反例、unknown 和版本差分测试；
+- [x] 当前架构、完整架构、交接文档和 metadata protocol README 与代码状态一致。
 
-- [x] G1：switch/case/default CFG 完整并有 10 个 ext4 v6.14 真实函数 golden；
-- [x] G2-A：frontend IR schema v1、tree-sitter adapter、round-trip/golden/parity 已完成；
-- [ ] G2：tree-sitter/Clang 使用同一 IR，Kbuild compile database 可重建；
-- [ ] G2：compiled mode 的成功、失败和 fallback 可量化；
-- [ ] G3：一般 callee CFG 可推导出口敏感 must/may effect；
-- [ ] G3：每个自动 must 有可重建证明；
-- [ ] G4：有限字段路径和 alias 有结构化模型与保守降级；
-- [ ] G5：candidate 有 acquire-to-exit predecessor witness；
-- [ ] 配置 lifecycle、determinism、schema version 和资源上限完成；
-- [ ] 所有新增能力有正例、反例、unknown 和 regression tests；
-- [ ] tree-sitter fallback、quarantine 和 uncertainty provenance 未被破坏；
-- [ ] 全量测试、compileall 和 diff check 通过；
-- [ ] `PROJECT_ARCHITECTURE.md` 与代码一致；
-- [ ] 本文件更新为新的代码快照。
-
-达到这些条件后，分析器代码主线才算完善。届时再按照 `PROJECT_CLOSURE_PLAN.md` 从 G6 开始处理独立 benchmark、baseline、正式评估、artifact 和论文闭合。
+M6 已满足上述门禁。下一步不是立即扩大文件系统或候选规模，而是冻结评估准备、跨函数 summary 增强或复现清理。

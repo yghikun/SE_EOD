@@ -1,4 +1,9 @@
-# Benchmark Pilot
+# Benchmark Pilot: SE-EOD Baseline and MOCC-SE Migration
+
+The existing pilot was created for the resource/error-path baseline. It is a
+development set for MOCC-SE protocol design, not an independent test set. The
+MOCC-SE evaluation must freeze protocol definitions before collecting its test
+labels, and must report the three metadata violation classes separately.
 
 This directory contains independently reviewed benchmark data. LLM outputs and
 ranking scores are not ground truth. A reviewer must inspect the source path,

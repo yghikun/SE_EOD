@@ -1,5 +1,7 @@
 # Manual Bug Candidates To Verify
 
+> MOCC-SE migration note (2026-07-21): this is a historical development review set. Confirmed replay findings motivate `failure_reported_as_success`; resource-only findings remain baseline material. Do not reuse this file as a frozen MOCC-SE test set.
+
 These are the candidates we manually promoted from DeepSeek output for
 follow-up verification. They are still not final confirmed bugs until each item
 is checked against current upstream code, patch history, and, when possible,

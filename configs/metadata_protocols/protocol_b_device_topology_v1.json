@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "protocol_version": "1.0.0",
+  "protocol_id": "mocc.protocol_b.device_topology_rollback",
+  "filesystems": ["btrfs"],
+  "linux_versions": [">=6.8"],
+  "phases": ["ENTRY", "SUCCESS", "FAILURE"],
+  "operations": [
+    {
+      "operation_id": "btrfs_relocation_recovery",
+      "entry_functions": ["btrfs_recover_relocation"],
+      "principal_objects": [
+        {"role": "fs_info", "selector": "arg0"},
+        {"role": "fs_root", "selector": "fs_root", "field_or_member": "reloc_root"}
+      ],
+      "callee_roles": [
+        {"role_id": "recovery_commit", "callees": ["btrfs_commit_transaction"], "necessary": true, "return_contract_ids": ["reloc.failure.nonzero", "reloc.success.zero"]}
+      ]
+    },
+    {
+      "operation_id": "btrfs_sprout_device_add",
+      "entry_functions": ["btrfs_init_new_device"],
+      "principal_objects": [
+        {"role": "fs_info", "selector": "arg0"},
+        {"role": "device", "selector": "device"},
+        {"role": "fs_devices", "selector": "fs_devices"}
+      ],
+      "callee_roles": [
+        {"role_id": "first_rw_device", "callees": ["init_first_rw_device"], "necessary": true, "return_contract_ids": ["sprout.failure.nonzero", "sprout.success.zero"]},
+        {"role_id": "add_device_item", "callees": ["btrfs_add_dev_item"], "necessary": true, "return_contract_ids": ["sprout.failure.nonzero", "sprout.success.zero"]},
+        {"role_id": "finish_sprout", "callees": ["btrfs_finish_sprout"], "necessary": true, "return_contract_ids": ["sprout.failure.nonzero", "sprout.success.zero"]}
+      ]
+    }
+  ],
+  "return_contracts": [
+    {"contract_id": "reloc.failure.nonzero", "operation_id": "btrfs_relocation_recovery", "guard": "ret != 0", "outcome": "failure"},
+    {"contract_id": "reloc.success.zero", "operation_id": "btrfs_relocation_recovery", "guard": "ret == 0", "outcome": "success"},
+    {"contract_id": "sprout.failure.nonzero", "operation_id": "btrfs_sprout_device_add", "guard": "ret != 0", "outcome": "failure"},
+    {"contract_id": "sprout.success.zero", "operation_id": "btrfs_sprout_device_add", "guard": "ret == 0", "outcome": "success"}
+  ],
+  "effects": [
+    {
+      "event_id": "reloc.root.attached",
+      "effect_id": "reloc.root_pointer",
+      "operation_id": "btrfs_relocation_recovery",
+      "kind": "POINTER_UPDATE",
+      "object": {"role": "fs_root", "selector": "fs_root", "field_or_member": "reloc_root"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "btrfs_recover_relocation",
+      "phase": "ENTRY",
+      "required": true,
+      "match_fields": ["reloc_root"],
+      "match_rhs": ["btrfs_grab_root"],
+      "description": "Attach a grabbed relocation root to an fs root."
+    },
+    {
+      "event_id": "sprout.topology.changed",
+      "effect_id": "sprout.fs_devices_topology",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "METADATA_UPDATE",
+      "object": {"role": "fs_devices", "selector": "fs_devices"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "btrfs_init_new_device",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["btrfs_setup_sprout"],
+      "description": "Move seed devices and replace the active fs_devices identity."
+    },
+    {
+      "event_id": "sprout.active.s_bdev",
+      "effect_id": "sprout.active_s_bdev",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "POINTER_UPDATE",
+      "object": {"role": "fs_info", "selector": "arg0"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "btrfs_init_new_device",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["btrfs_assign_next_active_device"],
+      "description": "Potentially move superblock active block-device pointer to the sprout."
+    },
+    {
+      "event_id": "sprout.active.latest_dev",
+      "effect_id": "sprout.active_latest_dev",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "POINTER_UPDATE",
+      "object": {"role": "fs_devices", "selector": "fs_devices"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "btrfs_init_new_device",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["btrfs_assign_next_active_device"],
+      "description": "Move latest_dev to the new sprout device."
+    },
+    {
+      "event_id": "sprout.post_commit.linked",
+      "effect_id": "sprout.post_commit_membership",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "MEMBERSHIP_ADD",
+      "object": {"role": "device", "selector": "device"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "transaction.device_update_list",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["init_first_rw_device"],
+      "match_results": ["ret"],
+      "strength": "may",
+      "guard": "ret != 0",
+      "description": "Reviewed summary: failed first chunk creation may leave device->post_commit_list linked."
+    },
+    {
+      "event_id": "sprout.device.dev_list.linked",
+      "effect_id": "sprout.device_dev_membership",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "MEMBERSHIP_ADD",
+      "object": {"role": "device", "selector": "device"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "fs_devices.devices",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["list_add_rcu"],
+      "match_arguments": ["device->dev_list"],
+      "description": "Link the new device into fs_devices->devices."
+    },
+    {
+      "event_id": "sprout.device.alloc_list.linked",
+      "effect_id": "sprout.device_alloc_membership",
+      "operation_id": "btrfs_sprout_device_add",
+      "kind": "MEMBERSHIP_ADD",
+      "object": {"role": "device", "selector": "device"},
+      "scope": "IN_MEMORY_GLOBAL",
+      "owner": "fs_devices.alloc_list",
+      "phase": "ENTRY",
+      "required": true,
+      "match_callees": ["list_add"],
+      "match_arguments": ["device->dev_alloc_list"],
+      "description": "Link the new writable device into fs_devices->alloc_list."
+    }
+  ],
+  "compensations": [
+    {
+      "event_id": "reloc.root.detached",
+      "compensation_id": "reloc.clear_root_pointer",
+      "operation_id": "btrfs_relocation_recovery",
+      "target_effect_id": "reloc.root_pointer",
+      "object": {"role": "fs_root", "selector": "fs_root", "field_or_member": "reloc_root"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_fields": ["reloc_root"],
+      "match_rhs": ["NULL"]
+    },
+    {
+      "event_id": "sprout.topology.restored",
+      "compensation_id": "sprout.rollback_topology",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.fs_devices_topology",
+      "object": {"role": "fs_devices", "selector": "fs_devices"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["btrfs_rollback_sprout"]
+    },
+    {
+      "event_id": "sprout.active_s_bdev.restored",
+      "compensation_id": "sprout.restore_s_bdev",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.active_s_bdev",
+      "object": {"role": "fs_info", "selector": "arg0"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["btrfs_restore_sprout_active_devices"]
+    },
+    {
+      "event_id": "sprout.latest_dev.restored",
+      "compensation_id": "sprout.restore_latest_dev",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.active_latest_dev",
+      "object": {"role": "fs_devices", "selector": "fs_devices"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["btrfs_restore_sprout_active_devices"]
+    },
+    {
+      "event_id": "sprout.post_commit.detached",
+      "compensation_id": "sprout.detach_post_commit",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.post_commit_membership",
+      "object": {"role": "device", "selector": "device"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["btrfs_detach_device_from_transaction"]
+    },
+    {
+      "event_id": "sprout.device.dev_list.detached",
+      "compensation_id": "sprout.detach_device_dev_list",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.device_dev_membership",
+      "object": {"role": "device", "selector": "device"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["list_del_rcu"],
+      "match_arguments": ["device->dev_list"]
+    },
+    {
+      "event_id": "sprout.device.alloc_list.detached",
+      "compensation_id": "sprout.detach_device_alloc_list",
+      "operation_id": "btrfs_sprout_device_add",
+      "target_effect_id": "sprout.device_alloc_membership",
+      "object": {"role": "device", "selector": "device"},
+      "guard": "failure_cleanup",
+      "phase": "FAILURE",
+      "match_callees": ["list_del"],
+      "match_arguments": ["device->dev_alloc_list"]
+    }
+  ],
+  "handlers": [],
+  "accounting_constraints": [],
+  "legal_exits": [
+    {"exit_id": "reloc.success", "operation_id": "btrfs_relocation_recovery", "kind": "success", "phases": ["SUCCESS"], "completion_modes": ["COMMITTED"], "return_outcomes": ["success"]},
+    {"exit_id": "reloc.failure", "operation_id": "btrfs_relocation_recovery", "kind": "failure", "phases": ["FAILURE"], "completion_modes": ["ROLLED_BACK", "ABORTED", "RECOVERY_DELEGATED", "DEFERRED"], "return_outcomes": ["failure"]},
+    {"exit_id": "sprout.success", "operation_id": "btrfs_sprout_device_add", "kind": "success", "phases": ["SUCCESS"], "completion_modes": ["COMMITTED"], "return_outcomes": ["success"]},
+    {"exit_id": "sprout.failure", "operation_id": "btrfs_sprout_device_add", "kind": "failure", "phases": ["FAILURE"], "completion_modes": ["ROLLED_BACK", "ABORTED", "RECOVERY_DELEGATED", "DEFERRED"], "return_outcomes": ["failure"]}
+  ],
+  "description": "Protocol B MVP for relocation-root and seed/sprout topology rollback."
+}

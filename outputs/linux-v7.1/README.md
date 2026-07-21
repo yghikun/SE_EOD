@@ -1,5 +1,7 @@
 # Linux v7.1 Results
 
+> MOCC-SE migration note (2026-07-21): this directory contains SE-EOD scan baselines. Future MOCC-SE runs must use separate manifests and protocol-versioned output directories.
+
 Place Linux v7.1 scan artifacts under one directory per filesystem:
 
 ```text

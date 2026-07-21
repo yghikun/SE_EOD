@@ -1,6 +1,7 @@
-# Configuration Layout
+# Configuration Layout: SE-EOD Baseline and MOCC-SE Protocols
 
-Each filesystem has five configuration layers. They serve different stages and
+Each filesystem has five baseline configuration layers plus the planned MOCC-SE
+metadata protocol layer. They serve different stages and
 must not be merged merely because some API names overlap.
 
 | Layer | Files | Purpose |
@@ -10,6 +11,19 @@ must not be merged merely because some API names overlap.
 | Wrapper summaries | `*_wrapper_summaries.json` | Conservative wrapper/alias evidence. The ext4 canonical file retains the historical name `wrapper_summaries.json`. |
 | Reviewed exceptions | `*_review_false_positives.json` | Source-reviewed false-positive contracts and confirmed-bug exceptions. |
 | Historical fixes | `*_historical_fixes.json` | Reviewed cross-version source fixes used only for E3 ranking evidence. |
+| Metadata protocols (M0) | `metadata_protocols/*.json` | Strict schema v1 for operation phases, return contracts, effect ownership, compensations, handlers, accounting constraints, and legal exits. |
+
+Metadata protocol files are semantic specifications, not ranking hints. They
+must not be used to silently suppress a candidate. Each effect declares its
+scope (`LOCAL`, `IN_MEMORY_GLOBAL`, `TRANSACTION_SCOPED`, `PERSISTENT`,
+`RECOVERY_OWNED`, or `DEFERRED_OWNED`) so that an abort or recovery handler only
+closes obligations it actually owns.
+
+M0 is implemented by `src/metadata_protocol.py`. Its JSON loader rejects
+unknown fields/enums, unstable or duplicate IDs, dangling references, invalid
+phase/object ownership, ambiguous return contracts, and illegal handler scope.
+These protocols are not yet loaded by `src/main.py`; event extraction and
+candidate generation remain later milestones.
 
 Reviewed exception files contain two rule groups:
 

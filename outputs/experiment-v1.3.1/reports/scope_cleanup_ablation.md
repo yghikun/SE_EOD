@@ -1,5 +1,7 @@
 # Scope-Cleanup Ablation: experiment-v1.3.1
 
+> MOCC-SE migration note (2026-07-21): this report evaluates SE-EOD compiler-managed resource cleanup. It is retained as a baseline ablation and does not evaluate metadata completion protocols.
+
 Generated: 2026-07-12T12:32:02.646959+00:00
 
 ## Candidate Counts

@@ -1,8 +1,16 @@
-# SE-EOD Resource State Model
+# SE-EOD / MOCC-SE Resource and Metadata Effect State Model
 
 This document defines the ownership semantics used by the function-local and
-interprocedural analyses. A reported result must be explainable as transitions
-in this model rather than as a function-name exception.
+interprocedural analyses. In MOCC-SE, resource ownership is one special case of
+the broader metadata effect ledger. A reported result must be explainable as
+state transitions and responsibility transfers rather than as a function-name
+exception. The full target model is documented in
+[`../MOCC_SE_FULL_ARCHITECTURE.md`](../MOCC_SE_FULL_ARCHITECTURE.md).
+
+Metadata effects additionally carry `scope`, `owner`, `compensation`, and
+`status`. Transaction abort only resolves effects explicitly marked
+`TRANSACTION_SCOPED`; it does not automatically resolve global pointers,
+container membership, or filesystem topology changes.
 
 ## States
 

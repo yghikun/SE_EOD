@@ -1,0 +1,1136 @@
+[
+  {
+    "protocol_id": "mocc.protocol_c.activation_accounting",
+    "operation_id": "ext4_extra_isize_fallback",
+    "function": "ext4_expand_extra_isize_ea",
+    "source_file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+    "source_version": "linux-v6.14",
+    "events": [
+      {
+        "event_id": "mev_24dda62904f668435189",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "isize_diff",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74178,
+          "end_byte": 74237,
+          "start_line": 2777,
+          "end_line": 2777,
+          "start_column": 1,
+          "end_column": 60,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "isize_diff = new_extra_isize - EXT4_I(inode)->i_extra_isize"
+      },
+      {
+        "event_id": "mev_2de125f0a5f198dae49a",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "header",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74307,
+          "end_byte": 74338,
+          "start_line": 2781,
+          "end_line": 2781,
+          "start_column": 1,
+          "end_column": 32,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "header = IHDR(inode, raw_inode)"
+      },
+      {
+        "event_id": "mev_17c2d291a0cededa0354",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "base",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74460,
+          "end_byte": 74481,
+          "start_line": 2788,
+          "end_line": 2788,
+          "start_column": 1,
+          "end_column": 22,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "base = IFIRST(header)"
+      },
+      {
+        "event_id": "mev_c1a3b169fced271ca341",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "end",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74484,
+          "end_byte": 74544,
+          "start_line": 2789,
+          "end_line": 2789,
+          "start_column": 1,
+          "end_column": 61,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "end = (void *)raw_inode + EXT4_SB(inode->i_sb)->s_inode_size"
+      },
+      {
+        "event_id": "mev_51b293fc66a48c516945",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "min_offs",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74547,
+          "end_byte": 74568,
+          "start_line": 2790,
+          "end_line": 2790,
+          "start_column": 1,
+          "end_column": 22,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "min_offs = end - base"
+      },
+      {
+        "event_id": "mev_49359b5c5e4f9ec38aad",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "total_ino",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74571,
+          "end_byte": 74635,
+          "start_line": 2791,
+          "end_line": 2791,
+          "start_column": 1,
+          "end_column": 65,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "total_ino = sizeof(struct ext4_xattr_ibody_header) + sizeof(u32)"
+      },
+      {
+        "event_id": "mev_dd15296df27b06b9e388",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74639,
+          "end_byte": 74684,
+          "start_line": 2793,
+          "end_line": 2793,
+          "start_column": 1,
+          "end_column": 46,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = xattr_check_inode(inode, header, end)"
+      },
+      {
+        "event_id": "mev_4ae3bf13fbb95a7f9aee",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ifree",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 74716,
+          "end_byte": 74780,
+          "start_line": 2797,
+          "end_line": 2797,
+          "start_column": 1,
+          "end_column": 65,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ifree = ext4_xattr_free_space(base, &min_offs, base, &total_ino)"
+      },
+      {
+        "event_id": "mev_a65c39cceb96765db040",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bh",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75001,
+          "end_byte": 75069,
+          "start_line": 2808,
+          "end_line": 2808,
+          "start_column": 2,
+          "end_column": 70,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "bh = ext4_sb_bread(inode->i_sb, EXT4_I(inode)->i_file_acl, REQ_PRIO)"
+      },
+      {
+        "event_id": "mev_100ac3ac972d3b9302b9",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75094,
+          "end_byte": 75113,
+          "start_line": 2810,
+          "end_line": 2810,
+          "start_column": 3,
+          "end_column": 22,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = PTR_ERR(bh)"
+      },
+      {
+        "event_id": "mev_11d1f97dce842a34724d",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75138,
+          "end_byte": 75179,
+          "start_line": 2813,
+          "end_line": 2813,
+          "start_column": 2,
+          "end_column": 43,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = ext4_xattr_check_block(inode, bh)"
+      },
+      {
+        "event_id": "mev_69d25b5ba6bca068862e",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "base",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75234,
+          "end_byte": 75249,
+          "start_line": 2818,
+          "end_line": 2818,
+          "start_column": 2,
+          "end_column": 17,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "base = BHDR(bh)"
+      },
+      {
+        "event_id": "mev_2bc7dd8010cc9fc2a5e2",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "end",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75253,
+          "end_byte": 75282,
+          "start_line": 2819,
+          "end_line": 2819,
+          "start_column": 2,
+          "end_column": 31,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "end = bh->b_data + bh->b_size"
+      },
+      {
+        "event_id": "mev_1cdac126dace2cc7ba93",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "min_offs",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75286,
+          "end_byte": 75307,
+          "start_line": 2820,
+          "end_line": 2820,
+          "start_column": 2,
+          "end_column": 23,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "min_offs = end - base"
+      },
+      {
+        "event_id": "mev_5f1f76e01ed27a5b19c6",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bfree",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75311,
+          "end_byte": 75386,
+          "start_line": 2821,
+          "end_line": 2822,
+          "start_column": 2,
+          "end_column": 16,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "bfree = ext4_xattr_free_space(BFIRST(bh), &min_offs, base, NULL)"
+      },
+      {
+        "event_id": "mev_4522a076ce4c6b6bf946",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "tried_min_extra_isize++",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75496,
+          "end_byte": 75519,
+          "start_line": 2826,
+          "end_line": 2826,
+          "start_column": 4,
+          "end_column": 27,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "tried_min_extra_isize++"
+      },
+      {
+        "event_id": "mev_20afe14e040b88fc9305",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "new_extra_isize",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75525,
+          "end_byte": 75560,
+          "start_line": 2827,
+          "end_line": 2827,
+          "start_column": 4,
+          "end_column": 39,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "new_extra_isize = s_min_extra_isize"
+      },
+      {
+        "event_id": "mev_13b97996bdbd9106a594",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75586,
+          "end_byte": 75601,
+          "start_line": 2830,
+          "end_line": 2830,
+          "start_column": 3,
+          "end_column": 18,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = -ENOSPC"
+      },
+      {
+        "event_id": "mev_16c33234d81ea6621926",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bfree",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75636,
+          "end_byte": 75668,
+          "start_line": 2834,
+          "end_line": 2834,
+          "start_column": 2,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "bfree = inode->i_sb->s_blocksize"
+      },
+      {
+        "event_id": "mev_b7a1b8c778733183d554",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75675,
+          "end_byte": 75792,
+          "start_line": 2837,
+          "end_line": 2839,
+          "start_column": 1,
+          "end_column": 20,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = ext4_xattr_make_inode_space(handle, inode, raw_inode, isize_diff, ifree, bfree, &total_ino)"
+      },
+      {
+        "event_id": "mev_5ae51391c7ec55debdf1",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "inode",
+          "expression": "inode",
+          "identity": "EXACT",
+          "symbol_id": "sym_29418a6f0882faea622a"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75683,
+          "end_byte": 75792,
+          "start_line": 2837,
+          "end_line": 2839,
+          "start_column": 9,
+          "end_column": 20,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "inode_space_attempt",
+        "callee": "ext4_xattr_make_inode_space",
+        "result_symbol": "error",
+        "return_contract_ids": [
+          "ext4.space.failure",
+          "ext4.space.success"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ext4_xattr_make_inode_space"
+      },
+      {
+        "event_id": "mev_d2540b43b966e70597b1",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "tried_min_extra_isize++",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75890,
+          "end_byte": 75913,
+          "start_line": 2843,
+          "end_line": 2843,
+          "start_column": 3,
+          "end_column": 26,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "tried_min_extra_isize++"
+      },
+      {
+        "event_id": "mev_a5192f4b605a65a54c17",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "new_extra_isize",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 75918,
+          "end_byte": 75953,
+          "start_line": 2844,
+          "end_line": 2844,
+          "start_column": 3,
+          "end_column": 38,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "new_extra_isize = s_min_extra_isize"
+      },
+      {
+        "event_id": "mev_9425db43008d7a7203ca",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "inode",
+          "expression": "inode",
+          "identity": "EXACT",
+          "symbol_id": "sym_29418a6f0882faea622a"
+        },
+        "container_ref": null,
+        "field_or_member": "i_extra_isize",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 76256,
+          "end_byte": 76302,
+          "start_line": 2855,
+          "end_line": 2855,
+          "start_column": 1,
+          "end_column": 47,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "ext4.inode_extra_isize_changed",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "EXT4_I(inode)->i_extra_isize = new_extra_isize"
+      },
+      {
+        "event_id": "mev_9530532787823f41360a",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 76341,
+          "end_byte": 76384,
+          "start_line": 2858,
+          "end_line": 2858,
+          "start_column": 2,
+          "end_column": 45,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "error = ext4_find_inline_data_nolock(inode)"
+      },
+      {
+        "event_id": "mev_8c7b43b7015b0ac31dff",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "mnt_count",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+          "start_byte": 76579,
+          "end_byte": 76626,
+          "start_line": 2864,
+          "end_line": 2864,
+          "start_column": 2,
+          "end_column": 49,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "mnt_count = le16_to_cpu(sbi->s_es->s_mnt_count)"
+      }
+    ],
+    "candidates": [
+      {
+        "candidate_id": "moc_96f810e538b02dc42b55",
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "operation_id": "ext4_extra_isize_fallback",
+        "violation_type": "metadata_state_divergence",
+        "exit_kind": "failure",
+        "exit_id": "ext4.failure",
+        "principal_objects": [
+          {
+            "role": "inode",
+            "expression": "inode",
+            "identity": "EXACT",
+            "symbol_id": "sym_29418a6f0882faea622a"
+          }
+        ],
+        "open_effects": [],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "ext4_xattr_make_inode_space starts inode_space_attempt@1",
+            "line": 2837,
+            "event_id": "mev_5ae51391c7ec55debdf1"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "contract ext4.space.failure: ret != 0",
+            "line": 2837,
+            "event_id": "mev_5ae51391c7ec55debdf1"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "ext4_xattr_make_inode_space -> ret != 0 (inode_space_attempt@1)",
+            "line": 2837,
+            "event_id": "mev_5ae51391c7ec55debdf1"
+          },
+          {
+            "kind": "effect_created",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "ext4.inode_extra_isize_changed",
+            "line": 2855,
+            "event_id": "mev_9425db43008d7a7203ca"
+          },
+          {
+            "kind": "stale_result",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "metadata changed after inode_space_attempt@1, but the returned symbol still carries its failure",
+            "line": 2866,
+            "event_id": "mev_5ae51391c7ec55debdf1"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "return error;",
+            "line": 2866,
+            "event_id": ""
+          },
+          {
+            "kind": "handler",
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/xattr.c",
+            "detail": "failure reaches function return",
+            "line": 2866,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "inode_space_attempt@1",
+        "return_provenance": "stale_result_provenance"
+      }
+    ],
+    "unknown": [],
+    "cfg_snapshot": {
+      "entry": 0,
+      "exit": 1,
+      "blocks": 100,
+      "edges": 111,
+      "unsupported_nodes": [],
+      "unsupported_blocks": {},
+      "complete": true
+    }
+  }
+]

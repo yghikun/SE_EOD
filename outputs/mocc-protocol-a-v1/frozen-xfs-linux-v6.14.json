@@ -1,0 +1,650 @@
+[
+  {
+    "protocol_id": "mocc.protocol_a.replay_recovery",
+    "operation_id": "xfs_copy_summary",
+    "function": "xfs_rtcopy_summary",
+    "source_file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+    "source_version": "linux-v6.14-held-out",
+    "events": [
+      {
+        "event_id": "mev_ce0267ea6abdb5f52acf",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "log",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2443,
+          "end_byte": 2476,
+          "start_line": 107,
+          "end_line": 107,
+          "start_column": 6,
+          "end_column": 39,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_8e7f0aed05fd68b3b7bb",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "log--",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2488,
+          "end_byte": 2493,
+          "start_line": 107,
+          "end_line": 107,
+          "start_column": 51,
+          "end_column": 56,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_062cd30bd02de85cb574",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bbno",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2504,
+          "end_byte": 2543,
+          "start_line": 108,
+          "end_line": 108,
+          "start_column": 7,
+          "end_column": 46,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_ec4fdae881dbbfc98785",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "bbno--",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2586,
+          "end_byte": 2592,
+          "start_line": 110,
+          "end_line": 110,
+          "start_column": 7,
+          "end_column": 13,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_a28ef79c962e367bd4ab",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2599,
+          "end_byte": 2648,
+          "start_line": 111,
+          "end_line": 111,
+          "start_column": 3,
+          "end_column": 52,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_6a3b5b0646c17f72ea08",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "xfs_rtcopy_summary",
+          "identity": "EXACT",
+          "symbol_id": "fn_5c0221a43083f9297a9f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2607,
+          "end_byte": 2648,
+          "start_line": 111,
+          "end_line": 111,
+          "start_column": 11,
+          "end_column": 52,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "get_summary",
+        "callee": "xfs_rtget_summary",
+        "result_symbol": "error",
+        "return_contract_ids": [
+          "copy.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_b65270936a427315a063",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2712,
+          "end_byte": 2764,
+          "start_line": 116,
+          "end_line": 116,
+          "start_column": 3,
+          "end_column": 55,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_0c8a9ad115f3c1b74b22",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "xfs_rtcopy_summary",
+          "identity": "EXACT",
+          "symbol_id": "fn_5c0221a43083f9297a9f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2720,
+          "end_byte": 2764,
+          "start_line": 116,
+          "end_line": 116,
+          "start_column": 11,
+          "end_column": 55,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "modify_summary",
+        "callee": "xfs_rtmodify_summary",
+        "result_symbol": "error",
+        "return_contract_ids": [
+          "copy.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_8dbc4c5896fbc3fe6ac0",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2797,
+          "end_byte": 2848,
+          "start_line": 119,
+          "end_line": 119,
+          "start_column": 3,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_17cb507dc0cb34298c37",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "xfs_rtcopy_summary",
+          "identity": "EXACT",
+          "symbol_id": "fn_5c0221a43083f9297a9f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2805,
+          "end_byte": 2848,
+          "start_line": 119,
+          "end_line": 119,
+          "start_column": 11,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "modify_summary",
+        "callee": "xfs_rtmodify_summary",
+        "result_symbol": "error",
+        "return_contract_ids": [
+          "copy.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_ea10e565f3970fef4507",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "error",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+          "start_byte": 2906,
+          "end_byte": 2915,
+          "start_line": 125,
+          "end_line": 125,
+          "start_column": 1,
+          "end_column": 10,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      }
+    ],
+    "candidates": [
+      {
+        "candidate_id": "moc_b8c47ea144888d0146ca",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "violation_type": "failure_reported_as_success",
+        "exit_kind": "success",
+        "exit_id": "copy.success",
+        "principal_objects": [
+          {
+            "role": "operation",
+            "expression": "xfs_rtcopy_summary",
+            "identity": "EXACT",
+            "symbol_id": "fn_5c0221a43083f9297a9f"
+          }
+        ],
+        "open_effects": [],
+        "unresolved_failures": [
+          {
+            "failure_id": "failure_53d8707368e0b01f0b22",
+            "attempt_id": "get_summary@1",
+            "source_event": "mev_6a3b5b0646c17f72ea08",
+            "error_class": "ret != 0",
+            "resolution": "UNRESOLVED",
+            "status_origin": "return_contract",
+            "object_ref": {
+              "role": "operation",
+              "expression": "xfs_rtcopy_summary",
+              "identity": "EXACT",
+              "symbol_id": "fn_5c0221a43083f9297a9f"
+            }
+          }
+        ],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtget_summary starts get_summary@1",
+            "line": 111,
+            "event_id": "mev_6a3b5b0646c17f72ea08"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "contract copy.failure.nonzero: ret != 0",
+            "line": 111,
+            "event_id": "mev_6a3b5b0646c17f72ea08"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtget_summary -> ret != 0 (get_summary@1)",
+            "line": 111,
+            "event_id": "mev_6a3b5b0646c17f72ea08"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "return 0;",
+            "line": 128,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high"
+      },
+      {
+        "candidate_id": "moc_b251f5934981c7302ec2",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "violation_type": "failure_reported_as_success",
+        "exit_kind": "success",
+        "exit_id": "copy.success",
+        "principal_objects": [
+          {
+            "role": "operation",
+            "expression": "xfs_rtcopy_summary",
+            "identity": "EXACT",
+            "symbol_id": "fn_5c0221a43083f9297a9f"
+          }
+        ],
+        "open_effects": [],
+        "unresolved_failures": [
+          {
+            "failure_id": "failure_75bb41a9433ec6dd7bb9",
+            "attempt_id": "modify_summary@1",
+            "source_event": "mev_0c8a9ad115f3c1b74b22",
+            "error_class": "ret != 0",
+            "resolution": "UNRESOLVED",
+            "status_origin": "return_contract",
+            "object_ref": {
+              "role": "operation",
+              "expression": "xfs_rtcopy_summary",
+              "identity": "EXACT",
+              "symbol_id": "fn_5c0221a43083f9297a9f"
+            }
+          }
+        ],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtmodify_summary starts modify_summary@1",
+            "line": 116,
+            "event_id": "mev_0c8a9ad115f3c1b74b22"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "contract copy.failure.nonzero: ret != 0",
+            "line": 116,
+            "event_id": "mev_0c8a9ad115f3c1b74b22"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtmodify_summary -> ret != 0 (modify_summary@1)",
+            "line": 116,
+            "event_id": "mev_0c8a9ad115f3c1b74b22"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "return 0;",
+            "line": 128,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high"
+      },
+      {
+        "candidate_id": "moc_984b1028c5a518b6ee2c",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "xfs_copy_summary",
+        "violation_type": "failure_reported_as_success",
+        "exit_kind": "success",
+        "exit_id": "copy.success",
+        "principal_objects": [
+          {
+            "role": "operation",
+            "expression": "xfs_rtcopy_summary",
+            "identity": "EXACT",
+            "symbol_id": "fn_5c0221a43083f9297a9f"
+          }
+        ],
+        "open_effects": [],
+        "unresolved_failures": [
+          {
+            "failure_id": "failure_d490c52603e745da7888",
+            "attempt_id": "modify_summary@1",
+            "source_event": "mev_17cb507dc0cb34298c37",
+            "error_class": "ret != 0",
+            "resolution": "UNRESOLVED",
+            "status_origin": "return_contract",
+            "object_ref": {
+              "role": "operation",
+              "expression": "xfs_rtcopy_summary",
+              "identity": "EXACT",
+              "symbol_id": "fn_5c0221a43083f9297a9f"
+            }
+          }
+        ],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtmodify_summary starts modify_summary@1",
+            "line": 119,
+            "event_id": "mev_17cb507dc0cb34298c37"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "contract copy.failure.nonzero: ret != 0",
+            "line": 119,
+            "event_id": "mev_17cb507dc0cb34298c37"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "xfs_rtmodify_summary -> ret != 0 (modify_summary@1)",
+            "line": 119,
+            "event_id": "mev_17cb507dc0cb34298c37"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.14-fs/fs/xfs/xfs_rtalloc.c",
+            "detail": "return 0;",
+            "line": 128,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high"
+      }
+    ],
+    "unknown": [],
+    "cfg_snapshot": {
+      "entry": 0,
+      "exit": 1,
+      "blocks": 37,
+      "edges": 42,
+      "unsupported_nodes": [],
+      "unsupported_blocks": {},
+      "complete": true
+    }
+  }
+]

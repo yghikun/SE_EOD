@@ -1,6 +1,8 @@
-# Output Layout
+# Output Layout: SE-EOD Baselines and MOCC-SE Evidence
 
-`outputs/` keeps final or currently useful SE-EOD artifacts. Results are grouped
+`outputs/` keeps final or currently useful SE-EOD artifacts that serve as
+historical baselines, motivating examples, and regression evidence for MOCC-SE.
+They are not an independent MOCC-SE test set. Results are grouped
 first by Linux version and then by filesystem, so scans from different source
 snapshots cannot overwrite or mix with each other.
 
@@ -11,6 +13,9 @@ snapshots cannot overwrite or mix with each other.
   F2FS folio-lifetime submissions, including withdrawn and pending findings.
 - `linux-v6.8/`: results produced from `linux-sources/linux-v6.8-fs`.
 - `linux-v7.1/`: results produced from `linux-sources/linux-v7.1-fs`.
+- `mocc-protocol-a-v1/`: versioned Protocol A replay/recovery JSON and witness.
+- `mocc-protocol-b-v1/`: versioned Protocol B device/topology rollback JSON and witness.
+- `mocc-protocol-c-v1/`: versioned Protocol C activation/accounting JSON and witness.
 
 ## Linux v6.8
 

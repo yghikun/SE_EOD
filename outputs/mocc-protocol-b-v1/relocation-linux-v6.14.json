@@ -1,0 +1,1873 @@
+[
+  {
+    "protocol_id": "mocc.protocol_b.device_topology_rollback",
+    "operation_id": "btrfs_relocation_recovery",
+    "function": "btrfs_recover_relocation",
+    "source_file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+    "source_version": "linux-v6.14",
+    "events": [
+      {
+        "event_id": "mev_8a919a4a927f9c89650f",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "path",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107270,
+          "end_byte": 107295,
+          "start_line": 4100,
+          "end_line": 4100,
+          "start_column": 1,
+          "end_column": 26,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "path = btrfs_alloc_path()"
+      },
+      {
+        "event_id": "mev_1111e6ac14ef04ec4dd9",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "path->reada",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "reada",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107328,
+          "end_byte": 107352,
+          "start_line": 4103,
+          "end_line": 4103,
+          "start_column": 1,
+          "end_column": 25,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "path->reada = READA_BACK"
+      },
+      {
+        "event_id": "mev_e88985f26a1c40e15042",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "key.objectid",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "objectid",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107356,
+          "end_byte": 107396,
+          "start_line": 4105,
+          "end_line": 4105,
+          "start_column": 1,
+          "end_column": 41,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "key.objectid = BTRFS_TREE_RELOC_OBJECTID"
+      },
+      {
+        "event_id": "mev_673e4f8784adbbdc467a",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "key.type",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "type",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107399,
+          "end_byte": 107429,
+          "start_line": 4106,
+          "end_line": 4106,
+          "start_column": 1,
+          "end_column": 31,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "key.type = BTRFS_ROOT_ITEM_KEY"
+      },
+      {
+        "event_id": "mev_3272e76c494a2c15e5a7",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "key.offset",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "offset",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107432,
+          "end_byte": 107452,
+          "start_line": 4107,
+          "end_line": 4107,
+          "start_column": 1,
+          "end_column": 21,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "key.offset = (u64)-1"
+      },
+      {
+        "event_id": "mev_26cf350e01e19fdb7557",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107470,
+          "end_byte": 107542,
+          "start_line": 4110,
+          "end_line": 4111,
+          "start_column": 2,
+          "end_column": 16,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_search_slot(NULL, fs_info->tree_root, &key, path, 0, 0)"
+      },
+      {
+        "event_id": "mev_4ff5ea5ffeeeadba0a53",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "path->slots[0]--",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107631,
+          "end_byte": 107647,
+          "start_line": 4117,
+          "end_line": 4117,
+          "start_column": 3,
+          "end_column": 19,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "path->slots[0]--"
+      },
+      {
+        "event_id": "mev_b954c95d0f71ca9519c1",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107655,
+          "end_byte": 107662,
+          "start_line": 4119,
+          "end_line": 4119,
+          "start_column": 2,
+          "end_column": 9,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = 0"
+      },
+      {
+        "event_id": "mev_d9f3b9cd904d5c6c773d",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "leaf",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107666,
+          "end_byte": 107687,
+          "start_line": 4120,
+          "end_line": 4120,
+          "start_column": 2,
+          "end_column": 23,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "leaf = path->nodes[0]"
+      },
+      {
+        "event_id": "mev_c1722b45ae45a90587d4",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "reloc_root",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107874,
+          "end_byte": 107933,
+          "start_line": 4128,
+          "end_line": 4128,
+          "start_column": 2,
+          "end_column": 61,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "reloc_root = btrfs_read_tree_root(fs_info->tree_root, &key)"
+      },
+      {
+        "event_id": "mev_616fe33116be51630147",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 107966,
+          "end_byte": 107991,
+          "start_line": 4130,
+          "end_line": 4130,
+          "start_column": 3,
+          "end_column": 28,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(reloc_root)"
+      },
+      {
+        "event_id": "mev_323c763b93230ec55fc9",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "FLAG_SET",
+        "object_ref": {
+          "role": "subject",
+          "expression": "&reloc_root->state",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108013,
+          "end_byte": 108062,
+          "start_line": 4134,
+          "end_line": 4134,
+          "start_column": 2,
+          "end_column": 51,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "set_bit",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "set_bit"
+      },
+      {
+        "event_id": "mev_23a38549f4919d8c9e70",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "MEMBERSHIP_ADD",
+        "object_ref": {
+          "role": "member",
+          "expression": "&reloc_root->root_list",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": {
+          "role": "container",
+          "expression": "&reloc_roots",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108066,
+          "end_byte": 108112,
+          "start_line": 4135,
+          "end_line": 4135,
+          "start_column": 2,
+          "end_column": 48,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_container_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "list_add",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "list_add"
+      },
+      {
+        "event_id": "mev_e82c6c69d853a9063cae",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_root",
+          "expression": "fs_root",
+          "identity": "EXACT",
+          "symbol_id": "sym_a0e5464c40267e34e76f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108171,
+          "end_byte": 108248,
+          "start_line": 4138,
+          "end_line": 4139,
+          "start_column": 3,
+          "end_column": 40,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "fs_root = btrfs_get_fs_root(fs_info, reloc_root->root_key.offset, false)"
+      },
+      {
+        "event_id": "mev_c09ead619386c24ab9c5",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108280,
+          "end_byte": 108302,
+          "start_line": 4141,
+          "end_line": 4141,
+          "start_column": 4,
+          "end_column": 26,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(fs_root)"
+      },
+      {
+        "event_id": "mev_4adc8c2bd6d5b86ac28f",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108347,
+          "end_byte": 108382,
+          "start_line": 4144,
+          "end_line": 4144,
+          "start_column": 4,
+          "end_column": 39,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = mark_garbage_root(reloc_root)"
+      },
+      {
+        "event_id": "mev_7a6df6bc9265edf2959e",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108420,
+          "end_byte": 108427,
+          "start_line": 4147,
+          "end_line": 4147,
+          "start_column": 4,
+          "end_column": 11,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = 0"
+      },
+      {
+        "event_id": "mev_c0d2d53698502440fc14",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "COUNTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "key.offset--",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108516,
+          "end_byte": 108528,
+          "start_line": 4156,
+          "end_line": 4156,
+          "start_column": 2,
+          "end_column": 14,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "key.offset--"
+      },
+      {
+        "event_id": "mev_f688ead1fcfaa49a9cdf",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "rc",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108606,
+          "end_byte": 108639,
+          "start_line": 4163,
+          "end_line": 4163,
+          "start_column": 1,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "rc = alloc_reloc_control(fs_info)"
+      },
+      {
+        "event_id": "mev_0f51af79e3622941ca24",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108655,
+          "end_byte": 108668,
+          "start_line": 4165,
+          "end_line": 4165,
+          "start_column": 2,
+          "end_column": 15,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = -ENOMEM"
+      },
+      {
+        "event_id": "mev_5c91be5e03a0187e2ca7",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108687,
+          "end_byte": 108719,
+          "start_line": 4169,
+          "end_line": 4169,
+          "start_column": 1,
+          "end_column": 33,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = reloc_chunk_start(fs_info)"
+      },
+      {
+        "event_id": "mev_513aa911a07873b6ebf5",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "rc->extent_root",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "extent_root",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108753,
+          "end_byte": 108800,
+          "start_line": 4173,
+          "end_line": 4173,
+          "start_column": 1,
+          "end_column": 48,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "rc->extent_root = btrfs_extent_root(fs_info, 0)"
+      },
+      {
+        "event_id": "mev_83be8fa9af157429a8bd",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "trans",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108829,
+          "end_byte": 108876,
+          "start_line": 4177,
+          "end_line": 4177,
+          "start_column": 1,
+          "end_column": 48,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "trans = btrfs_join_transaction(rc->extent_root)"
+      },
+      {
+        "event_id": "mev_8acba4240c19df643fb9",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108902,
+          "end_byte": 108922,
+          "start_line": 4179,
+          "end_line": 4179,
+          "start_column": 2,
+          "end_column": 22,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(trans)"
+      },
+      {
+        "event_id": "mev_474f33ea858c68c5fe09",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "rc->merge_reloc_tree",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "merge_reloc_tree",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 108947,
+          "end_byte": 108974,
+          "start_line": 4183,
+          "end_line": 4183,
+          "start_column": 1,
+          "end_column": 28,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "rc->merge_reloc_tree = true"
+      },
+      {
+        "event_id": "mev_b947f5852be7ce6b3a6f",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "reloc_root",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109016,
+          "end_byte": 109092,
+          "start_line": 4186,
+          "end_line": 4187,
+          "start_column": 2,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "reloc_root = list_entry(reloc_roots.next, struct btrfs_root, root_list)"
+      },
+      {
+        "event_id": "mev_008063df0b274472f8a0",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "MEMBERSHIP_REMOVE",
+        "object_ref": {
+          "role": "member",
+          "expression": "&reloc_root->root_list",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109096,
+          "end_byte": 109128,
+          "start_line": 4188,
+          "end_line": 4188,
+          "start_column": 2,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "list_del",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "list_del"
+      },
+      {
+        "event_id": "mev_e456592ee284119c3fb6",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "MEMBERSHIP_ADD",
+        "object_ref": {
+          "role": "member",
+          "expression": "&reloc_root->root_list",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": {
+          "role": "container",
+          "expression": "&rc->reloc_roots",
+          "identity": "EXACT",
+          "symbol_id": "sym_f262ed5fbc7f2645418f"
+        },
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109188,
+          "end_byte": 109253,
+          "start_line": 4191,
+          "end_line": 4192,
+          "start_column": 3,
+          "end_column": 27,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "list_add_tail",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "list_add_tail"
+      },
+      {
+        "event_id": "mev_dedfdeeee3bedf2502d1",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_root",
+          "expression": "fs_root",
+          "identity": "EXACT",
+          "symbol_id": "sym_a0e5464c40267e34e76f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109275,
+          "end_byte": 109356,
+          "start_line": 4196,
+          "end_line": 4197,
+          "start_column": 2,
+          "end_column": 15,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "fs_root = btrfs_get_fs_root(fs_info, reloc_root->root_key.offset, false)"
+      },
+      {
+        "event_id": "mev_05e8004a476006613568",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109386,
+          "end_byte": 109408,
+          "start_line": 4199,
+          "end_line": 4199,
+          "start_column": 3,
+          "end_column": 25,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(fs_root)"
+      },
+      {
+        "event_id": "mev_bb72821df4f7a0b578ff",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "MEMBERSHIP_ADD",
+        "object_ref": {
+          "role": "member",
+          "expression": "&reloc_root->root_list",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": {
+          "role": "container",
+          "expression": "&reloc_roots",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109413,
+          "end_byte": 109464,
+          "start_line": 4200,
+          "end_line": 4200,
+          "start_column": 3,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_container_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "list_add_tail",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "list_add_tail"
+      },
+      {
+        "event_id": "mev_8a1af9914701cfd5f50c",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109525,
+          "end_byte": 109559,
+          "start_line": 4205,
+          "end_line": 4205,
+          "start_column": 2,
+          "end_column": 36,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = __add_reloc_root(reloc_root)"
+      },
+      {
+        "event_id": "mev_8a4abd5337d66286fcf5",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "MEMBERSHIP_ADD",
+        "object_ref": {
+          "role": "member",
+          "expression": "&reloc_root->root_list",
+          "identity": "EXACT",
+          "symbol_id": "sym_c7595ea31fb456b72099"
+        },
+        "container_ref": {
+          "role": "container",
+          "expression": "&reloc_roots",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109603,
+          "end_byte": 109654,
+          "start_line": 4208,
+          "end_line": 4208,
+          "start_column": 3,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_container_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "list_add_tail",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "list_add_tail"
+      },
+      {
+        "event_id": "mev_c6ee68f940cd53fb9655",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "fs_root",
+          "expression": "fs_root",
+          "identity": "EXACT",
+          "symbol_id": "sym_a0e5464c40267e34e76f"
+        },
+        "container_ref": null,
+        "field_or_member": "reloc_root",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109742,
+          "end_byte": 109791,
+          "start_line": 4213,
+          "end_line": 4213,
+          "start_column": 2,
+          "end_column": 51,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "reloc.root_pointer",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "fs_root->reloc_root = btrfs_grab_root(reloc_root)"
+      },
+      {
+        "event_id": "mev_ce75aafebce9382b49c0",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109825,
+          "end_byte": 109862,
+          "start_line": 4217,
+          "end_line": 4217,
+          "start_column": 1,
+          "end_column": 38,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_commit_transaction(trans)"
+      },
+      {
+        "event_id": "mev_b7fb5c7b2da689fbda13",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_info",
+          "expression": "fs_info",
+          "identity": "EXACT",
+          "symbol_id": "sym_0b8af4abf97ddd67ef5e"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109831,
+          "end_byte": 109862,
+          "start_line": 4217,
+          "end_line": 4217,
+          "start_column": 7,
+          "end_column": 38,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "recovery_commit",
+        "callee": "btrfs_commit_transaction",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "reloc.failure.nonzero",
+          "reloc.success.zero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "btrfs_commit_transaction"
+      },
+      {
+        "event_id": "mev_dc726571537a4b790826",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "trans",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 109946,
+          "end_byte": 109993,
+          "start_line": 4225,
+          "end_line": 4225,
+          "start_column": 1,
+          "end_column": 48,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "trans = btrfs_join_transaction(rc->extent_root)"
+      },
+      {
+        "event_id": "mev_e832e6c613dd60a2b911",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110019,
+          "end_byte": 110039,
+          "start_line": 4227,
+          "end_line": 4227,
+          "start_column": 2,
+          "end_column": 22,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = PTR_ERR(trans)"
+      },
+      {
+        "event_id": "mev_10ed54b65aa224d13899",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110063,
+          "end_byte": 110100,
+          "start_line": 4230,
+          "end_line": 4230,
+          "start_column": 1,
+          "end_column": 38,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_commit_transaction(trans)"
+      },
+      {
+        "event_id": "mev_8c1c055a847962bb65b6",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_info",
+          "expression": "fs_info",
+          "identity": "EXACT",
+          "symbol_id": "sym_0b8af4abf97ddd67ef5e"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110069,
+          "end_byte": 110100,
+          "start_line": 4230,
+          "end_line": 4230,
+          "start_column": 7,
+          "end_column": 38,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "recovery_commit",
+        "callee": "btrfs_commit_transaction",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "reloc.failure.nonzero",
+          "reloc.success.zero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "btrfs_commit_transaction"
+      },
+      {
+        "event_id": "mev_b367ac9fe3870bc73d29",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret2",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110114,
+          "end_byte": 110144,
+          "start_line": 4232,
+          "end_line": 4232,
+          "start_column": 1,
+          "end_column": 31,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret2 = clean_dirty_subvols(rc)"
+      },
+      {
+        "event_id": "mev_0d5bb047e44098f409df",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110171,
+          "end_byte": 110181,
+          "start_line": 4234,
+          "end_line": 4234,
+          "start_column": 2,
+          "end_column": 12,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = ret2"
+      },
+      {
+        "event_id": "mev_147e384bd35de0bdaa93",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "fs_root",
+          "expression": "fs_root",
+          "identity": "EXACT",
+          "symbol_id": "sym_a0e5464c40267e34e76f"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110417,
+          "end_byte": 110468,
+          "start_line": 4247,
+          "end_line": 4247,
+          "start_column": 2,
+          "end_column": 53,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "fs_root = btrfs_grab_root(fs_info->data_reloc_root)"
+      },
+      {
+        "event_id": "mev_78a097a47adb196bd4b7",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+          "start_byte": 110491,
+          "end_byte": 110526,
+          "start_line": 4249,
+          "end_line": 4249,
+          "start_column": 2,
+          "end_column": 37,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": "",
+        "expression": "ret = btrfs_orphan_cleanup(fs_root)"
+      }
+    ],
+    "candidates": [
+      {
+        "candidate_id": "moc_46a9a5f60fd23c8fd704",
+        "protocol_id": "mocc.protocol_b.device_topology_rollback",
+        "operation_id": "btrfs_relocation_recovery",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "failure",
+        "exit_id": "reloc.failure",
+        "principal_objects": [
+          {
+            "role": "fs_info",
+            "expression": "fs_info",
+            "identity": "EXACT",
+            "symbol_id": "sym_0b8af4abf97ddd67ef5e"
+          }
+        ],
+        "open_effects": [
+          {
+            "effect_id": "reloc.root_pointer@mev_c6ee68f940cd53fb9655",
+            "kind": "POINTER_UPDATE",
+            "object_ref": {
+              "role": "fs_root",
+              "expression": "fs_root",
+              "identity": "EXACT",
+              "symbol_id": "sym_a0e5464c40267e34e76f"
+            },
+            "scope": "IN_MEMORY_GLOBAL",
+            "owner": "btrfs_recover_relocation",
+            "status": "OPEN",
+            "source_event": "mev_c6ee68f940cd53fb9655",
+            "required": true,
+            "spec_effect_id": "reloc.root_pointer"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "reloc.root_pointer",
+            "line": 4213,
+            "event_id": "mev_c6ee68f940cd53fb9655"
+          },
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "btrfs_commit_transaction starts recovery_commit@1",
+            "line": 4230,
+            "event_id": "mev_8c1c055a847962bb65b6"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "contract reloc.failure.nonzero: ret != 0",
+            "line": 4230,
+            "event_id": "mev_8c1c055a847962bb65b6"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "btrfs_commit_transaction -> ret != 0 (recovery_commit@1)",
+            "line": 4230,
+            "event_id": "mev_8c1c055a847962bb65b6"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "return ret;",
+            "line": 4252,
+            "event_id": ""
+          },
+          {
+            "kind": "handler",
+            "source": "linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c",
+            "detail": "failure reaches function return",
+            "line": 4252,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high"
+      }
+    ],
+    "unknown": [],
+    "cfg_snapshot": {
+      "entry": 0,
+      "exit": 1,
+      "blocks": 171,
+      "edges": 194,
+      "unsupported_nodes": [],
+      "unsupported_blocks": {},
+      "complete": true
+    }
+  }
+]

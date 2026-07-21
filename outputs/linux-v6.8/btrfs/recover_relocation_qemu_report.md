@@ -1,5 +1,7 @@
 # Btrfs recover_relocation QEMU fault-injection report
 
+> MOCC-SE migration note (2026-07-21): this report is dynamic evidence for `incomplete_failure_completion` and the rule that transaction/global error handling cannot be assumed to own every in-memory metadata effect.
+
 Date: 2026-07-11
 
 Target:

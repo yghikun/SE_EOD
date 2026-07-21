@@ -1,5 +1,7 @@
 # Interprocedural Ablation
 
+> MOCC-SE migration note (2026-07-21): this report is a CFG development baseline and contains no independent metadata-protocol evaluation.
+
 Generated: 2026-07-12T17:03:35.945563+00:00
 
 | Baseline | Interprocedural | Retained | Removed | Added | Reduction |

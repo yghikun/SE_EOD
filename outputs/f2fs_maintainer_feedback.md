@@ -1,5 +1,7 @@
 # F2FS Maintainer Feedback
 
+> MOCC-SE migration note (2026-07-21): this file records resource-lifetime review evidence. It remains useful for the SE-EOD baseline but is not itself evidence for metadata operation completion consistency.
+
 Date: 2026-07-21
 
 This file records upstream review outcomes for the three F2FS folio-lifetime

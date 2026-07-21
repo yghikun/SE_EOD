@@ -1,5 +1,7 @@
 # Confirmed Bugs
 
+> MOCC-SE use (2026-07-21): these findings are motivating examples and regression targets, not an independent evaluation set. Metadata-focused records map to `failure_reported_as_success` (#1, #2, #5, #8, #13), `incomplete_failure_completion` (#7, #17-#19), and `metadata_state_divergence` (#4, #16). Pure resource-lifetime findings remain SE-EOD baseline evidence and are not the primary MOCC-SE contribution.
+
 Date: 2026-07-19
 
 This file records the ext4, btrfs, and XFS issues that we have checked beyond raw

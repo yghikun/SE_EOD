@@ -1,0 +1,1077 @@
+[
+  {
+    "protocol_id": "mocc.protocol_a.replay_recovery",
+    "operation_id": "ext4_replay_inode",
+    "function": "ext4_fc_replay_inode",
+    "source_file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+    "source_version": "linux-v7.1",
+    "events": [
+      {
+        "event_id": "mev_d627fbb5802663045b2d",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ino",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 46783,
+          "end_byte": 46817,
+          "start_line": 1533,
+          "end_line": 1533,
+          "start_column": 1,
+          "end_column": 35,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_4eb16c234c40b634882a",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 46864,
+          "end_byte": 46908,
+          "start_line": 1536,
+          "end_line": 1536,
+          "start_column": 1,
+          "end_column": 45,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_fae5a9e7098768a725b8",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 46980,
+          "end_byte": 46992,
+          "start_line": 1541,
+          "end_line": 1541,
+          "start_column": 1,
+          "end_column": 13,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_9d310cd5453cc5f591b6",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 46996,
+          "end_byte": 47040,
+          "start_line": 1543,
+          "end_line": 1543,
+          "start_column": 1,
+          "end_column": 45,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_322a91ac55846ff6126a",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47002,
+          "end_byte": 47040,
+          "start_line": 1543,
+          "end_line": 1543,
+          "start_column": 7,
+          "end_column": 45,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "record_modified",
+        "callee": "ext4_fc_record_modified_inode",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_2c4571f4e73cd382ff65",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "raw_fc_inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47066,
+          "end_byte": 47157,
+          "start_line": 1547,
+          "end_line": 1548,
+          "start_column": 1,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_d1dda3983f256d84b9ff",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47160,
+          "end_byte": 47203,
+          "start_line": 1549,
+          "end_line": 1549,
+          "start_column": 1,
+          "end_column": 44,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_676762b33840132f9de0",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47166,
+          "end_byte": 47203,
+          "start_line": 1549,
+          "end_line": 1549,
+          "start_column": 7,
+          "end_column": 44,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "get_inode_loc",
+        "callee": "ext4_get_fc_inode_loc",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_fdb13c9d17bba9e18da8",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode_len",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47229,
+          "end_byte": 47282,
+          "start_line": 1553,
+          "end_line": 1553,
+          "start_column": 1,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_57dd181f750859836a38",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "raw_inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47285,
+          "end_byte": 47318,
+          "start_line": 1554,
+          "end_line": 1554,
+          "start_column": 1,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_b8f7ab5ce23069ad634d",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "eh",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47548,
+          "end_byte": 47606,
+          "start_line": 1560,
+          "end_line": 1560,
+          "start_column": 2,
+          "end_column": 60,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_30b5c72d64e7c9f9c981",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "eh->eh_magic",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "eh_magic",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47682,
+          "end_byte": 47711,
+          "start_line": 1563,
+          "end_line": 1563,
+          "start_column": 3,
+          "end_column": 32,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_691bce4485567710ff99",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "eh->eh_max",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "eh_max",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 47716,
+          "end_byte": 47850,
+          "start_line": 1564,
+          "end_line": 1567,
+          "start_column": 3,
+          "end_column": 34,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_3a838e3236d355d4128a",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48059,
+          "end_byte": 48112,
+          "start_line": 1575,
+          "end_line": 1575,
+          "start_column": 1,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_702f54dc5fb9b16e4a29",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48065,
+          "end_byte": 48112,
+          "start_line": 1575,
+          "end_line": 1575,
+          "start_column": 7,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "dirty_metadata",
+        "callee": "ext4_handle_dirty_metadata",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_62be908986464fd30323",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48144,
+          "end_byte": 48176,
+          "start_line": 1578,
+          "end_line": 1578,
+          "start_column": 1,
+          "end_column": 33,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_61a7081e81efb1c057c9",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48150,
+          "end_byte": 48176,
+          "start_line": 1578,
+          "end_line": 1578,
+          "start_column": 7,
+          "end_column": 33,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "sync_buffer",
+        "callee": "sync_dirty_buffer",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_4486281bcdcc39fcae61",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48208,
+          "end_byte": 48243,
+          "start_line": 1581,
+          "end_line": 1581,
+          "start_column": 1,
+          "end_column": 36,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_5b13b31c900c45f5f361",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48214,
+          "end_byte": 48243,
+          "start_line": 1581,
+          "end_line": 1581,
+          "start_column": 7,
+          "end_column": 36,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "mark_inode_used",
+        "callee": "ext4_mark_inode_used",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_cdf0eb490310b78e001e",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48348,
+          "end_byte": 48392,
+          "start_line": 1586,
+          "end_line": 1586,
+          "start_column": 1,
+          "end_column": 45,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_97f2d4c50fec42600d2d",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48452,
+          "end_byte": 48464,
+          "start_line": 1589,
+          "end_line": 1589,
+          "start_column": 2,
+          "end_column": 14,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_4accdb604023a80c044f",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48468,
+          "end_byte": 48487,
+          "start_line": 1590,
+          "end_line": 1590,
+          "start_column": 2,
+          "end_column": 21,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_f8a3d204147680bd81e9",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "inode->i_generation",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "i_generation",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48786,
+          "end_byte": 48856,
+          "start_line": 1602,
+          "end_line": 1602,
+          "start_column": 1,
+          "end_column": 71,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_9e0288dd4df7f717ad1d",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "POINTER_UPDATE",
+        "object_ref": {
+          "role": "unknown",
+          "expression": "ret",
+          "identity": "UNKNOWN",
+          "symbol_id": ""
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "may",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48958,
+          "end_byte": 49011,
+          "start_line": 1606,
+          "end_line": 1606,
+          "start_column": 1,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [
+          "unknown_object_identity"
+        ],
+        "callee_role_id": "",
+        "callee": "",
+        "result_symbol": "",
+        "return_contract_ids": [],
+        "necessary": false,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_f68a1156ce432331e43a",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 48964,
+          "end_byte": 49011,
+          "start_line": 1606,
+          "end_line": 1606,
+          "start_column": 7,
+          "end_column": 54,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "dirty_metadata",
+        "callee": "ext4_handle_dirty_metadata",
+        "result_symbol": "ret",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      },
+      {
+        "event_id": "mev_a374bc826bcba3d6ce2b",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "kind": "METADATA_UPDATE",
+        "object_ref": {
+          "role": "operation",
+          "expression": "ext4_fc_replay_inode",
+          "identity": "EXACT",
+          "symbol_id": "fn_e198ad3893f58fe0331d"
+        },
+        "container_ref": null,
+        "field_or_member": "",
+        "guard": "always",
+        "strength": "must",
+        "source_location": {
+          "file": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+          "start_byte": 49014,
+          "end_byte": 49040,
+          "start_line": 1607,
+          "end_line": 1607,
+          "start_column": 1,
+          "end_column": 27,
+          "expansion_file": "",
+          "expansion_start_byte": 0,
+          "expansion_end_byte": 0
+        },
+        "uncertainty_causes": [],
+        "callee_role_id": "sync_buffer",
+        "callee": "sync_dirty_buffer",
+        "result_symbol": "",
+        "return_contract_ids": [
+          "inode.failure.nonzero"
+        ],
+        "necessary": true,
+        "effect_spec_id": "",
+        "compensation_spec_id": "",
+        "handler_spec_id": ""
+      }
+    ],
+    "candidates": [],
+    "unknown": [
+      {
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "ext4_replay_inode",
+        "exit_kind": "success",
+        "exit_id": "",
+        "classification": "ANALYSIS_UNKNOWN",
+        "reasons": [
+          "return_outcome_unknown"
+        ],
+        "representative_witness": [
+          {
+            "kind": "necessary_step",
+            "source": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+            "detail": "sync_dirty_buffer starts sync_buffer@1",
+            "line": 1607,
+            "event_id": "mev_a374bc826bcba3d6ce2b"
+          },
+          {
+            "kind": "branch",
+            "source": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+            "detail": "contract inode.failure.nonzero: ret != 0",
+            "line": 1607,
+            "event_id": "mev_a374bc826bcba3d6ce2b"
+          },
+          {
+            "kind": "failure",
+            "source": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+            "detail": "sync_dirty_buffer -> ret != 0 (sync_buffer@1)",
+            "line": 1607,
+            "event_id": "mev_a374bc826bcba3d6ce2b"
+          },
+          {
+            "kind": "exit",
+            "source": "linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c",
+            "detail": "return ret;",
+            "line": 1615,
+            "event_id": ""
+          }
+        ]
+      }
+    ],
+    "cfg_snapshot": {
+      "entry": 0,
+      "exit": 1,
+      "blocks": 90,
+      "edges": 101,
+      "unsupported_nodes": [],
+      "unsupported_blocks": {},
+      "complete": true
+    }
+  }
+]

@@ -1,5 +1,7 @@
 # Benchmark Evaluation
 
+> MOCC-SE migration note (2026-07-21): this is an SE-EOD development-pilot result. It predates the metadata completion protocols and must not be reported as an independent MOCC-SE effectiveness result.
+
 > This report evaluates one annotation pass. It is not an independent gold-set result until a second reviewer and adjudication are complete.
 
 - Samples: 30

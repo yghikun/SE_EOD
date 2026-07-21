@@ -1,5 +1,7 @@
 # experiment-v1.3.3 Model-Refinement Comparison
 
+> MOCC-SE migration note (2026-07-21): this is the refined SE-EOD resource-state baseline. Candidate reduction is not a MOCC-SE accuracy claim.
+
 Generated: 2026-07-12T13:18:55.587221+00:00
 
 ## Candidate Counts
