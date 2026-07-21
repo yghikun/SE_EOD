@@ -17,7 +17,7 @@ It does not mean upstream acceptance unless explicitly stated.
 | 4 | ext4 | `ext4_expand_extra_isize_ea()` | stale error after successful retry | patch submitted / under review | `/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch` |
 | 5 | ext4 | `ext4_fc_replay_inode()` | `iloc.bh` leak plus swallowed error | already fixed upstream / duplicate finding | upstream commit `ec0a7500d8ea` |
 | 6 | btrfs | `__add_reloc_root()` | `mapping_node` leak on duplicate insert | patch v2 submitted; reviewer reply received | `[PATCH v2] btrfs: free mapping node on duplicate reloc root insert` |
-| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed under condition; patch submitted | `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`, `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md` |
+| 7 | btrfs | `btrfs_recover_relocation()` | missing `reloc_root` cleanup on recovery failure path | QEMU fault-injection confirmed; added to btrfs for-next | `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`, `outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md` |
 | 8 | xfs | `xfs_rtcopy_summary()` | swallowed summary-copy error | source-level confirmed in v6.8; fixed in later mainline | v6.8 returns `0` from `out:`; current mainline returns `error` |
 | 9 | ext4 | `ext4_dx_add_entry()` | `bh2` `buffer_head` leak | source-level confirmed in v6.8; fixed in later mainline | v6.8 htree split error paths omitted `brelse(bh2)`; later code adds it |
 | 10 | ext4 | `ext4_ext_shift_extents()` | `ext4_ext_path` leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline sends `!extent` to `out:` and releases `path` |
@@ -25,18 +25,19 @@ It does not mean upstream acceptance unless explicitly stated.
 | 12 | XFS | `xfs_qm_quotacheck_dqadjust()` | dquot reference leak | source-level confirmed in v6.14; fixed in latest mainline | latest mainline routes attach-buffer failure through `xfs_qm_dqrele(dqp)` |
 | 13 | XFS | `xfs_rtginode_ensure()` | swallowed `xfs_rtginode_load()` error | patch submitted | `[PATCH] xfs: propagate errors from xfs_rtginode_load`, linux-xfs thread shown in local submission screenshot |
 | 14 | F2FS | `find_in_level()` | `dentry_folio` leak on `find_in_block()` error | v2 submitted; Reviewed-by received | `[PATCH v2] f2fs: fix dentry folio leak in find_in_level`, Message-ID `<20260719084514.586-1-3497809730@qq.com>` |
-| 15 | F2FS | `f2fs_move_inline_dirents()` | `ifolio` leak on `f2fs_reserve_block()` failure | patch submitted; maintainer clarification pending | `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`, reply sent as plain text, Message-ID `<20260719090519.1473-1-3497809730@qq.com>` |
-| 16 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch v2 submitted; Reviewed-by received | `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com` |
-| 17 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
-| 18 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
-| 19 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
+| 15 | btrfs | `reserve_chunk_space()` | zoned positive-success return skips chunk metadata reservation | patch v2 submitted; Reviewed-by received | `[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation`, lore Message-ID `tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com` |
+| 16 | btrfs | `btrfs_init_new_device()` | failed sprout device left on transaction update list | patch submitted | `[PATCH 1/3] btrfs: detach failed sprout device from transaction update list`, lore Message-ID `tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com` |
+| 17 | btrfs | `btrfs_init_new_device()` | active device pointers left on failed sprout device | patch submitted | `[PATCH 2/3] btrfs: restore active device pointers after failed sprout`, lore Message-ID `tencent_3A451E4FED103C3756888298712A161E2607@qq.com` |
+| 18 | btrfs | `btrfs_init_new_device()` | sprout fs_devices state not rolled back after device-add failure | patch submitted | `[PATCH 3/3] btrfs: roll back sprout setup after device add failure`, lore Message-ID `tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com` |
 
-As of 2026-07-19, 6 of the 19 confirmed bug records are already fixed
-upstream.  The other 13 records are covered by submitted patches or patch
+As of 2026-07-21, 6 of the 18 confirmed bug records are already fixed
+upstream.  The other 12 records are covered by submitted patches or patch
 series, but are not recorded here as upstream merged.  Bugs #1 and #2 share
-one ext4 patch, and bugs #17-#19 are covered by one 3-patch btrfs sprout
+one ext4 patch, and bugs #16-#18 are covered by one 3-patch btrfs sprout
 rollback series.  Patch-email counts are intentionally not used as bug counts:
-one bug can produce multiple revisions, replies, or series patches.
+one bug can produce multiple revisions, replies, or series patches.  One of the
+12 non-mainline records (#7) has now been accepted into the btrfs `for-next`
+branch and is awaiting the normal merge into mainline.
 
 ## ext4
 
@@ -271,6 +272,8 @@ Evidence:
 - Mailing-list evidence checked on 2026-07-13 shows the submitted patch from
   Guanghui Yang with subject
   `[PATCH] btrfs: drop recovered reloc root refs on recovery failure`.
+- David Sterba replied on 2026-07-20: `Added to for-next, thanks.`
+  Reply Message-ID: `<20260720111913.GE10684@twin.jikos.cz>`.
 - Test target: Linux 6.8 Btrfs recovery.
 - Pending relocation image contained 25 `TREE_RELOC ROOT_ITEM` records.
 - Normal recovery succeeded.
@@ -296,11 +299,11 @@ assigned during `btrfs_recover_relocation()`, and explicitly clear/drop those
 references on errors before `clean_dirty_subvols()`, independent of
 `BTRFS_FS_ERROR`.
 
-Status: confirmed cleanup-defect candidate under the tested fault-injection
-condition, with a follow-up fix locally validated and submitted upstream.  It
-is not yet recorded as upstream merged.
+Status: confirmed by QEMU/fault injection; the follow-up fix was accepted into
+the btrfs `for-next` branch on 2026-07-20.  It is not yet recorded as merged in
+Linus's mainline.
 
-### 16. `fs/btrfs/block-group.c::reserve_chunk_space`
+### 15. `fs/btrfs/block-group.c::reserve_chunk_space`
 
 Bug type: positive zoned activation success return skips chunk metadata
 reservation.
@@ -391,7 +394,7 @@ Submitted patch:
 Status: confirmed by targeted zoned-device reproduction on Linux 6.14 and
 patch v2 submitted.  Not recorded as upstream merged.
 
-### 17. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 16. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: failed sprout device remains linked on the transaction device update
 list.
@@ -422,7 +425,7 @@ Status: confirmed by targeted seed/sprout fault injection and patch submitted
 as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
 recorded as upstream merged.
 
-### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 17. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: active device pointers left on a failed sprout device.
 
@@ -445,7 +448,7 @@ Status: confirmed by targeted seed/sprout fault injection and patch submitted
 as part of `[PATCH 0/3] btrfs: fix failed sprout device add rollback`.  Not
 recorded as upstream merged.
 
-### 19. `fs/btrfs/volumes.c::btrfs_init_new_device`
+### 18. `fs/btrfs/volumes.c::btrfs_init_new_device`
 
 Bug type: sprout `fs_devices` state is not rolled back after device-add
 failure.
@@ -601,31 +604,6 @@ Evidence:
 
 Status: confirmed; v2 submitted with the requested metadata and Reviewed-by.
 
-### 15. `fs/f2fs/inline.c::f2fs_move_inline_dirents`
-
-Bug type: `ifolio` reference leak on `f2fs_reserve_block()` failure.
-
-`f2fs_move_inline_dirents()` documents that the caller grabs `ifolio`, and that
-the function should release it on any error.  The cache-folio allocation
-failure path already releases `ifolio`, but the `f2fs_reserve_block()` failure
-path only released the newly grabbed folio through the shared `out` label.
-
-The submitted fix releases `ifolio` on this error path only while
-`dn.inode_folio` is still set.  The remaining review question is whether the
-callee or the enclosing inline-directory conversion already owns that cleanup.
-
-Evidence:
-
-- Source-level confirmation in latest mainline sparse checkout based on
-  `a13c140cc289c0b7b3770bce5b3ad42ab35074aa`.
-- Patch Message-ID: `<20260713064043.1837-1-3497809730@qq.com>`
-- Patch subject: `[PATCH] f2fs: fix ifolio leak in f2fs_move_inline_dirents`
-- Chao Yu asked whether `f2fs_reserve_block()` already handles this error
-  case.  A plain-text reply explaining the caller-owned folio path was sent
-  with Message-ID `<20260719090519.1473-1-3497809730@qq.com>`.
-
-Status: confirmed source-level candidate; maintainer clarification is pending.
-
 ## ext4
 
 ### 9. `fs/ext4/namei.c::ext4_dx_add_entry`
@@ -686,6 +664,13 @@ The following candidates should not be presented as confirmed bugs yet:
   caller owns the inode-folio cleanup.  The proposed patch was withdrawn and
   must not be counted as a confirmed bug or submitted fix.  Chao Yu's review:
   `https://lore.kernel.org/linux-f2fs-devel/bfb4dffb-e02a-480c-bb91-29cf97b48e66@kernel.org/`.
+
+- `fs/f2fs/inline.c::f2fs_move_inline_dirents`: `f2fs_reserve_block()` calls
+  `f2fs_put_dnode(dn)` whenever `err` is non-zero because its condition is
+  `if (err || need_put)`.  That releases `dn.inode_folio` on the reported
+  failure path even when `need_put` is false.  Chao Yu identified the missed
+  `err` branch, and the patch was withdrawn on 2026-07-21.  Review:
+  `https://lore.kernel.org/linux-f2fs-devel/b3a3d74c-338d-422f-b2c7-84ad00a9187d@kernel.org/`.
 
 - `fs/btrfs/zoned.c::btrfs_load_block_group_zone_info`: likely true from local
   cleanup structure, but still needs a reachability check for the zoned/RST

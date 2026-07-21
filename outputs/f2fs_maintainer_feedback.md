@@ -1,6 +1,6 @@
 # F2FS Maintainer Feedback
 
-Date: 2026-07-19
+Date: 2026-07-21
 
 This file records upstream review outcomes for the three F2FS folio-lifetime
 patches submitted in July 2026.  It separates maintainer-confirmed results from
@@ -41,14 +41,19 @@ bug counts.
   `https://lore.kernel.org/linux-f2fs-devel/c9081653-4295-4605-b543-ee84000b1ba4@kernel.org/`
 - Technical clarification reply Message-ID:
   `<20260719090519.1473-1-3497809730@qq.com>`
-- Current classification: retained as a source-level confirmed candidate based
-  on the caller-owned folio analysis, but final maintainer resolution is
-  pending.  Do not send a v2 until that reply arrives.
+- Follow-up review:
+  `https://lore.kernel.org/linux-f2fs-devel/b3a3d74c-338d-422f-b2c7-84ad00a9187d@kernel.org/`
+- Final maintainer result: Chao Yu pointed out that `err` being non-zero makes
+  `if (err || need_put)` call `f2fs_put_dnode(dn)` regardless of `need_put`.
+  This releases `dn.inode_folio` on the proposed error path.
+- Current classification: false positive after maintainer review; patch
+  withdrawn on 2026-07-21; excluded from confirmed-bug and submitted-fix
+  totals.
 
 ## Current Count Impact
 
-- Confirmed bug records: 19, reduced from 20.
+- Confirmed bug records: 18, reduced from 20 after two F2FS false positives.
 - Already fixed in upstream/mainline: 6.
-- Submitted or under review and not recorded as merged: 13.
-- `f2fs_get_new_data_folio()` is not included in any of those counts.
-
+- Submitted or under review and not recorded as merged: 12.
+- `f2fs_get_new_data_folio()` and `f2fs_move_inline_dirents()` are not included
+  in any of those counts.

@@ -125,6 +125,17 @@
       "description": "Upstream F2FS maintainer review confirmed that the caller handles the caller-provided inode folio when f2fs_reserve_block() fails. The submitted patch was withdrawn on 2026-07-19."
     },
     {
+      "rule_id": "f2fs.reviewed.f2fs_move_inline_dirents.missing_cleanup",
+      "file": "fs/f2fs/inline.c",
+      "function": "f2fs_move_inline_dirents",
+      "candidate_type": "missing_cleanup",
+      "error_lines": [
+        430
+      ],
+      "reason_code": "upstream_maintainer_false_positive",
+      "description": "Upstream F2FS maintainer review confirmed that a non-zero err makes f2fs_reserve_block() call f2fs_put_dnode() through if (err || need_put), releasing dn.inode_folio on the proposed error path. The submitted patch was withdrawn on 2026-07-21."
+    },
+    {
       "rule_id": "f2fs.reviewed.f2fs_bmap_compress.error_swallowed",
       "file": "fs/f2fs/data.c",
       "function": "f2fs_bmap_compress",
