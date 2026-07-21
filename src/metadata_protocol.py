@@ -141,11 +141,91 @@ class CalleeRoleSpec:
 
 
 @dataclass(frozen=True)
+class DiscoverySpec:
+    required_callees: tuple[str, ...] = ()
+    required_fields: tuple[str, ...] = ()
+    forbidden_callees: tuple[str, ...] = ()
+    semantic_patterns: tuple[str, ...] = ()
+    minimum_role_coverage: float = 0.5
+
+    @classmethod
+    def from_dict(
+        cls, data: Mapping[str, Any], path: str = "discovery"
+    ) -> "DiscoverySpec":
+        value = _mapping(data, path)
+        _known_keys(
+            value,
+            {
+                "required_callees",
+                "required_fields",
+                "forbidden_callees",
+                "semantic_patterns",
+                "minimum_role_coverage",
+            },
+            path,
+        )
+        minimum_role_coverage = _number(
+            value,
+            "minimum_role_coverage",
+            path,
+            default=0.5,
+        )
+        if not 0.0 <= minimum_role_coverage <= 1.0:
+            raise MetadataProtocolValidationError(
+                f"{path}.minimum_role_coverage",
+                "expected a number between 0.0 and 1.0",
+            )
+        semantic_patterns = _string_tuple(
+            value, "semantic_patterns", path, optional=True
+        )
+        supported_patterns = {
+            "failure_return_mismatch",
+            "mutation_failure_cleanup",
+            "retry_return_provenance",
+            "conditional_accounting",
+        }
+        unknown_patterns = sorted(set(semantic_patterns) - supported_patterns)
+        if unknown_patterns:
+            raise MetadataProtocolValidationError(
+                f"{path}.semantic_patterns",
+                f"unsupported semantic pattern(s): {', '.join(unknown_patterns)}",
+            )
+        return cls(
+            required_callees=_string_tuple(
+                value, "required_callees", path, optional=True
+            ),
+            required_fields=_string_tuple(
+                value, "required_fields", path, optional=True
+            ),
+            forbidden_callees=_string_tuple(
+                value, "forbidden_callees", path, optional=True
+            ),
+            semantic_patterns=semantic_patterns,
+            minimum_role_coverage=minimum_role_coverage,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        if self.required_callees:
+            data["required_callees"] = list(self.required_callees)
+        if self.required_fields:
+            data["required_fields"] = list(self.required_fields)
+        if self.forbidden_callees:
+            data["forbidden_callees"] = list(self.forbidden_callees)
+        if self.semantic_patterns:
+            data["semantic_patterns"] = list(self.semantic_patterns)
+        if self.minimum_role_coverage != 0.5:
+            data["minimum_role_coverage"] = self.minimum_role_coverage
+        return data
+
+
+@dataclass(frozen=True)
 class OperationEntry:
     operation_id: str
     entry_functions: tuple[str, ...]
     principal_objects: tuple[ObjectRef, ...]
     callee_roles: tuple[CalleeRoleSpec, ...] = ()
+    discovery: DiscoverySpec = DiscoverySpec()
 
     @classmethod
     def from_dict(
@@ -154,7 +234,13 @@ class OperationEntry:
         value = _mapping(data, path)
         _known_keys(
             value,
-            {"operation_id", "entry_functions", "principal_objects", "callee_roles"},
+            {
+                "operation_id",
+                "entry_functions",
+                "principal_objects",
+                "callee_roles",
+                "discovery",
+            },
             path,
         )
         objects = _object_list(value, "principal_objects", path, ObjectRef.from_dict)
@@ -163,18 +249,29 @@ class OperationEntry:
         _unique((item.role_id for item in roles), f"{path}.callee_roles", "role_id")
         return cls(
             operation_id=_identifier(value, "operation_id", path),
-            entry_functions=_string_tuple(value, "entry_functions", path, nonempty=True),
+            entry_functions=_string_tuple(
+                value, "entry_functions", path, optional=True
+            ),
             principal_objects=objects,
             callee_roles=roles,
+            discovery=(
+                DiscoverySpec.from_dict(value["discovery"], f"{path}.discovery")
+                if "discovery" in value
+                else DiscoverySpec()
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "operation_id": self.operation_id,
             "entry_functions": list(self.entry_functions),
             "principal_objects": [item.to_dict() for item in self.principal_objects],
             "callee_roles": [item.to_dict() for item in self.callee_roles],
         }
+        discovery = self.discovery.to_dict()
+        if discovery:
+            data["discovery"] = discovery
+        return data
 
 
 @dataclass(frozen=True)
@@ -877,6 +974,19 @@ def _integer(data: Mapping[str, Any], key: str, path: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise MetadataProtocolValidationError(f"{path}.{key}", "expected an integer")
     return value
+
+
+def _number(
+    data: Mapping[str, Any],
+    key: str,
+    path: str,
+    *,
+    default: float,
+) -> float:
+    value = data.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise MetadataProtocolValidationError(f"{path}.{key}", "expected a number")
+    return float(value)
 
 
 def _boolean(data: Mapping[str, Any], key: str, path: str, *, default: bool) -> bool:

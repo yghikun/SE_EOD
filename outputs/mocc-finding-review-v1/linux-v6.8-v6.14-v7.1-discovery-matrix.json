@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "reports": [
+    {
+      "version": "v6.8",
+      "path": "outputs/mocc-discovery-v1-linux-v6.8.json",
+      "source_version": "linux-v6.8",
+      "source_root": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs"
+    },
+    {
+      "version": "v6.14",
+      "path": "outputs/mocc-discovery-v1-linux-v6.14.json",
+      "source_version": "linux-v6.14",
+      "source_root": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.14-fs/fs"
+    },
+    {
+      "version": "v7.1",
+      "path": "outputs/mocc-discovery-v1-linux-v7.1.json",
+      "source_version": "linux-v7.1",
+      "source_root": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs"
+    }
+  ],
+  "summary": {
+    "versions": [
+      "v6.8",
+      "v6.14",
+      "v7.1"
+    ],
+    "version_summaries": {
+      "v6.8": {
+        "scanned_files": 278,
+        "scanned_functions": 8544,
+        "applicable_functions": 8,
+        "protocol_candidate_occurrences": 19,
+        "protocol_candidate_families": 19,
+        "discovery_review_occurrences": 0,
+        "discovery_review_families": 0,
+        "analysis_unknown": 2,
+        "discovery_unknown": 0,
+        "skip_reasons": {
+          "filesystem_not_applicable": 13972,
+          "function_not_applicable": 8536,
+          "no_semantic_operation_match": 11652
+        }
+      },
+      "v6.14": {
+        "scanned_files": 394,
+        "scanned_functions": 12280,
+        "applicable_functions": 9,
+        "protocol_candidate_occurrences": 20,
+        "protocol_candidate_families": 20,
+        "discovery_review_occurrences": 0,
+        "discovery_review_families": 0,
+        "analysis_unknown": 2,
+        "discovery_unknown": 0,
+        "skip_reasons": {
+          "filesystem_not_applicable": 23834,
+          "function_not_applicable": 12271,
+          "no_semantic_operation_match": 12997
+        }
+      },
+      "v7.1": {
+        "scanned_files": 334,
+        "scanned_functions": 10302,
+        "applicable_functions": 9,
+        "protocol_candidate_occurrences": 14,
+        "protocol_candidate_families": 14,
+        "discovery_review_occurrences": 0,
+        "discovery_review_families": 0,
+        "analysis_unknown": 3,
+        "discovery_unknown": 0,
+        "skip_reasons": {
+          "filesystem_not_applicable": 17212,
+          "function_not_applicable": 10293,
+          "no_semantic_operation_match": 13685
+        }
+      }
+    },
+    "rows": 9,
+    "candidate_occurrences_by_version": {
+      "v6.8": 19,
+      "v6.14": 20,
+      "v7.1": 14
+    },
+    "persistent_candidate_functions": [
+      "ext4_fc_replay_add_range",
+      "ext4_fc_replay_del_range",
+      "btrfs_recover_relocation",
+      "btrfs_init_new_device",
+      "reserve_chunk_space",
+      "ext4_expand_extra_isize_ea"
+    ],
+    "candidate_removed_functions": [
+      "ext4_fc_replay_inode",
+      "xfs_rtcopy_summary"
+    ],
+    "candidate_added_functions": [
+      "xfs_rtginode_ensure"
+    ]
+  },
+  "rows": [
+    {
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 5,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 5,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 5,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_del_range",
+      "function": "ext4_fc_replay_del_range",
+      "source_file": "ext4/fast_commit.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 3,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 3,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 3,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 5,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 5,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 0,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "xfs_copy_summary",
+      "function": "xfs_rtcopy_summary",
+      "source_file": "xfs/xfs_rtalloc.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 2,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 2,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 0,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "xfs_rtginode_ensure",
+      "function": "xfs_rtginode_ensure",
+      "source_file": "xfs/xfs_rtalloc.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 0,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 2,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "operation_id": "btrfs_relocation_recovery",
+      "function": "btrfs_recover_relocation",
+      "source_file": "btrfs/relocation.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "operation_id": "btrfs_sprout_device_add",
+      "function": "btrfs_init_new_device",
+      "source_file": "btrfs/volumes.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        },
+        "v6.14": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        },
+        "v7.1": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "operation_id": "btrfs_chunk_activation_reservation",
+      "function": "reserve_chunk_space",
+      "source_file": "btrfs/block-group.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        },
+        "v6.14": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        },
+        "v7.1": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 1
+        }
+      }
+    },
+    {
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "operation_id": "ext4_extra_isize_fallback",
+      "function": "ext4_expand_extra_isize_ea",
+      "source_file": "ext4/xattr.c",
+      "version_counts": {
+        "v6.8": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v6.14": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        },
+        "v7.1": {
+          "protocol_candidates": 1,
+          "discovery_reviews": 0,
+          "analysis_unknown": 0
+        }
+      }
+    }
+  ]
+}

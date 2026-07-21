@@ -69,6 +69,54 @@ def test_json_write_and_read_round_trip(tmp_path):
     assert target.read_text(encoding="utf-8").endswith("\n")
 
 
+def test_operation_discovery_context_is_optional_and_round_trips():
+    payload = _payload()
+    payload["operations"][0]["discovery"] = {
+        "required_callees": ["load_replay_record"],
+        "required_fields": ["i_extra_isize"],
+        "forbidden_callees": ["bypass_replay"],
+        "semantic_patterns": ["failure_return_mismatch"],
+        "minimum_role_coverage": 0.75,
+    }
+
+    protocol = MetadataProtocol.from_dict(payload)
+    discovery = protocol.operations[0].discovery
+
+    assert discovery.required_callees == ("load_replay_record",)
+    assert discovery.required_fields == ("i_extra_isize",)
+    assert discovery.forbidden_callees == ("bypass_replay",)
+    assert discovery.semantic_patterns == ("failure_return_mismatch",)
+    assert discovery.minimum_role_coverage == 0.75
+    assert MetadataProtocol.from_json(protocol.to_json()).to_dict() == protocol.to_dict()
+
+
+def test_operation_discovery_context_rejects_invalid_coverage():
+    _raises_with(
+        lambda payload: payload["operations"][0].update(
+            {"discovery": {"minimum_role_coverage": 1.2}}
+        ),
+        r"minimum_role_coverage: expected a number between 0\.0 and 1\.0",
+    )
+
+
+def test_operation_discovery_rejects_unknown_semantic_pattern():
+    _raises_with(
+        lambda payload: payload["operations"][0].update(
+            {"discovery": {"semantic_patterns": ["function_name_guess"]}}
+        ),
+        r"semantic_patterns: unsupported semantic pattern",
+    )
+
+
+def test_operation_entry_functions_are_optional_regression_seeds():
+    payload = _payload()
+    payload["operations"][0]["entry_functions"] = []
+
+    protocol = MetadataProtocol.from_dict(payload)
+
+    assert protocol.operations[0].entry_functions == ()
+
+
 def test_enum_values_are_explicit_and_do_not_overlap_resource_state_contract():
     assert EffectKind.POINTER_UPDATE.value == "POINTER_UPDATE"
     assert EffectStatus.UNKNOWN.value == "UNKNOWN"

@@ -1,0 +1,2363 @@
+{
+  "schema_version": 1,
+  "triage_source": "outputs/mocc-finding-review-v1/linux-v6.8-initial-source-triage.json",
+  "repair_sources": [
+    "outputs/mocc-finding-review-v1/xfs_rtcopy_summary-v6.8-v6.14-v7.1-function-diff.json",
+    "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json"
+  ],
+  "summary": {
+    "triage_items": 19,
+    "items_with_repair_evidence": 7,
+    "items_without_repair_evidence": 12,
+    "repair_evidence_functions": [
+      "ext4_fc_replay_inode",
+      "xfs_rtcopy_summary"
+    ],
+    "by_protocol": {
+      "mocc.protocol_a.replay_recovery": 7
+    },
+    "by_repair_hint": {
+      "added_corruption_guard": 2,
+      "callee_set_expanded": 2,
+      "callee_set_reduced": 2,
+      "local_return_propagation_repair": 7,
+      "return_success_changed_to_error_symbol": 7
+    },
+    "interpretation": "development repair evidence only; do not use as frozen benchmark labels or confirmed bug claims"
+  },
+  "items": [
+    {
+      "review_id": "mocc_review_mocc_occurrence_1fdcd64a328daf121598",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "operation_id": "btrfs_chunk_activation_reservation",
+      "function": "reserve_chunk_space",
+      "source_file": "btrfs/block-group.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "metadata_state_divergence",
+      "exit_kind": "success",
+      "exit_id": "btrfs.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_e3566f888ab190ed0731",
+      "occurrence_fingerprint": "mocc_occurrence_1fdcd64a328daf121598",
+      "review_focus": [
+        "Confirm whether return outcome, metadata effects, and accounting state agree.",
+        "Check whether a missing reservation/accounting effect is hidden in a helper."
+      ],
+      "missing_summary_hints": [
+        "review reservation/accounting summaries for unsatisfied obligation"
+      ],
+      "unresolved_failures": [],
+      "open_effects": [],
+      "accounting_state": [
+        {
+          "obligation_id": "btrfs.pending_requires_reservation",
+          "subject": {
+            "role": "fs_info",
+            "expression": "fs_info",
+            "identity": "EXACT",
+            "symbol_id": "sym_56bc28a1e1fbe2430523"
+          },
+          "required_condition": "pending metadata work exists => matching reservation exists",
+          "observed_state": "pending_without_reservation",
+          "satisfied": false
+        }
+      ],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "btrfs/block-group.c",
+          "detail": "btrfs_zoned_activate_one_bg starts chunk_activation@1",
+          "line": 4220,
+          "event_id": "mev_1245e33aca07ff44f04c"
+        },
+        {
+          "kind": "branch",
+          "source": "btrfs/block-group.c",
+          "detail": "contract btrfs.activation.changed: ret > 0",
+          "line": 4220,
+          "event_id": "mev_1245e33aca07ff44f04c"
+        },
+        {
+          "kind": "effect_created",
+          "source": "btrfs/block-group.c",
+          "detail": "btrfs.chunk_metadata_pending",
+          "line": 4220,
+          "event_id": "mev_1245e33aca07ff44f04c"
+        },
+        {
+          "kind": "accounting_check",
+          "source": "fs_info",
+          "detail": "btrfs.pending_requires_reservation: pending_without_reservation",
+          "line": 0,
+          "event_id": ""
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/btrfs/block-group.c",
+          "detail": "<implicit return>",
+          "line": 4245,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "btrfs/block-group.c",
+          "start_line": 4216,
+          "end_line": 4224,
+          "snippet": " 4216: \t\t\t/*\n 4217: \t\t\t * We have a new chunk. We also need to activate it for\n 4218: \t\t\t * zoned filesystem.\n 4219: \t\t\t */\n 4220: \t\t\tret = btrfs_zoned_activate_one_bg(fs_info, info, true);\n 4221: \t\t\tif (ret < 0)\n 4222: \t\t\t\treturn;\n 4223: \n 4224: \t\t\t/*"
+        },
+        {
+          "source_file": "btrfs/block-group.c",
+          "start_line": 4241,
+          "end_line": 4249,
+          "snippet": " 4241: \t\t\t\t\t  bytes, BTRFS_RESERVE_NO_FLUSH);\n 4242: \t\tif (!ret)\n 4243: \t\t\ttrans->chunk_bytes_reserved += bytes;\n 4244: \t}\n 4245: }\n 4246: \n 4247: /*\n 4248:  * Reserve space in the system space for allocating or removing a chunk.\n 4249:  * The caller must be holding fs_info->chunk_mutex."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "The activation-changed path is modeled by ret > 0. The later reservation call is under if (!ret), so that path skips btrfs_block_rsv_add and reaches the void success exit with pending chunk metadata work.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep as a Protocol C finding candidate and compare against later/fixed versions before paper-stage adjudication.",
+        "notes": "This is source-level development triage only; it is not counted as benchmark evidence."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_1fdcd64a328daf121598",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "The activation-changed path is modeled by ret > 0. The later reservation call is under if (!ret), so that path skips btrfs_block_rsv_add and reaches the void success exit with pending chunk metadata work.",
+          "This is source-level development triage only; it is not counted as benchmark evidence."
+        ],
+        "development_followups": [
+          "Keep as a Protocol C finding candidate and compare against later/fixed versions before paper-stage adjudication."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_1c504a8198f68f2b16af",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "operation_id": "btrfs_relocation_recovery",
+      "function": "btrfs_recover_relocation",
+      "source_file": "btrfs/relocation.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "incomplete_failure_completion",
+      "exit_kind": "failure",
+      "exit_id": "reloc.failure",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_b03a06d0c674eaf41b1b",
+      "occurrence_fingerprint": "mocc_occurrence_1c504a8198f68f2b16af",
+      "review_focus": [
+        "Confirm whether each open effect is compensated or transferred on failure.",
+        "Check callee summaries for cleanup hidden behind helper calls."
+      ],
+      "missing_summary_hints": [
+        "review compensation or handler summaries for open metadata effects"
+      ],
+      "unresolved_failures": [],
+      "open_effects": [
+        {
+          "effect_id": "reloc.root_pointer@mev_88fcc233fa47fd06f2e0",
+          "kind": "POINTER_UPDATE",
+          "object_ref": {
+            "role": "fs_root",
+            "expression": "fs_root",
+            "identity": "EXACT",
+            "symbol_id": "sym_630cec956fcc409b7f5b"
+          },
+          "scope": "IN_MEMORY_GLOBAL",
+          "owner": "btrfs_recover_relocation",
+          "status": "OPEN",
+          "source_event": "mev_88fcc233fa47fd06f2e0",
+          "required": true,
+          "spec_effect_id": "reloc.root_pointer"
+        }
+      ],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "effect_created",
+          "source": "btrfs/relocation.c",
+          "detail": "reloc.root_pointer",
+          "line": 4382,
+          "event_id": "mev_88fcc233fa47fd06f2e0"
+        },
+        {
+          "kind": "necessary_step",
+          "source": "btrfs/relocation.c",
+          "detail": "btrfs_commit_transaction starts recovery_commit@1",
+          "line": 4399,
+          "event_id": "mev_d1c915d3aafc4e69ad4e"
+        },
+        {
+          "kind": "branch",
+          "source": "btrfs/relocation.c",
+          "detail": "contract reloc.failure.nonzero: ret != 0",
+          "line": 4399,
+          "event_id": "mev_d1c915d3aafc4e69ad4e"
+        },
+        {
+          "kind": "failure",
+          "source": "btrfs/relocation.c",
+          "detail": "btrfs_commit_transaction -> ret != 0 (recovery_commit@1)",
+          "line": 4399,
+          "event_id": "mev_d1c915d3aafc4e69ad4e"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "detail": "return err;",
+          "line": 4421,
+          "event_id": ""
+        },
+        {
+          "kind": "handler",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "detail": "failure reaches function return",
+          "line": 4421,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "btrfs/relocation.c",
+          "start_line": 4378,
+          "end_line": 4386,
+          "snippet": " 4378: \t\t\tbtrfs_put_root(fs_root);\n 4379: \t\t\tbtrfs_end_transaction(trans);\n 4380: \t\t\tgoto out_unset;\n 4381: \t\t}\n 4382: \t\tfs_root->reloc_root = btrfs_grab_root(reloc_root);\n 4383: \t\tbtrfs_put_root(fs_root);\n 4384: \t}\n 4385: \n 4386: \terr = btrfs_commit_transaction(trans);"
+        },
+        {
+          "source_file": "btrfs/relocation.c",
+          "start_line": 4395,
+          "end_line": 4403,
+          "snippet": " 4395: \tif (IS_ERR(trans)) {\n 4396: \t\terr = PTR_ERR(trans);\n 4397: \t\tgoto out_clean;\n 4398: \t}\n 4399: \terr = btrfs_commit_transaction(trans);\n 4400: out_clean:\n 4401: \tret = clean_dirty_subvols(rc);\n 4402: \tif (ret < 0 && !err)\n 4403: \t\terr = ret;"
+        },
+        {
+          "source_file": "btrfs/relocation.c",
+          "start_line": 4417,
+          "end_line": 4425,
+          "snippet": " 4417: \t\tASSERT(fs_root);\n 4418: \t\terr = btrfs_orphan_cleanup(fs_root);\n 4419: \t\tbtrfs_put_root(fs_root);\n 4420: \t}\n 4421: \treturn err;\n 4422: }\n 4423: \n 4424: /*\n 4425:  * helper to add ordered checksum for data relocation."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "medium",
+        "root_cause": "fs_root->reloc_root is attached before the recovery commit. On commit failure, the visible failure path runs unset/free cleanup but no local compensation that clears the attached reloc_root pointer.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep as a Protocol B candidate and inspect fixed-version source or patch context to decide final adjudication.",
+        "notes": "Confidence is medium because the local source path is clear, but cross-function ownership outside this slice should still be checked before claiming a confirmed bug."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_1c504a8198f68f2b16af",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "medium",
+        "source_evidence": [
+          "fs_root->reloc_root is attached before the recovery commit. On commit failure, the visible failure path runs unset/free cleanup but no local compensation that clears the attached reloc_root pointer.",
+          "Confidence is medium because the local source path is clear, but cross-function ownership outside this slice should still be checked before claiming a confirmed bug."
+        ],
+        "development_followups": [
+          "Keep as a Protocol B candidate and inspect fixed-version source or patch context to decide final adjudication."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_084190f9e1fa5b21424c",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "operation_id": "btrfs_sprout_device_add",
+      "function": "btrfs_init_new_device",
+      "source_file": "btrfs/volumes.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "incomplete_failure_completion",
+      "exit_kind": "failure",
+      "exit_id": "sprout.failure",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_fb79b2aa4177f853f100",
+      "occurrence_fingerprint": "mocc_occurrence_084190f9e1fa5b21424c",
+      "review_focus": [
+        "Confirm whether each open effect is compensated or transferred on failure.",
+        "Check callee summaries for cleanup hidden behind helper calls."
+      ],
+      "missing_summary_hints": [
+        "review compensation or handler summaries for open metadata effects"
+      ],
+      "unresolved_failures": [],
+      "open_effects": [
+        {
+          "effect_id": "sprout.fs_devices_topology@mev_0d510bc0664fe6479e72",
+          "kind": "METADATA_UPDATE",
+          "object_ref": {
+            "role": "fs_devices",
+            "expression": "fs_devices",
+            "identity": "EXACT",
+            "symbol_id": "sym_c9c7715df2debd696f12"
+          },
+          "scope": "IN_MEMORY_GLOBAL",
+          "owner": "btrfs_init_new_device",
+          "status": "OPEN",
+          "source_event": "mev_0d510bc0664fe6479e72",
+          "required": true,
+          "spec_effect_id": "sprout.fs_devices_topology"
+        },
+        {
+          "effect_id": "sprout.active_s_bdev@mev_3729008a28b8de883443",
+          "kind": "POINTER_UPDATE",
+          "object_ref": {
+            "role": "fs_info",
+            "expression": "fs_info",
+            "identity": "EXACT",
+            "symbol_id": "sym_b2488066a10da6596ab6"
+          },
+          "scope": "IN_MEMORY_GLOBAL",
+          "owner": "btrfs_init_new_device",
+          "status": "OPEN",
+          "source_event": "mev_3729008a28b8de883443",
+          "required": true,
+          "spec_effect_id": "sprout.active_s_bdev"
+        },
+        {
+          "effect_id": "sprout.active_latest_dev@mev_b38e5debdd5afcc3b2f5",
+          "kind": "POINTER_UPDATE",
+          "object_ref": {
+            "role": "fs_devices",
+            "expression": "fs_devices",
+            "identity": "EXACT",
+            "symbol_id": "sym_c9c7715df2debd696f12"
+          },
+          "scope": "IN_MEMORY_GLOBAL",
+          "owner": "btrfs_init_new_device",
+          "status": "OPEN",
+          "source_event": "mev_b38e5debdd5afcc3b2f5",
+          "required": true,
+          "spec_effect_id": "sprout.active_latest_dev"
+        }
+      ],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "effect_created",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.fs_devices_topology",
+          "line": 2680,
+          "event_id": "mev_0d510bc0664fe6479e72"
+        },
+        {
+          "kind": "effect_created",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.active_s_bdev",
+          "line": 2681,
+          "event_id": "mev_3729008a28b8de883443"
+        },
+        {
+          "kind": "effect_created",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.active_latest_dev",
+          "line": 2681,
+          "event_id": "mev_b38e5debdd5afcc3b2f5"
+        },
+        {
+          "kind": "effect_created",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.device_dev_membership",
+          "line": 2688,
+          "event_id": "mev_26cf707d476c67ce8d60"
+        },
+        {
+          "kind": "effect_created",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.device_alloc_membership",
+          "line": 2689,
+          "event_id": "mev_66f455bbf363cc8d6152"
+        },
+        {
+          "kind": "necessary_step",
+          "source": "btrfs/volumes.c",
+          "detail": "btrfs_finish_sprout starts finish_sprout@1",
+          "line": 2740,
+          "event_id": "mev_2fdce6efe51e0edf3fb6"
+        },
+        {
+          "kind": "branch",
+          "source": "btrfs/volumes.c",
+          "detail": "contract sprout.failure.nonzero: ret != 0",
+          "line": 2740,
+          "event_id": "mev_2fdce6efe51e0edf3fb6"
+        },
+        {
+          "kind": "failure",
+          "source": "btrfs/volumes.c",
+          "detail": "btrfs_finish_sprout -> ret != 0 (finish_sprout@1)",
+          "line": 2740,
+          "event_id": "mev_2fdce6efe51e0edf3fb6"
+        },
+        {
+          "kind": "effect_compensated",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.device_dev_membership",
+          "line": 2796,
+          "event_id": "mev_2d3d462df7d7fcceabae"
+        },
+        {
+          "kind": "effect_compensated",
+          "source": "btrfs/volumes.c",
+          "detail": "sprout.device_alloc_membership",
+          "line": 2797,
+          "event_id": "mev_c72c44ad7e3cf55e8efa"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/btrfs/volumes.c",
+          "detail": "return ret;",
+          "line": 2825,
+          "event_id": ""
+        },
+        {
+          "kind": "handler",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/btrfs/volumes.c",
+          "detail": "failure reaches function return",
+          "line": 2825,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2676,
+          "end_line": 2684,
+          "snippet": " 2676: \t}\n 2677: \n 2678: \tmutex_lock(&fs_devices->device_list_mutex);\n 2679: \tif (seeding_dev) {\n 2680: \t\tbtrfs_setup_sprout(fs_info, seed_devices);\n 2681: \t\tbtrfs_assign_next_active_device(fs_info->fs_devices->latest_dev,\n 2682: \t\t\t\t\t\tdevice);\n 2683: \t}\n 2684: "
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2677,
+          "end_line": 2685,
+          "snippet": " 2677: \n 2678: \tmutex_lock(&fs_devices->device_list_mutex);\n 2679: \tif (seeding_dev) {\n 2680: \t\tbtrfs_setup_sprout(fs_info, seed_devices);\n 2681: \t\tbtrfs_assign_next_active_device(fs_info->fs_devices->latest_dev,\n 2682: \t\t\t\t\t\tdevice);\n 2683: \t}\n 2684: \n 2685: \tdevice->fs_devices = fs_devices;"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2684,
+          "end_line": 2692,
+          "snippet": " 2684: \n 2685: \tdevice->fs_devices = fs_devices;\n 2686: \n 2687: \tmutex_lock(&fs_info->chunk_mutex);\n 2688: \tlist_add_rcu(&device->dev_list, &fs_devices->devices);\n 2689: \tlist_add(&device->dev_alloc_list, &fs_devices->alloc_list);\n 2690: \tfs_devices->num_devices++;\n 2691: \tfs_devices->open_devices++;\n 2692: \tfs_devices->rw_devices++;"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2685,
+          "end_line": 2693,
+          "snippet": " 2685: \tdevice->fs_devices = fs_devices;\n 2686: \n 2687: \tmutex_lock(&fs_info->chunk_mutex);\n 2688: \tlist_add_rcu(&device->dev_list, &fs_devices->devices);\n 2689: \tlist_add(&device->dev_alloc_list, &fs_devices->alloc_list);\n 2690: \tfs_devices->num_devices++;\n 2691: \tfs_devices->open_devices++;\n 2692: \tfs_devices->rw_devices++;\n 2693: \tfs_devices->total_devices++;"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2736,
+          "end_line": 2744,
+          "snippet": " 2736: \t\tgoto error_sysfs;\n 2737: \t}\n 2738: \n 2739: \tif (seeding_dev) {\n 2740: \t\tret = btrfs_finish_sprout(trans);\n 2741: \t\tif (ret) {\n 2742: \t\t\tbtrfs_abort_transaction(trans, ret);\n 2743: \t\t\tgoto error_sysfs;\n 2744: \t\t}"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2792,
+          "end_line": 2800,
+          "snippet": " 2792: error_sysfs:\n 2793: \tbtrfs_sysfs_remove_device(device);\n 2794: \tmutex_lock(&fs_info->fs_devices->device_list_mutex);\n 2795: \tmutex_lock(&fs_info->chunk_mutex);\n 2796: \tlist_del_rcu(&device->dev_list);\n 2797: \tlist_del(&device->dev_alloc_list);\n 2798: \tfs_info->fs_devices->num_devices--;\n 2799: \tfs_info->fs_devices->open_devices--;\n 2800: \tfs_info->fs_devices->rw_devices--;"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2793,
+          "end_line": 2801,
+          "snippet": " 2793: \tbtrfs_sysfs_remove_device(device);\n 2794: \tmutex_lock(&fs_info->fs_devices->device_list_mutex);\n 2795: \tmutex_lock(&fs_info->chunk_mutex);\n 2796: \tlist_del_rcu(&device->dev_list);\n 2797: \tlist_del(&device->dev_alloc_list);\n 2798: \tfs_info->fs_devices->num_devices--;\n 2799: \tfs_info->fs_devices->open_devices--;\n 2800: \tfs_info->fs_devices->rw_devices--;\n 2801: \tfs_info->fs_devices->total_devices--;"
+        },
+        {
+          "source_file": "btrfs/volumes.c",
+          "start_line": 2821,
+          "end_line": 2829,
+          "snippet": " 2821: \tif (locked) {\n 2822: \t\tmutex_unlock(&uuid_mutex);\n 2823: \t\tup_write(&sb->s_umount);\n 2824: \t}\n 2825: \treturn ret;\n 2826: }\n 2827: \n 2828: static noinline int btrfs_update_device(struct btrfs_trans_handle *trans,\n 2829: \t\t\t\t\tstruct btrfs_device *device)"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "medium",
+        "root_cause": "The finish_sprout failure path removes the new device list entries and counters, but the visible cleanup does not restore the sprout topology or active s_bdev/latest_dev effects introduced before the failure.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep as a Protocol B seed/sprout topology candidate and compare later source for rollback helpers or explicit restoration.",
+        "notes": "The candidate remains source-supported rather than a final bug claim."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_084190f9e1fa5b21424c",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "medium",
+        "source_evidence": [
+          "The finish_sprout failure path removes the new device list entries and counters, but the visible cleanup does not restore the sprout topology or active s_bdev/latest_dev effects introduced before the failure.",
+          "The candidate remains source-supported rather than a final bug claim."
+        ],
+        "development_followups": [
+          "Keep as a Protocol B seed/sprout topology candidate and compare later source for rollback helpers or explicit restoration."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_494f361a7b84fadf6d2e",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "add.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_a61f1072e9812e00d46b",
+      "occurrence_fingerprint": "mocc_occurrence_494f361a7b84fadf6d2e",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_97fc189e962994d362f2",
+          "attempt_id": "insert_extent@1",
+          "source_event": "mev_e16d0075da7b3e7feea1",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_add_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_06bf315e860d210ebe3a"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_insert_extent starts insert_extent@1",
+          "line": 1780,
+          "event_id": "mev_e16d0075da7b3e7feea1"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract add.failure.nonzero: ret != 0",
+          "line": 1780,
+          "event_id": "mev_e16d0075da7b3e7feea1"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_insert_extent -> ret != 0 (insert_extent@1)",
+          "line": 1780,
+          "event_id": "mev_e16d0075da7b3e7feea1"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1834,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1776,
+          "end_line": 1784,
+          "snippet": " 1776: \t\t\tnewex.ee_len = cpu_to_le16(map.m_len);\n 1777: \t\t\tif (ext4_ext_is_unwritten(ex))\n 1778: \t\t\t\text4_ext_mark_unwritten(&newex);\n 1779: \t\t\tdown_write(&EXT4_I(inode)->i_data_sem);\n 1780: \t\t\tret = ext4_ext_insert_extent(\n 1781: \t\t\t\tNULL, inode, &path, &newex, 0);\n 1782: \t\t\tup_write((&EXT4_I(inode)->i_data_sem));\n 1783: \t\t\text4_free_ext_path(path);\n 1784: \t\t\tif (ret)"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1830,
+          "end_line": 1838,
+          "snippet": " 1830: \text4_ext_replay_shrink_inode(inode, i_size_read(inode) >>\n 1831: \t\t\t\t\tsb->s_blocksize_bits);\n 1832: out:\n 1833: \tiput(inode);\n 1834: \treturn 0;\n 1835: }\n 1836: \n 1837: /* Replay DEL_RANGE tag */\n 1838: static int"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count.",
+        "notes": "This annotation intentionally covers all add-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_494f361a7b84fadf6d2e",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+          "This annotation intentionally covers all add-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_5b6b5526d4f1d1930526",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "add.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_0815218615100f6c6b6a",
+      "occurrence_fingerprint": "mocc_occurrence_5b6b5526d4f1d1930526",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_24e91224c6baa412d01c",
+          "attempt_id": "find_extent@1",
+          "source_event": "mev_0869ac622765ac846c2c",
+          "error_class": "IS_ERR(ret)",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_add_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_06bf315e860d210ebe3a"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_find_extent starts find_extent@1",
+          "line": 1769,
+          "event_id": "mev_0869ac622765ac846c2c"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract add.failure.errptr: IS_ERR(ret)",
+          "line": 1769,
+          "event_id": "mev_0869ac622765ac846c2c"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_find_extent -> IS_ERR(ret) (find_extent@1)",
+          "line": 1769,
+          "event_id": "mev_0869ac622765ac846c2c"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1834,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1765,
+          "end_line": 1773,
+          "snippet": " 1765: \t\t\tgoto out;\n 1766: \n 1767: \t\tif (ret == 0) {\n 1768: \t\t\t/* Range is not mapped */\n 1769: \t\t\tpath = ext4_find_extent(inode, cur, NULL, 0);\n 1770: \t\t\tif (IS_ERR(path))\n 1771: \t\t\t\tgoto out;\n 1772: \t\t\tmemset(&newex, 0, sizeof(newex));\n 1773: \t\t\tnewex.ee_block = cpu_to_le32(cur);"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1830,
+          "end_line": 1838,
+          "snippet": " 1830: \text4_ext_replay_shrink_inode(inode, i_size_read(inode) >>\n 1831: \t\t\t\t\tsb->s_blocksize_bits);\n 1832: out:\n 1833: \tiput(inode);\n 1834: \treturn 0;\n 1835: }\n 1836: \n 1837: /* Replay DEL_RANGE tag */\n 1838: static int"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count.",
+        "notes": "This annotation intentionally covers all add-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_5b6b5526d4f1d1930526",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+          "This annotation intentionally covers all add-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_67bc885339c21d674412",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "add.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_c7ddd5670afd52a332c7",
+      "occurrence_fingerprint": "mocc_occurrence_67bc885339c21d674412",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_6bb5f074ecb5273fdd24",
+          "attempt_id": "record_modified@1",
+          "source_event": "mev_4727bb87648b32c69a6f",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_add_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_06bf315e860d210ebe3a"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode starts record_modified@1",
+          "line": 1744,
+          "event_id": "mev_4727bb87648b32c69a6f"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract add.failure.nonzero: ret != 0",
+          "line": 1744,
+          "event_id": "mev_4727bb87648b32c69a6f"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode -> ret != 0 (record_modified@1)",
+          "line": 1744,
+          "event_id": "mev_4727bb87648b32c69a6f"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1834,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1740,
+          "end_line": 1748,
+          "snippet": " 1740: \t\text4_debug(\"Inode not found.\");\n 1741: \t\treturn 0;\n 1742: \t}\n 1743: \n 1744: \tret = ext4_fc_record_modified_inode(sb, inode->i_ino);\n 1745: \tif (ret)\n 1746: \t\tgoto out;\n 1747: \n 1748: \tstart = le32_to_cpu(ex->ee_block);"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1830,
+          "end_line": 1838,
+          "snippet": " 1830: \text4_ext_replay_shrink_inode(inode, i_size_read(inode) >>\n 1831: \t\t\t\t\tsb->s_blocksize_bits);\n 1832: out:\n 1833: \tiput(inode);\n 1834: \treturn 0;\n 1835: }\n 1836: \n 1837: /* Replay DEL_RANGE tag */\n 1838: static int"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count.",
+        "notes": "This annotation intentionally covers all add-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_67bc885339c21d674412",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+          "This annotation intentionally covers all add-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_c85a2865849c465c67b8",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "add.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_0cefb3f2976d1d80ddb2",
+      "occurrence_fingerprint": "mocc_occurrence_c85a2865849c465c67b8",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_deb2363a804cef1885b8",
+          "attempt_id": "map_blocks@1",
+          "source_event": "mev_50c1022e79ac6748b3df",
+          "error_class": "ret < 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_add_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_06bf315e860d210ebe3a"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_map_blocks starts map_blocks@1",
+          "line": 1762,
+          "event_id": "mev_50c1022e79ac6748b3df"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract add.failure.negative: ret < 0",
+          "line": 1762,
+          "event_id": "mev_50c1022e79ac6748b3df"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_map_blocks -> ret < 0 (map_blocks@1)",
+          "line": 1762,
+          "event_id": "mev_50c1022e79ac6748b3df"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1834,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1758,
+          "end_line": 1766,
+          "snippet": " 1758: \twhile (remaining > 0) {\n 1759: \t\tmap.m_lblk = cur;\n 1760: \t\tmap.m_len = remaining;\n 1761: \t\tmap.m_pblk = 0;\n 1762: \t\tret = ext4_map_blocks(NULL, inode, &map, 0);\n 1763: \n 1764: \t\tif (ret < 0)\n 1765: \t\t\tgoto out;\n 1766: "
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1830,
+          "end_line": 1838,
+          "snippet": " 1830: \text4_ext_replay_shrink_inode(inode, i_size_read(inode) >>\n 1831: \t\t\t\t\tsb->s_blocksize_bits);\n 1832: out:\n 1833: \tiput(inode);\n 1834: \treturn 0;\n 1835: }\n 1836: \n 1837: /* Replay DEL_RANGE tag */\n 1838: static int"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count.",
+        "notes": "This annotation intentionally covers all add-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_c85a2865849c465c67b8",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+          "This annotation intentionally covers all add-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_e901bdddd2188d9c7135",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_add_range",
+      "function": "ext4_fc_replay_add_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "add.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_41d89170475c39254c72",
+      "occurrence_fingerprint": "mocc_occurrence_e901bdddd2188d9c7135",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_351750435f1dc24ce12b",
+          "attempt_id": "update_extent@1",
+          "source_event": "mev_d2934729e4c76b1c6eb0",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_add_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_06bf315e860d210ebe3a"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_replay_update_ex starts update_extent@1",
+          "line": 1795,
+          "event_id": "mev_d2934729e4c76b1c6eb0"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract add.failure.nonzero: ret != 0",
+          "line": 1795,
+          "event_id": "mev_d2934729e4c76b1c6eb0"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_replay_update_ex -> ret != 0 (update_extent@1)",
+          "line": 1795,
+          "event_id": "mev_d2934729e4c76b1c6eb0"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1834,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1791,
+          "end_line": 1799,
+          "snippet": " 1791: \t\t\t * Logical to physical mapping changed. This can happen\n 1792: \t\t\t * if this range was removed and then reallocated to\n 1793: \t\t\t * map to new physical blocks during a fast commit.\n 1794: \t\t\t */\n 1795: \t\t\tret = ext4_ext_replay_update_ex(inode, cur, map.m_len,\n 1796: \t\t\t\t\text4_ext_is_unwritten(ex),\n 1797: \t\t\t\t\tstart_pblk + cur - start);\n 1798: \t\t\tif (ret)\n 1799: \t\t\t\tgoto out;"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1830,
+          "end_line": 1838,
+          "snippet": " 1830: \text4_ext_replay_shrink_inode(inode, i_size_read(inode) >>\n 1831: \t\t\t\t\tsb->s_blocksize_bits);\n 1832: out:\n 1833: \tiput(inode);\n 1834: \treturn 0;\n 1835: }\n 1836: \n 1837: /* Replay DEL_RANGE tag */\n 1838: static int"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count.",
+        "notes": "This annotation intentionally covers all add-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_e901bdddd2188d9c7135",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Multiple necessary replay steps can fail, yet the reviewed local paths reach return 0 without a proven retry, sentinel fallback, abort, recovery delegation, or propagated error.",
+          "This annotation intentionally covers all add-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A add-range candidates as one reviewed development family; later count root causes separately from occurrence count."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_451a8159d7ebc634d05b",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_del_range",
+      "function": "ext4_fc_replay_del_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "del.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_dd4d926c9116795307f8",
+      "occurrence_fingerprint": "mocc_occurrence_451a8159d7ebc634d05b",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_9e10f3eefd48250dd533",
+          "attempt_id": "map_blocks@1",
+          "source_event": "mev_daead61707f7e067cedb",
+          "error_class": "ret < 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_del_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_44b5df6b9af105c6ad52"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_map_blocks starts map_blocks@1",
+          "line": 1872,
+          "event_id": "mev_daead61707f7e067cedb"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract del.failure.negative: ret < 0",
+          "line": 1872,
+          "event_id": "mev_daead61707f7e067cedb"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_map_blocks -> ret < 0 (map_blocks@1)",
+          "line": 1872,
+          "event_id": "mev_daead61707f7e067cedb"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1897,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1868,
+          "end_line": 1876,
+          "snippet": " 1868: \twhile (remaining > 0) {\n 1869: \t\tmap.m_lblk = cur;\n 1870: \t\tmap.m_len = remaining;\n 1871: \n 1872: \t\tret = ext4_map_blocks(NULL, inode, &map, 0);\n 1873: \t\tif (ret < 0)\n 1874: \t\t\tgoto out;\n 1875: \t\tif (ret > 0) {\n 1876: \t\t\tremaining -= ret;"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1893,
+          "end_line": 1901,
+          "snippet": " 1893: \t\ti_size_read(inode) >> sb->s_blocksize_bits);\n 1894: \text4_mark_inode_dirty(NULL, inode);\n 1895: out:\n 1896: \tiput(inode);\n 1897: \treturn 0;\n 1898: }\n 1899: \n 1900: static void ext4_fc_set_bitmaps_and_counters(struct super_block *sb)\n 1901: {"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A delete-range candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all delete-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_451a8159d7ebc634d05b",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+          "This annotation intentionally covers all delete-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A delete-range candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_733ee0e26506eb6c017e",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_del_range",
+      "function": "ext4_fc_replay_del_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "del.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_d50fda549bb49a3b7667",
+      "occurrence_fingerprint": "mocc_occurrence_733ee0e26506eb6c017e",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_35ee00ef884eebc9d5f4",
+          "attempt_id": "remove_space@1",
+          "source_event": "mev_d01dfaef80031fa37aec",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_del_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_44b5df6b9af105c6ad52"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_remove_space starts remove_space@1",
+          "line": 1886,
+          "event_id": "mev_d01dfaef80031fa37aec"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract del.failure.nonzero: ret != 0",
+          "line": 1886,
+          "event_id": "mev_d01dfaef80031fa37aec"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_ext_remove_space -> ret != 0 (remove_space@1)",
+          "line": 1886,
+          "event_id": "mev_d01dfaef80031fa37aec"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1897,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1882,
+          "end_line": 1890,
+          "snippet": " 1882: \t\t}\n 1883: \t}\n 1884: \n 1885: \tdown_write(&EXT4_I(inode)->i_data_sem);\n 1886: \tret = ext4_ext_remove_space(inode, le32_to_cpu(lrange.fc_lblk),\n 1887: \t\t\t\tle32_to_cpu(lrange.fc_lblk) +\n 1888: \t\t\t\tle32_to_cpu(lrange.fc_len) - 1);\n 1889: \tup_write(&EXT4_I(inode)->i_data_sem);\n 1890: \tif (ret)"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1893,
+          "end_line": 1901,
+          "snippet": " 1893: \t\ti_size_read(inode) >> sb->s_blocksize_bits);\n 1894: \text4_mark_inode_dirty(NULL, inode);\n 1895: out:\n 1896: \tiput(inode);\n 1897: \treturn 0;\n 1898: }\n 1899: \n 1900: static void ext4_fc_set_bitmaps_and_counters(struct super_block *sb)\n 1901: {"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A delete-range candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all delete-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_733ee0e26506eb6c017e",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+          "This annotation intentionally covers all delete-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A delete-range candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_769c3f15a6f7dfa5c159",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_del_range",
+      "function": "ext4_fc_replay_del_range",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "del.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_d4180a6b912dc753ba10",
+      "occurrence_fingerprint": "mocc_occurrence_769c3f15a6f7dfa5c159",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_458eb8d65c1dc8dbaae5",
+          "attempt_id": "record_modified@1",
+          "source_event": "mev_acc795177759990140eb",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_del_range",
+            "identity": "EXACT",
+            "symbol_id": "fn_44b5df6b9af105c6ad52"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode starts record_modified@1",
+          "line": 1861,
+          "event_id": "mev_acc795177759990140eb"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract del.failure.nonzero: ret != 0",
+          "line": 1861,
+          "event_id": "mev_acc795177759990140eb"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode -> ret != 0 (record_modified@1)",
+          "line": 1861,
+          "event_id": "mev_acc795177759990140eb"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1897,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1857,
+          "end_line": 1865,
+          "snippet": " 1857: \t\text4_debug(\"Inode %d not found\", le32_to_cpu(lrange.fc_ino));\n 1858: \t\treturn 0;\n 1859: \t}\n 1860: \n 1861: \tret = ext4_fc_record_modified_inode(sb, inode->i_ino);\n 1862: \tif (ret)\n 1863: \t\tgoto out;\n 1864: \n 1865: \text4_debug(\"DEL_RANGE, inode %ld, lblk %d, len %d\\n\","
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1893,
+          "end_line": 1901,
+          "snippet": " 1893: \t\ti_size_read(inode) >> sb->s_blocksize_bits);\n 1894: \text4_mark_inode_dirty(NULL, inode);\n 1895: out:\n 1896: \tiput(inode);\n 1897: \treturn 0;\n 1898: }\n 1899: \n 1900: static void ext4_fc_set_bitmaps_and_counters(struct super_block *sb)\n 1901: {"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A delete-range candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all delete-range occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_769c3f15a6f7dfa5c159",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary delete-range replay steps can fail and still reach return 0; no source-visible allowed sentinel, retry success, abort, or recovery delegation closes the failure tokens.",
+          "This annotation intentionally covers all delete-range occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A delete-range candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_1b96d3faaab09e3c91d2",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "inode.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_0306deaee3bb1cfc6f64",
+      "occurrence_fingerprint": "mocc_occurrence_1b96d3faaab09e3c91d2",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_ef68b10c4bcc100b508e",
+          "attempt_id": "mark_inode_used@1",
+          "source_event": "mev_c1155a22986198efa4df",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_inode",
+            "identity": "EXACT",
+            "symbol_id": "fn_f2c22070e565a72e4201"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_mark_inode_used starts mark_inode_used@1",
+          "line": 1579,
+          "event_id": "mev_c1155a22986198efa4df"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract inode.failure.nonzero: ret != 0",
+          "line": 1579,
+          "event_id": "mev_c1155a22986198efa4df"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_mark_inode_used -> ret != 0 (mark_inode_used@1)",
+          "line": 1579,
+          "event_id": "mev_c1155a22986198efa4df"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1610,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1575,
+          "end_line": 1583,
+          "snippet": " 1575: \t\tgoto out;\n 1576: \tret = sync_dirty_buffer(iloc.bh);\n 1577: \tif (ret)\n 1578: \t\tgoto out;\n 1579: \tret = ext4_mark_inode_used(sb, ino);\n 1580: \tif (ret)\n 1581: \t\tgoto out;\n 1582: \n 1583: \t/* Given that we just wrote the inode on disk, this SHOULD succeed. */"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1606,
+          "end_line": 1614,
+          "snippet": " 1606: \tiput(inode);\n 1607: \tif (!ret)\n 1608: \t\tblkdev_issue_flush(sb->s_bdev);\n 1609: \n 1610: \treturn 0;\n 1611: }\n 1612: \n 1613: /*\n 1614:  * Dentry create replay function."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A inode replay candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all inode replay occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_1b96d3faaab09e3c91d2",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+          "This annotation intentionally covers all inode replay occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A inode replay candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "ext4_fc_replay_inode",
+          "source_report": "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair"
+          ],
+          "removed_returns": [
+            "\t\treturn -EFSCORRUPTED;",
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn ret;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_3e4f1c944e82245ff46d",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "inode.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_e419d74f5ab7000912d7",
+      "occurrence_fingerprint": "mocc_occurrence_3e4f1c944e82245ff46d",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_10283ae5561a6b5dd617",
+          "attempt_id": "sync_buffer@1",
+          "source_event": "mev_ba5c0ee0dc4641f4d67f",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_inode",
+            "identity": "EXACT",
+            "symbol_id": "fn_f2c22070e565a72e4201"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "sync_dirty_buffer starts sync_buffer@1",
+          "line": 1576,
+          "event_id": "mev_ba5c0ee0dc4641f4d67f"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract inode.failure.nonzero: ret != 0",
+          "line": 1576,
+          "event_id": "mev_ba5c0ee0dc4641f4d67f"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "sync_dirty_buffer -> ret != 0 (sync_buffer@1)",
+          "line": 1576,
+          "event_id": "mev_ba5c0ee0dc4641f4d67f"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1610,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1572,
+          "end_line": 1580,
+          "snippet": " 1572: \t/* Immediately update the inode on disk. */\n 1573: \tret = ext4_handle_dirty_metadata(NULL, NULL, iloc.bh);\n 1574: \tif (ret)\n 1575: \t\tgoto out;\n 1576: \tret = sync_dirty_buffer(iloc.bh);\n 1577: \tif (ret)\n 1578: \t\tgoto out;\n 1579: \tret = ext4_mark_inode_used(sb, ino);\n 1580: \tif (ret)"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1606,
+          "end_line": 1614,
+          "snippet": " 1606: \tiput(inode);\n 1607: \tif (!ret)\n 1608: \t\tblkdev_issue_flush(sb->s_bdev);\n 1609: \n 1610: \treturn 0;\n 1611: }\n 1612: \n 1613: /*\n 1614:  * Dentry create replay function."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A inode replay candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all inode replay occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_3e4f1c944e82245ff46d",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+          "This annotation intentionally covers all inode replay occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A inode replay candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "ext4_fc_replay_inode",
+          "source_report": "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair"
+          ],
+          "removed_returns": [
+            "\t\treturn -EFSCORRUPTED;",
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn ret;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_5748c6c26760e1c2f625",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "inode.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_6060d023ecf268dc137d",
+      "occurrence_fingerprint": "mocc_occurrence_5748c6c26760e1c2f625",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_de8c5c17920296db3f09",
+          "attempt_id": "get_inode_loc@1",
+          "source_event": "mev_72ff041c752da3989b78",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_inode",
+            "identity": "EXACT",
+            "symbol_id": "fn_f2c22070e565a72e4201"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_get_fc_inode_loc starts get_inode_loc@1",
+          "line": 1547,
+          "event_id": "mev_72ff041c752da3989b78"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract inode.failure.nonzero: ret != 0",
+          "line": 1547,
+          "event_id": "mev_72ff041c752da3989b78"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_get_fc_inode_loc -> ret != 0 (get_inode_loc@1)",
+          "line": 1547,
+          "event_id": "mev_72ff041c752da3989b78"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1610,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1543,
+          "end_line": 1551,
+          "snippet": " 1543: \t\tgoto out;\n 1544: \n 1545: \traw_fc_inode = (struct ext4_inode *)\n 1546: \t\t(val + offsetof(struct ext4_fc_inode, fc_raw_inode));\n 1547: \tret = ext4_get_fc_inode_loc(sb, ino, &iloc);\n 1548: \tif (ret)\n 1549: \t\tgoto out;\n 1550: \n 1551: \tinode_len = tl->fc_len - sizeof(struct ext4_fc_inode);"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1606,
+          "end_line": 1614,
+          "snippet": " 1606: \tiput(inode);\n 1607: \tif (!ret)\n 1608: \t\tblkdev_issue_flush(sb->s_bdev);\n 1609: \n 1610: \treturn 0;\n 1611: }\n 1612: \n 1613: /*\n 1614:  * Dentry create replay function."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A inode replay candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all inode replay occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_5748c6c26760e1c2f625",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+          "This annotation intentionally covers all inode replay occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A inode replay candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "ext4_fc_replay_inode",
+          "source_report": "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair"
+          ],
+          "removed_returns": [
+            "\t\treturn -EFSCORRUPTED;",
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn ret;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_d8ce5780d59918326ede",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "inode.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_54b0c0d8001d08984f41",
+      "occurrence_fingerprint": "mocc_occurrence_d8ce5780d59918326ede",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_bc9c51bd42b848fcc52a",
+          "attempt_id": "dirty_metadata@1",
+          "source_event": "mev_682a2c597b9171a689d8",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_inode",
+            "identity": "EXACT",
+            "symbol_id": "fn_f2c22070e565a72e4201"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_handle_dirty_metadata starts dirty_metadata@1",
+          "line": 1573,
+          "event_id": "mev_682a2c597b9171a689d8"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract inode.failure.nonzero: ret != 0",
+          "line": 1573,
+          "event_id": "mev_682a2c597b9171a689d8"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_handle_dirty_metadata -> ret != 0 (dirty_metadata@1)",
+          "line": 1573,
+          "event_id": "mev_682a2c597b9171a689d8"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1610,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1569,
+          "end_line": 1577,
+          "snippet": " 1569: \t\t\tsizeof(raw_inode->i_block));\n 1570: \t}\n 1571: \n 1572: \t/* Immediately update the inode on disk. */\n 1573: \tret = ext4_handle_dirty_metadata(NULL, NULL, iloc.bh);\n 1574: \tif (ret)\n 1575: \t\tgoto out;\n 1576: \tret = sync_dirty_buffer(iloc.bh);\n 1577: \tif (ret)"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1606,
+          "end_line": 1614,
+          "snippet": " 1606: \tiput(inode);\n 1607: \tif (!ret)\n 1608: \t\tblkdev_issue_flush(sb->s_bdev);\n 1609: \n 1610: \treturn 0;\n 1611: }\n 1612: \n 1613: /*\n 1614:  * Dentry create replay function."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A inode replay candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all inode replay occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_d8ce5780d59918326ede",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+          "This annotation intentionally covers all inode replay occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A inode replay candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "ext4_fc_replay_inode",
+          "source_report": "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair"
+          ],
+          "removed_returns": [
+            "\t\treturn -EFSCORRUPTED;",
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn ret;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_e3968a5e986534d82167",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "ext4_replay_inode",
+      "function": "ext4_fc_replay_inode",
+      "source_file": "ext4/fast_commit.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "inode.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_87c74beff5e8bb5765cd",
+      "occurrence_fingerprint": "mocc_occurrence_e3968a5e986534d82167",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_3ee7e8bda50b1bc79001",
+          "attempt_id": "record_modified@1",
+          "source_event": "mev_c0c6f296aabbe87da4b6",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "ext4_fc_replay_inode",
+            "identity": "EXACT",
+            "symbol_id": "fn_f2c22070e565a72e4201"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode starts record_modified@1",
+          "line": 1541,
+          "event_id": "mev_c0c6f296aabbe87da4b6"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/fast_commit.c",
+          "detail": "contract inode.failure.nonzero: ret != 0",
+          "line": 1541,
+          "event_id": "mev_c0c6f296aabbe87da4b6"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/fast_commit.c",
+          "detail": "ext4_fc_record_modified_inode -> ret != 0 (record_modified@1)",
+          "line": 1541,
+          "event_id": "mev_c0c6f296aabbe87da4b6"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c",
+          "detail": "return 0;",
+          "line": 1610,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1537,
+          "end_line": 1545,
+          "snippet": " 1537: \t\tiput(inode);\n 1538: \t}\n 1539: \tinode = NULL;\n 1540: \n 1541: \tret = ext4_fc_record_modified_inode(sb, ino);\n 1542: \tif (ret)\n 1543: \t\tgoto out;\n 1544: \n 1545: \traw_fc_inode = (struct ext4_inode *)"
+        },
+        {
+          "source_file": "ext4/fast_commit.c",
+          "start_line": 1606,
+          "end_line": 1614,
+          "snippet": " 1606: \tiput(inode);\n 1607: \tif (!ret)\n 1608: \t\tblkdev_issue_flush(sb->s_bdev);\n 1609: \n 1610: \treturn 0;\n 1611: }\n 1612: \n 1613: /*\n 1614:  * Dentry create replay function."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep these Protocol A inode replay candidates as one reviewed development family.",
+        "notes": "This annotation intentionally covers all inode replay occurrences in the queue."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_e3968a5e986534d82167",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "Necessary inode replay and metadata-dirtying steps can fail, but the reviewed paths reach return 0 without a proven legal failure completion.",
+          "This annotation intentionally covers all inode replay occurrences in the queue."
+        ],
+        "development_followups": [
+          "Keep these Protocol A inode replay candidates as one reviewed development family."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "ext4_fc_replay_inode",
+          "source_report": "outputs/mocc-finding-review-v1/ext4_fc_replay_inode-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair"
+          ],
+          "removed_returns": [
+            "\t\treturn -EFSCORRUPTED;",
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn ret;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_894bc776d438d17f786e",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "operation_id": "ext4_extra_isize_fallback",
+      "function": "ext4_expand_extra_isize_ea",
+      "source_file": "ext4/xattr.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "metadata_state_divergence",
+      "exit_kind": "failure",
+      "exit_id": "ext4.failure",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_22fb2e1d3a400fed5318",
+      "occurrence_fingerprint": "mocc_occurrence_894bc776d438d17f786e",
+      "review_focus": [
+        "Confirm whether return outcome, metadata effects, and accounting state agree.",
+        "Check whether a missing reservation/accounting effect is hidden in a helper."
+      ],
+      "missing_summary_hints": [],
+      "unresolved_failures": [],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "ext4/xattr.c",
+          "detail": "ext4_xattr_make_inode_space starts inode_space_attempt@1",
+          "line": 2834,
+          "event_id": "mev_84bef57d0961bb0af2a1"
+        },
+        {
+          "kind": "branch",
+          "source": "ext4/xattr.c",
+          "detail": "contract ext4.space.failure: ret != 0",
+          "line": 2834,
+          "event_id": "mev_84bef57d0961bb0af2a1"
+        },
+        {
+          "kind": "failure",
+          "source": "ext4/xattr.c",
+          "detail": "ext4_xattr_make_inode_space -> ret != 0 (inode_space_attempt@1)",
+          "line": 2834,
+          "event_id": "mev_84bef57d0961bb0af2a1"
+        },
+        {
+          "kind": "effect_created",
+          "source": "ext4/xattr.c",
+          "detail": "ext4.inode_extra_isize_changed",
+          "line": 2852,
+          "event_id": "mev_2b82e87b40e5a6d6b440"
+        },
+        {
+          "kind": "stale_result",
+          "source": "ext4/xattr.c",
+          "detail": "metadata changed after inode_space_attempt@1, but the returned symbol still carries its failure",
+          "line": 2863,
+          "event_id": "mev_84bef57d0961bb0af2a1"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/xattr.c",
+          "detail": "return error;",
+          "line": 2863,
+          "event_id": ""
+        },
+        {
+          "kind": "handler",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/ext4/xattr.c",
+          "detail": "failure reaches function return",
+          "line": 2863,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "ext4/xattr.c",
+          "start_line": 2830,
+          "end_line": 2838,
+          "snippet": " 2830: \t} else {\n 2831: \t\tbfree = inode->i_sb->s_blocksize;\n 2832: \t}\n 2833: \n 2834: \terror = ext4_xattr_make_inode_space(handle, inode, raw_inode,\n 2835: \t\t\t\t\t    isize_diff, ifree, bfree,\n 2836: \t\t\t\t\t    &total_ino);\n 2837: \tif (error) {\n 2838: \t\tif (error == -ENOSPC && !tried_min_extra_isize &&"
+        },
+        {
+          "source_file": "ext4/xattr.c",
+          "start_line": 2848,
+          "end_line": 2856,
+          "snippet": " 2848: \text4_xattr_shift_entries(IFIRST(header), EXT4_I(inode)->i_extra_isize\n 2849: \t\t\t- new_extra_isize, (void *)raw_inode +\n 2850: \t\t\tEXT4_GOOD_OLD_INODE_SIZE + new_extra_isize,\n 2851: \t\t\t(void *)header, total_ino);\n 2852: \tEXT4_I(inode)->i_extra_isize = new_extra_isize;\n 2853: \n 2854: \tif (ext4_has_inline_data(inode))\n 2855: \t\terror = ext4_find_inline_data_nolock(inode);\n 2856: "
+        },
+        {
+          "source_file": "ext4/xattr.c",
+          "start_line": 2859,
+          "end_line": 2867,
+          "snippet": " 2859: \t\text4_warning(inode->i_sb, \"Unable to expand inode %lu. Delete some EAs or run e2fsck.\",\n 2860: \t\t\t     inode->i_ino);\n 2861: \t\tmnt_count = le16_to_cpu(sbi->s_es->s_mnt_count);\n 2862: \t}\n 2863: \treturn error;\n 2864: }\n 2865: \n 2866: #define EIA_INCR 16 /* must be 2^n */\n 2867: #define EIA_MASK (EIA_INCR - 1)"
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "The failed inode-space attempt keeps its failure return provenance, but the later path updates i_extra_isize and returns that stale failure result.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep the stale-return Protocol C candidate and use version-diff review to confirm the repair pattern.",
+        "notes": "This records the M6/M8 source observation; no networking, security, or permission assumption is involved."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_894bc776d438d17f786e",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "The failed inode-space attempt keeps its failure return provenance, but the later path updates i_extra_isize and returns that stale failure result.",
+          "This records the M6/M8 source observation; no networking, security, or permission assumption is involved."
+        ],
+        "development_followups": [
+          "Keep the stale-return Protocol C candidate and use version-diff review to confirm the repair pattern."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      }
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_028bc7698b4b215c4e89",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "xfs_copy_summary",
+      "function": "xfs_rtcopy_summary",
+      "source_file": "xfs/xfs_rtalloc.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "copy.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_8f70f320171e9690ad2d",
+      "occurrence_fingerprint": "mocc_occurrence_028bc7698b4b215c4e89",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_b3b301cc6b52c9917c75",
+          "attempt_id": "get_summary@1",
+          "source_event": "mev_3cc0e644e078a21ea5b5",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "xfs_rtcopy_summary",
+            "identity": "EXACT",
+            "symbol_id": "fn_13cb0daeb64168891d30"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "xfs_rtget_summary starts get_summary@1",
+          "line": 101,
+          "event_id": "mev_3cc0e644e078a21ea5b5"
+        },
+        {
+          "kind": "branch",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "contract copy.failure.nonzero: ret != 0",
+          "line": 101,
+          "event_id": "mev_3cc0e644e078a21ea5b5"
+        },
+        {
+          "kind": "failure",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "xfs_rtget_summary -> ret != 0 (get_summary@1)",
+          "line": 101,
+          "event_id": "mev_3cc0e644e078a21ea5b5"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/xfs/xfs_rtalloc.c",
+          "detail": "return 0;",
+          "line": 118,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "xfs/xfs_rtalloc.c",
+          "start_line": 97,
+          "end_line": 105,
+          "snippet": "   97: \tfor (log = oargs->mp->m_rsumlevels - 1; log >= 0; log--) {\n   98: \t\tfor (bbno = oargs->mp->m_sb.sb_rbmblocks - 1;\n   99: \t\t     (xfs_srtblock_t)bbno >= 0;\n  100: \t\t     bbno--) {\n  101: \t\t\terror = xfs_rtget_summary(oargs, log, bbno, &sum);\n  102: \t\t\tif (error)\n  103: \t\t\t\tgoto out;\n  104: \t\t\tif (sum == 0)\n  105: \t\t\t\tcontinue;"
+        },
+        {
+          "source_file": "xfs/xfs_rtalloc.c",
+          "start_line": 114,
+          "end_line": 122,
+          "snippet": "  114: \t}\n  115: \terror = 0;\n  116: out:\n  117: \txfs_rtbuf_cache_relse(oargs);\n  118: \treturn 0;\n  119: }\n  120: /*\n  121:  * Mark an extent specified by start and len allocated.\n  122:  * Updates all the summary information as well as the bitmap."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "The realtime summary copy path can ignore failed get/modify summary steps and still return 0, with no source-visible retry or propagated error on the witnessed paths.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep as a Protocol A cross-filesystem validation candidate; use later-version source comparison for repair confirmation.",
+        "notes": "This annotation intentionally covers both xfs_rtcopy_summary occurrences."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_028bc7698b4b215c4e89",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "The realtime summary copy path can ignore failed get/modify summary steps and still return 0, with no source-visible retry or propagated error on the witnessed paths.",
+          "This annotation intentionally covers both xfs_rtcopy_summary occurrences."
+        ],
+        "development_followups": [
+          "Keep as a Protocol A cross-filesystem validation candidate; use later-version source comparison for repair confirmation."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "xfs_rtcopy_summary",
+          "source_report": "outputs/mocc-finding-review-v1/xfs_rtcopy_summary-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair",
+            "added_corruption_guard",
+            "callee_set_expanded",
+            "callee_set_reduced"
+          ],
+          "removed_returns": [
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn error;"
+          ]
+        }
+      ]
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_26ae1e03588221460d20",
+      "classification": "PROTOCOL_CANDIDATE",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "xfs_copy_summary",
+      "function": "xfs_rtcopy_summary",
+      "source_file": "xfs/xfs_rtalloc.c",
+      "source_version": "linux-v6.8",
+      "violation_type": "failure_reported_as_success",
+      "exit_kind": "success",
+      "exit_id": "copy.success",
+      "static_certainty": "high",
+      "family_fingerprint": "mocc_family_79510ac618cc9224ce98",
+      "occurrence_fingerprint": "mocc_occurrence_26ae1e03588221460d20",
+      "review_focus": [
+        "Confirm whether the failed necessary step can reach a success exit.",
+        "Check for retry, sentinel handling, abort, recovery, or propagated error."
+      ],
+      "missing_summary_hints": [
+        "review retry/handler/return-propagation summaries for unresolved failure"
+      ],
+      "unresolved_failures": [
+        {
+          "failure_id": "failure_d638af2736ff4ddbd335",
+          "attempt_id": "modify_summary@1",
+          "source_event": "mev_b0e2e703cd71e5d55a3b",
+          "error_class": "ret != 0",
+          "resolution": "UNRESOLVED",
+          "status_origin": "return_contract",
+          "object_ref": {
+            "role": "operation",
+            "expression": "xfs_rtcopy_summary",
+            "identity": "EXACT",
+            "symbol_id": "fn_13cb0daeb64168891d30"
+          }
+        }
+      ],
+      "open_effects": [],
+      "accounting_state": [],
+      "witness": [
+        {
+          "kind": "necessary_step",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "xfs_rtmodify_summary starts modify_summary@1",
+          "line": 106,
+          "event_id": "mev_b0e2e703cd71e5d55a3b"
+        },
+        {
+          "kind": "branch",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "contract copy.failure.nonzero: ret != 0",
+          "line": 106,
+          "event_id": "mev_b0e2e703cd71e5d55a3b"
+        },
+        {
+          "kind": "failure",
+          "source": "xfs/xfs_rtalloc.c",
+          "detail": "xfs_rtmodify_summary -> ret != 0 (modify_summary@1)",
+          "line": 106,
+          "event_id": "mev_b0e2e703cd71e5d55a3b"
+        },
+        {
+          "kind": "exit",
+          "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.8-fs/fs/xfs/xfs_rtalloc.c",
+          "detail": "return 0;",
+          "line": 118,
+          "event_id": ""
+        }
+      ],
+      "source_context": [
+        {
+          "source_file": "xfs/xfs_rtalloc.c",
+          "start_line": 102,
+          "end_line": 110,
+          "snippet": "  102: \t\t\tif (error)\n  103: \t\t\t\tgoto out;\n  104: \t\t\tif (sum == 0)\n  105: \t\t\t\tcontinue;\n  106: \t\t\terror = xfs_rtmodify_summary(oargs, log, bbno, -sum);\n  107: \t\t\tif (error)\n  108: \t\t\t\tgoto out;\n  109: \t\t\terror = xfs_rtmodify_summary(nargs, log, bbno, sum);\n  110: \t\t\tif (error)"
+        },
+        {
+          "source_file": "xfs/xfs_rtalloc.c",
+          "start_line": 114,
+          "end_line": 122,
+          "snippet": "  114: \t}\n  115: \terror = 0;\n  116: out:\n  117: \txfs_rtbuf_cache_relse(oargs);\n  118: \treturn 0;\n  119: }\n  120: /*\n  121:  * Mark an extent specified by start and len allocated.\n  122:  * Updates all the summary information as well as the bitmap."
+        }
+      ],
+      "source_review": {
+        "verdict": "likely_true_candidate",
+        "confidence": "high",
+        "root_cause": "The realtime summary copy path can ignore failed get/modify summary steps and still return 0, with no source-visible retry or propagated error on the witnessed paths.",
+        "needs_protocol_change": false,
+        "needs_summary_change": false,
+        "needs_frontend_change": false,
+        "suggested_change": "Keep as a Protocol A cross-filesystem validation candidate; use later-version source comparison for repair confirmation.",
+        "notes": "This annotation intentionally covers both xfs_rtcopy_summary occurrences."
+      },
+      "triage": {
+        "review_id": "mocc_review_mocc_occurrence_26ae1e03588221460d20",
+        "verdict": "candidate_survives_initial_review",
+        "confidence": "high",
+        "source_evidence": [
+          "The realtime summary copy path can ignore failed get/modify summary steps and still return 0, with no source-visible retry or propagated error on the witnessed paths.",
+          "This annotation intentionally covers both xfs_rtcopy_summary occurrences."
+        ],
+        "development_followups": [
+          "Keep as a Protocol A cross-filesystem validation candidate; use later-version source comparison for repair confirmation."
+        ],
+        "notes": "derived from reviewed queue source_review"
+      },
+      "repair_evidence": [
+        {
+          "function": "xfs_rtcopy_summary",
+          "source_report": "outputs/mocc-finding-review-v1/xfs_rtcopy_summary-v6.8-v6.14-v7.1-function-diff.json",
+          "from_version": "v6.14",
+          "to_version": "v7.1",
+          "semantic_hints": [
+            "return_success_changed_to_error_symbol",
+            "local_return_propagation_repair",
+            "added_corruption_guard",
+            "callee_set_expanded",
+            "callee_set_reduced"
+          ],
+          "removed_returns": [
+            "\treturn 0;"
+          ],
+          "added_returns": [
+            "\treturn error;"
+          ]
+        }
+      ]
+    }
+  ]
+}

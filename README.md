@@ -59,14 +59,15 @@ DEFERRED
 | Protocol A replay/recovery | M4 MVP 已实现，使用独立 CLI |
 | Protocol B device/topology rollback | M5 MVP 已实现，使用独立 CLI |
 | Protocol C activation/reservation/accounting | M6 MVP 已实现，使用独立 CLI |
+| Source-tree protocol discovery | M7 开发版已实现，exact candidate 与 semantic review/unknown 分离 |
 
 当前测试基线：
 
 ```text
-256 passed
+292 passed
 ```
 
-该数字是当前 M0-M6 快照；每次交接必须重新运行测试确认。
+该数字是当前 M0-M8 开发快照；每次交接必须重新运行测试确认。
 
 ## 当前实现架构
 
@@ -110,9 +111,11 @@ M3  legal exit and candidate generation
 M4  Protocol A replay/recovery
 M5  Protocol B device/topology rollback
 M6  Protocol C activation/reservation/accounting
+M7  source-tree protocol discovery and review isolation
+M8  finding expansion review queue and development source-review notes
 ```
 
-M0-M6 已实现于：
+M0-M10 已实现于：
 
 ```text
 src/metadata_protocol.py
@@ -120,7 +123,23 @@ src/metadata_event.py
 src/metadata_tracker.py
 src/metadata_candidate_rules.py
 src/metadata_protocol_analyzer.py
+src/metadata_protocol_discovery.py
+src/metadata_finding_review.py
+src/metadata_finding_triage.py
+src/metadata_finding_matrix.py
+src/metadata_function_diff.py
+src/metadata_repair_evidence.py
+src/metadata_bug_hunt_report.py
+src/metadata_confirmed_bug_linkage.py
 tests/test_metadata_protocol.py
+tests/test_metadata_protocol_discovery.py
+tests/test_metadata_finding_review.py
+tests/test_metadata_finding_triage.py
+tests/test_metadata_finding_matrix.py
+tests/test_metadata_function_diff.py
+tests/test_metadata_repair_evidence.py
+tests/test_metadata_bug_hunt_report.py
+tests/test_metadata_confirmed_bug_linkage.py
 tests/test_metadata_protocol_b.py
 tests/test_metadata_protocol_c.py
 configs/metadata_protocols/
@@ -129,7 +148,26 @@ configs/metadata_protocols/
 Protocol A/B/C 使用 `python -m src.metadata_protocol_analyzer` 独立运行，不改变旧
 `src.main` 的默认 CSV/JSONL。Protocol B 的版本化结果位于
 `outputs/mocc-protocol-b-v1/`；Protocol C 的版本化结果位于
-`outputs/mocc-protocol-c-v1/`。
+`outputs/mocc-protocol-c-v1/`。M7/M8 的开发发现和源码复核材料位于
+`outputs/mocc-discovery-v1/` 与 `outputs/mocc-finding-review-v1/`，它们不是
+frozen benchmark。
+
+M10 使用 `python -m src.metadata_confirmed_bug_linkage` 将 M9 队列与
+`outputs/confirmed_bugs.md` 的 Summary 记录按函数连接。当前三版本产物位于：
+
+```text
+outputs/mocc-finding-review-v1/linux-v6.8-v6.14-v7.1-confirmed-bug-linkage.json
+outputs/mocc-finding-review-v1/linux-v6.8-v6.14-v7.1-confirmed-bug-linkage.md
+```
+
+该 linkage 是开发期状态对齐，不是 benchmark 评估：22 个队列条目全部链接到已确认
+记录，共覆盖 11 个唯一 confirmed bug records；其余 7 个 confirmed records 只是未被
+当前 M9 队列选中，不能解释为未确认或 false negative 统计。
+
+目录级发现使用 `python -m src.metadata_protocol_discovery` 独立运行。精确入口结果写入
+`PROTOCOL_CANDIDATE`，非入口 semantic applicability 只进入
+`DISCOVERY_REVIEW` 或 `DISCOVERY_REVIEW_UNKNOWN`，ambiguous operation match 进入
+`DISCOVERY_UNKNOWN` quarantine；它不改变旧 `src.main` 输出。
 
 ## 开发样例与数据隔离
 
@@ -222,8 +260,10 @@ python scripts/audit_btrfs_v7_1_candidates.py
 | `suspicious_candidates.csv` | SE-EOD 基线候选 | 已确认 bug |
 | `quarantined_candidates.csv` | 分析不确定或低置信候选 | 与主候选置信度相同 |
 | `ranked_candidates.jsonl` | 排序和证据摘要 | bug 概率 |
-| `confirmed_bugs.md` | 人工、历史、动态或 patch 支持的记录 | 全部是新 bug 或 upstream accepted |
-| 未来 MOCC-SE candidate | 协议后置条件可能违规 | 自动证明磁盘损坏 |
+| `confirmed_bugs.md` | 人工、历史、动态或 patch 支持的 confirmed records | 不代表全部是新发现；可能是 submitted、for-next 或 fixed duplicate |
+| MOCC-SE `PROTOCOL_CANDIDATE` | 协议后置条件可能违规 | 自动证明磁盘损坏或 confirmed bug |
+| MOCC-SE `DISCOVERY_REVIEW` | semantic 匹配到待复核操作语境 | 与精确入口候选同等置信度 |
+| MOCC-SE `DISCOVERY_UNKNOWN` | operation 匹配不唯一或发现阶段不确定 | 可以混入候选统计 |
 
 ## 目录结构
 

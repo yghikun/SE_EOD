@@ -149,17 +149,24 @@ def extract_metadata_events(
         effect_specs = [
             item
             for item in protocol.effects
-            if _call_matches(item, call.callee_spelling, result_symbol, call.arguments)
+            if item.operation_id == operation.operation_id
+            and _call_matches(item, call.callee_spelling, result_symbol, call.arguments)
         ]
         compensation_specs = [
             item
             for item in protocol.compensations
-            if _call_matches(item, call.callee_spelling, result_symbol, call.arguments)
+            if item.operation_id == operation.operation_id
+            and _call_matches(item, call.callee_spelling, result_symbol, call.arguments)
         ]
         effect_spec = effect_specs[0] if effect_specs else None
         compensation_spec = compensation_specs[0] if compensation_specs else None
         handler_spec = next(
-            (item for item in protocol.handlers if call.callee_spelling in item.match_callees),
+            (
+                item
+                for item in protocol.handlers
+                if item.operation_id == operation.operation_id
+                and call.callee_spelling in item.match_callees
+            ),
             None,
         )
         if role is None and generic_kind is None and effect_spec is None and compensation_spec is None and handler_spec is None:

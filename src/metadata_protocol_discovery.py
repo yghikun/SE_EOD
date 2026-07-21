@@ -5,19 +5,25 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from .cfg import build_cfg
 from .frontend.model import FunctionIR
 from .frontend.tree_sitter_frontend import TreeSitterFrontend
+from .metadata_confirmed_bug_linkage import parse_confirmed_bugs_markdown
 from .metadata_event import MetadataEvent, extract_metadata_events
 from .metadata_protocol import MetadataProtocol
 from .metadata_protocol_analyzer import ProtocolAnalysisResult, analyze_function
 
 
-DISCOVERY_SCHEMA_VERSION = 1
+DISCOVERY_SCHEMA_VERSION = 2
+DEFAULT_CONFIRMED_BUGS = (
+    Path(__file__).resolve().parents[1] / "outputs" / "confirmed_bugs.md"
+)
 
 
 @dataclass(frozen=True)
@@ -29,7 +35,13 @@ class ApplicabilityEvidence:
     matched_compensation_ids: tuple[str, ...]
     matched_handler_ids: tuple[str, ...]
     unmatched_required_role_ids: tuple[str, ...]
+    matched_discovery_callees: tuple[str, ...]
+    matched_discovery_fields: tuple[str, ...]
+    unmatched_discovery_callees: tuple[str, ...]
+    unmatched_discovery_fields: tuple[str, ...]
+    forbidden_discovery_callees: tuple[str, ...]
     unique_anchor_ids: tuple[str, ...]
+    minimum_role_coverage: float = 0.5
 
     @property
     def semantic_anchor_count(self) -> int:
@@ -38,28 +50,48 @@ class ApplicabilityEvidence:
             + len(self.matched_effect_ids)
             + len(self.matched_compensation_ids)
             + len(self.matched_handler_ids)
+            + len(self.matched_discovery_callees)
+            + len(self.matched_discovery_fields)
         )
+
+    @property
+    def required_role_coverage(self) -> float:
+        role_count = len(self.matched_role_ids)
+        required_count = role_count + len(self.unmatched_required_role_ids)
+        return role_count / required_count if required_count else 0.0
 
     @property
     def applicable(self) -> bool:
         if self.match_kind == "exact_entry":
             return True
+        if self.forbidden_discovery_callees:
+            return False
+        if self.unmatched_discovery_callees or self.unmatched_discovery_fields:
+            return False
         role_count = len(self.matched_role_ids)
         supporting_count = (
             len(self.matched_effect_ids)
             + len(self.matched_compensation_ids)
             + len(self.matched_handler_ids)
+            + len(self.matched_discovery_callees)
+            + len(self.matched_discovery_fields)
         )
         return bool(self.unique_anchor_ids) and (
-            role_count >= 2 or (role_count >= 1 and supporting_count >= 1)
+            (
+                role_count >= 2
+                and self.required_role_coverage >= self.minimum_role_coverage
+            )
+            or (role_count >= 1 and supporting_count >= 1)
         )
 
-    def score(self) -> tuple[int, int, int, int]:
+    def score(self) -> tuple[int, int, int, int, int, int]:
         return (
             1 if self.match_kind == "exact_entry" else 0,
             len(self.unique_anchor_ids),
             self.semantic_anchor_count,
             -len(self.unmatched_required_role_ids),
+            -len(self.unmatched_discovery_callees),
+            -len(self.unmatched_discovery_fields),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -71,8 +103,15 @@ class ApplicabilityEvidence:
             "matched_compensation_ids": list(self.matched_compensation_ids),
             "matched_handler_ids": list(self.matched_handler_ids),
             "unmatched_required_role_ids": list(self.unmatched_required_role_ids),
+            "matched_discovery_callees": list(self.matched_discovery_callees),
+            "matched_discovery_fields": list(self.matched_discovery_fields),
+            "unmatched_discovery_callees": list(self.unmatched_discovery_callees),
+            "unmatched_discovery_fields": list(self.unmatched_discovery_fields),
+            "forbidden_discovery_callees": list(self.forbidden_discovery_callees),
             "unique_anchor_ids": list(self.unique_anchor_ids),
             "semantic_anchor_count": self.semantic_anchor_count,
+            "required_role_coverage": self.required_role_coverage,
+            "minimum_role_coverage": self.minimum_role_coverage,
         }
 
 
@@ -81,12 +120,14 @@ class DiscoveryAnalysis:
     applicability: ApplicabilityEvidence
     result: ProtocolAnalysisResult
     candidate_records: tuple[dict[str, Any], ...]
+    review_records: tuple[dict[str, Any], ...]
     unknown_records: tuple[dict[str, Any], ...]
 
     def to_dict(self) -> dict[str, Any]:
         payload = self.result.to_dict()
         payload["applicability"] = self.applicability.to_dict()
         payload["candidates"] = list(self.candidate_records)
+        payload["discovery_review"] = list(self.review_records)
         payload["unknown"] = list(self.unknown_records)
         return payload
 
@@ -113,6 +154,50 @@ class DiscoveryQuarantine:
 
 
 @dataclass(frozen=True)
+class BroadDiscoveryReview:
+    protocol_id: str
+    source_file: str
+    source_version: str
+    filesystem: str
+    function: str
+    semantic_pattern: str
+    semantic_signals: tuple[str, ...]
+    representative_witness: tuple[dict[str, Any], ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        root_cause = _stable_id(
+            "root_cause",
+            self.protocol_id,
+            self.semantic_pattern,
+            self.semantic_signals,
+        )
+        return {
+            "classification": "DISCOVERY_REVIEW",
+            "protocol_id": self.protocol_id,
+            "operation_id": "",
+            "source_file": self.source_file,
+            "source_version": self.source_version,
+            "filesystem": self.filesystem,
+            "function": self.function,
+            "applicability_match_kind": "broad_semantic",
+            "semantic_pattern": self.semantic_pattern,
+            "semantic_signals": list(self.semantic_signals),
+            "review_reason": "broad_semantic_pattern_requires_protocol_review",
+            "representative_witness": list(self.representative_witness),
+            "root_cause_fingerprint": root_cause,
+            "family_fingerprint": _stable_id(
+                "family", self.function, root_cause
+            ),
+            "occurrence_fingerprint": _stable_id(
+                "occurrence",
+                self.source_file,
+                self.function,
+                root_cause,
+            ),
+        }
+
+
+@dataclass(frozen=True)
 class ProtocolDiscoveryReport:
     source_root: str
     source_version: str
@@ -121,17 +206,27 @@ class ProtocolDiscoveryReport:
     scanned_files: int
     scanned_functions: int
     analyses: tuple[DiscoveryAnalysis, ...]
+    broad_reviews: tuple[BroadDiscoveryReview, ...]
     quarantine: tuple[DiscoveryQuarantine, ...]
+    excluded_functions: tuple[str, ...]
     skip_reasons: tuple[tuple[str, int], ...]
 
     def to_dict(self) -> dict[str, Any]:
         candidates = [
             item for analysis in self.analyses for item in analysis.candidate_records
         ]
+        review = [
+            item for analysis in self.analyses for item in analysis.review_records
+        ]
+        review.extend(item.to_dict() for item in self.broad_reviews)
         unknown = [
             item for analysis in self.analyses for item in analysis.unknown_records
         ]
         family_counts = Counter(item["family_fingerprint"] for item in candidates)
+        review_family_counts = Counter(
+            item["family_fingerprint"] for item in review
+        )
+        fresh_queue = _fresh_review_queue(review)
         return {
             "schema_version": DISCOVERY_SCHEMA_VERSION,
             "source_root": self.source_root,
@@ -150,20 +245,42 @@ class ProtocolDiscoveryReport:
                 "scanned_files": self.scanned_files,
                 "scanned_functions": self.scanned_functions,
                 "applicable_functions": len(self.analyses),
-                "candidate_occurrences": len(candidates),
-                "candidate_families": len(family_counts),
+                "protocol_candidate_occurrences": len(candidates),
+                "protocol_candidate_families": len(family_counts),
+                "discovery_review_occurrences": len(review),
+                "discovery_review_families": len(review_family_counts),
+                "fresh_review_functions": len(
+                    {item["function"] for item in fresh_queue}
+                ),
+                "fresh_review_root_causes": len(
+                    {item["root_cause_fingerprint"] for item in fresh_queue}
+                ),
+                "fresh_review_queue_entries": len(fresh_queue),
+                "excluded_functions": len(self.excluded_functions),
                 "analysis_unknown": len(unknown),
                 "discovery_unknown": len(self.quarantine),
                 "skip_reasons": dict(self.skip_reasons),
             },
             "analyses": [item.to_dict() for item in self.analyses],
+            "broad_discovery_review": [
+                item.to_dict() for item in self.broad_reviews
+            ],
             "quarantine": [item.to_dict() for item in self.quarantine],
+            "excluded_function_names": list(self.excluded_functions),
+            "fresh_review_queue": fresh_queue,
             "candidate_families": [
                 {
                     "family_fingerprint": key,
                     "occurrences": family_counts[key],
                 }
                 for key in sorted(family_counts)
+            ],
+            "discovery_review_families": [
+                {
+                    "family_fingerprint": key,
+                    "occurrences": review_family_counts[key],
+                }
+                for key in sorted(review_family_counts)
             ],
         }
 
@@ -175,6 +292,8 @@ def discover_source_tree(
     source_version: str = "",
     include: Iterable[str] = ("*.c",),
     max_files: int | None = None,
+    excluded_functions: Iterable[str] = (),
+    exclude_regression_seeds: bool = False,
 ) -> ProtocolDiscoveryReport:
     root = Path(source_root).resolve()
     protocol_list = tuple(protocols)
@@ -183,15 +302,27 @@ def discover_source_tree(
         paths = paths[:max_files]
     frontend = TreeSitterFrontend(source_root=root)
     analyses: list[DiscoveryAnalysis] = []
+    broad_reviews: list[BroadDiscoveryReview] = []
     quarantine: list[DiscoveryQuarantine] = []
     skips: Counter[str] = Counter()
     scanned_functions = 0
+    excluded = {item.strip() for item in excluded_functions if item.strip()}
+    if exclude_regression_seeds:
+        excluded.update(
+            function
+            for protocol in protocol_list
+            for operation in protocol.operations
+            for function in operation.entry_functions
+        )
 
     for path in paths:
         unit = frontend.parse(path)
         for function in unit.functions:
             scanned_functions += 1
             filesystem = _filesystem_for_path(path)
+            if function.name in excluded:
+                skips["excluded_function"] += 1
+                continue
             matched_any = False
             for protocol in protocol_list:
                 if filesystem and filesystem not in protocol.filesystems:
@@ -200,7 +331,18 @@ def discover_source_tree(
                 evidences = operation_applicability(function, protocol)
                 applicable = [item for item in evidences if item.applicable]
                 if not applicable:
-                    skips["no_semantic_operation_match"] += 1
+                    broad = _broad_semantic_reviews(
+                        function,
+                        protocol,
+                        root=root,
+                        filesystem=filesystem,
+                        source_version=source_version,
+                    )
+                    if broad:
+                        matched_any = True
+                        broad_reviews.extend(broad)
+                    else:
+                        skips["no_semantic_operation_match"] += 1
                     continue
                 selected = _select_applicability(applicable)
                 if selected is None:
@@ -260,6 +402,17 @@ def discover_source_tree(
         ),
         tuple(
             sorted(
+                broad_reviews,
+                key=lambda item: (
+                    item.source_file,
+                    item.function,
+                    item.protocol_id,
+                    item.semantic_pattern,
+                ),
+            )
+        ),
+        tuple(
+            sorted(
                 quarantine,
                 key=lambda item: (
                     item.source_file,
@@ -268,6 +421,7 @@ def discover_source_tree(
                 ),
             )
         ),
+        tuple(sorted(excluded)),
         tuple(sorted(skips.items())),
     )
 
@@ -283,6 +437,30 @@ def operation_applicability(
             function,
             protocol,
             operation_id=operation.operation_id,
+        )
+        matched_anchor_ids = _matched_anchor_ids(events)
+        function_anchor_ids = _function_anchor_ids(function)
+        discovery = operation.discovery
+        matched_discovery_callees = tuple(
+            sorted(
+                callee
+                for callee in discovery.required_callees
+                if f"callee:{callee}" in function_anchor_ids
+            )
+        )
+        matched_discovery_fields = tuple(
+            sorted(
+                field
+                for field in discovery.required_fields
+                if f"field:{field}" in function_anchor_ids
+            )
+        )
+        forbidden_discovery_callees = tuple(
+            sorted(
+                callee
+                for callee in discovery.forbidden_callees
+                if f"callee:{callee}" in function_anchor_ids
+            )
         )
         matched_roles = tuple(
             sorted({item.callee_role_id for item in events if item.callee_role_id})
@@ -305,11 +483,14 @@ def operation_applicability(
         required_roles = {
             item.role_id for item in operation.callee_roles if item.necessary
         }
-        matched_anchor_ids = _matched_anchor_ids(events)
         unique_anchors = tuple(
             sorted(
                 anchor
-                for anchor in matched_anchor_ids
+                for anchor in (
+                    matched_anchor_ids
+                    | {f"callee:{callee}" for callee in matched_discovery_callees}
+                    | {f"field:{field}" for field in matched_discovery_fields}
+                )
                 if anchor_owners.get(anchor) == {operation.operation_id}
             )
         )
@@ -326,7 +507,23 @@ def operation_applicability(
                 matched_compensations,
                 matched_handlers,
                 tuple(sorted(required_roles - set(matched_roles))),
+                matched_discovery_callees,
+                matched_discovery_fields,
+                tuple(
+                    sorted(
+                        set(discovery.required_callees)
+                        - set(matched_discovery_callees)
+                    )
+                ),
+                tuple(
+                    sorted(
+                        set(discovery.required_fields)
+                        - set(matched_discovery_fields)
+                    )
+                ),
+                forbidden_discovery_callees,
                 unique_anchors,
+                discovery.minimum_role_coverage,
             )
         )
     return tuple(evidences)
@@ -378,7 +575,11 @@ def _anchor_owners(protocol: MetadataProtocol) -> dict[str, set[str]]:
             for field in getattr(spec, "match_fields", ()):
                 owners.setdefault(f"field:{field}", set()).add(
                     operation.operation_id
-                )
+        )
+        for callee in operation.discovery.required_callees:
+            owners.setdefault(f"callee:{callee}", set()).add(operation.operation_id)
+        for field in operation.discovery.required_fields:
+            owners.setdefault(f"field:{field}", set()).add(operation.operation_id)
     return owners
 
 
@@ -392,6 +593,13 @@ def _matched_anchor_ids(events: tuple[MetadataEvent, ...]) -> set[str]:
     return anchors
 
 
+def _function_anchor_ids(function: FunctionIR) -> set[str]:
+    anchors = {f"callee:{call.callee_spelling}" for call in function.calls}
+    for access_path in function.access_paths:
+        anchors.update(f"field:{field}" for field in access_path.fields)
+    return anchors
+
+
 def _discovery_analysis(
     root: Path,
     filesystem: str,
@@ -399,7 +607,7 @@ def _discovery_analysis(
     result: ProtocolAnalysisResult,
 ) -> DiscoveryAnalysis:
     relative = _relative_source(result.source_file, root)
-    candidates = tuple(
+    records = _dedupe_records(
         _candidate_record(
             item.to_dict(),
             result,
@@ -408,11 +616,29 @@ def _discovery_analysis(
         )
         for item in result.candidates
     )
+    if applicability.match_kind == "exact_entry":
+        candidates = records
+        review: tuple[dict[str, Any], ...] = ()
+    else:
+        candidates = ()
+        review = tuple(
+            {
+                **item,
+                "classification": "DISCOVERY_REVIEW",
+                "review_reason": "semantic_operation_applicability_requires_review",
+            }
+            for item in records
+        )
     unknown = tuple(
-        _unknown_record(item.to_dict(), result, relative)
+        _unknown_record(
+            item.to_dict(),
+            result,
+            relative,
+            applicability.match_kind,
+        )
         for item in result.unknown
     )
-    return DiscoveryAnalysis(applicability, result, candidates, unknown)
+    return DiscoveryAnalysis(applicability, result, candidates, review, unknown)
 
 
 def _candidate_record(
@@ -421,18 +647,26 @@ def _candidate_record(
     relative_source: str,
     filesystem: str,
 ) -> dict[str, Any]:
+    events = {
+        item["event_id"]: item
+        for item in result.events
+    }
     effect_ids = tuple(
         sorted(
             item.get("spec_effect_id", "")
             for item in candidate["open_effects"]
         )
     )
-    failure_roles = tuple(
-        sorted(
-            item.get("operation_role", "")
-            for item in candidate["unresolved_failures"]
+    failure_roles = []
+    for failure in candidate["unresolved_failures"]:
+        event = events.get(failure.get("source_event", ""), {})
+        failure_roles.append(
+            (
+                event.get("callee_role_id", ""),
+                event.get("callee", ""),
+                failure.get("error_class", ""),
+            )
         )
-    )
     structural = (
         result.protocol_id,
         result.operation_id,
@@ -440,11 +674,12 @@ def _candidate_record(
         candidate["exit_kind"],
         candidate.get("return_provenance", ""),
         effect_ids,
-        failure_roles,
+        tuple(sorted(failure_roles)),
     )
     enriched = dict(candidate)
     enriched.update(
         {
+            "classification": "PROTOCOL_CANDIDATE",
             "source_file": relative_source,
             "source_version": result.source_version,
             "filesystem": filesystem,
@@ -469,13 +704,17 @@ def _unknown_record(
     unknown: dict[str, Any],
     result: ProtocolAnalysisResult,
     relative_source: str,
+    match_kind: str,
 ) -> dict[str, Any]:
     enriched = dict(unknown)
+    if match_kind != "exact_entry":
+        enriched["classification"] = "DISCOVERY_REVIEW_UNKNOWN"
     enriched.update(
         {
             "source_file": relative_source,
             "source_version": result.source_version,
             "function": result.function,
+            "applicability_match_kind": match_kind,
             "unknown_fingerprint": _stable_id(
                 "unknown",
                 result.protocol_id,
@@ -487,6 +726,370 @@ def _unknown_record(
         }
     )
     return enriched
+
+
+def _dedupe_records(
+    records: Iterable[dict[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    selected: dict[str, dict[str, Any]] = {}
+    for record in records:
+        fingerprint = record["occurrence_fingerprint"]
+        existing = selected.get(fingerprint)
+        if existing is None or len(record["representative_witness"]) < len(
+            existing["representative_witness"]
+        ):
+            selected[fingerprint] = record
+    return tuple(selected[key] for key in sorted(selected))
+
+
+def _broad_semantic_reviews(
+    function: FunctionIR,
+    protocol: MetadataProtocol,
+    *,
+    root: Path,
+    filesystem: str,
+    source_version: str,
+) -> tuple[BroadDiscoveryReview, ...]:
+    patterns = sorted(
+        {
+            pattern
+            for operation in protocol.operations
+            for pattern in operation.discovery.semantic_patterns
+        }
+    )
+    if not patterns or function.body_node is None:
+        return ()
+
+    evidence = _broad_semantic_evidence(function)
+    records: list[BroadDiscoveryReview] = []
+    for pattern in patterns:
+        required = {
+            "failure_return_mismatch": {
+                "fallible_call",
+                "failure_guard",
+                "failure_to_success_exit",
+                "success_exit",
+            },
+            "mutation_failure_cleanup": {
+                "fallible_call",
+                "failure_guard",
+                "state_mutation",
+                "failure_control",
+            },
+            "retry_return_provenance": {
+                "fallible_call",
+                "failure_guard",
+                "retry_control",
+                "state_mutation",
+            },
+            "conditional_accounting": {
+                "fallible_call",
+                "failure_guard",
+                "accounting_operation",
+                "multi_outcome_guard",
+                "state_mutation",
+            },
+        }[pattern]
+        if not required.issubset(evidence):
+            continue
+        signal_names = tuple(sorted(required | ({"compensation"} & evidence.keys())))
+        witness = tuple(evidence[name] for name in signal_names)
+        records.append(
+            BroadDiscoveryReview(
+                protocol.protocol_id,
+                _relative_source(function.file.as_posix(), root),
+                source_version,
+                filesystem,
+                function.name,
+                pattern,
+                signal_names,
+                witness,
+            )
+        )
+    return tuple(records)
+
+
+def _broad_semantic_evidence(
+    function: FunctionIR,
+) -> dict[str, dict[str, Any]]:
+    nodes = tuple(function.body_node.walk()) if function.body_node else ()
+    assignments = _call_assignments(nodes)
+    cfg = build_cfg(function)
+    guarded = [
+        (symbol, call_node, guard)
+        for symbol, call_node in assignments
+        for guard in cfg.blocks.values()
+        if guard.kind in {"condition", "loop_condition", "switch_condition"}
+        and _mentions_identifier(guard.text, symbol)
+        and guard.start_byte >= call_node.start_byte
+    ]
+    success_returns = [
+        node
+        for node in nodes
+        if node.type == "return_statement"
+        and re.fullmatch(r"return\s+(?:0|NULL|false)\s*;", node.text.strip())
+    ]
+    failure_controls = [
+        node
+        for node in nodes
+        if (
+            node.type == "goto_statement"
+            or (
+                node.type == "return_statement"
+                and not re.fullmatch(
+                    r"return\s+(?:0|NULL|false)\s*;", node.text.strip()
+                )
+            )
+        )
+    ]
+    mutations = [
+        node
+        for node in nodes
+        if node.type in {"assignment_expression", "update_expression"}
+        and any(token in node.text for token in ("->", ".", "["))
+    ]
+    calls = [node for node in nodes if node.type == "call_expression"]
+    compensation_calls = [
+        node
+        for node in calls
+        if _callee_has_keyword(
+            node,
+            ("abort", "cancel", "clear", "del", "detach", "drop", "free", "put", "release", "restore", "rollback", "undo"),
+        )
+    ]
+    accounting_calls = [
+        node
+        for node in calls
+        if _callee_has_keyword(
+            node,
+            ("account", "counter", "quota", "reserve", "reservation", "rsv"),
+        )
+    ]
+    result_counts = Counter(symbol for symbol, _ in assignments)
+    retry_assignments = [
+        (symbol, node)
+        for symbol, node in assignments
+        if result_counts[symbol] > 1
+    ]
+    retry_controls = _backward_gotos(nodes)
+    multi_outcome_guards = [
+        (symbol, matching)
+        for symbol in sorted({item[0] for item in guarded})
+        if len(
+            matching := {
+                item[2].text.strip() for item in guarded if item[0] == symbol
+            }
+        )
+        >= 2
+    ]
+    swallowed_paths = [
+        (symbol, guard, success)
+        for symbol, _, guard in guarded
+        for success in success_returns
+        if _failure_branch_reaches(cfg, guard.id, success.start_byte, symbol)
+    ]
+
+    evidence: dict[str, dict[str, Any]] = {}
+    if assignments:
+        symbol, node = assignments[0]
+        evidence["fallible_call"] = _signal_witness(
+            "fallible_call", node, f"call result assigned to {symbol}"
+        )
+    if guarded:
+        symbol, _, guard = guarded[0]
+        evidence["failure_guard"] = {
+            "kind": "failure_guard",
+            "line": guard.start_line,
+            "detail": guard.text.strip(),
+            "result_symbol": symbol,
+        }
+    if success_returns:
+        node = success_returns[-1]
+        evidence["success_exit"] = _signal_witness(
+            "success_exit", node, node.text.strip()
+        )
+    if swallowed_paths:
+        symbol, guard, success = swallowed_paths[0]
+        evidence["failure_to_success_exit"] = {
+            "kind": "failure_to_success_exit",
+            "line": guard.start_line,
+            "detail": f"failure branch for {symbol} reaches {success.text.strip()}",
+        }
+    if failure_controls:
+        node = failure_controls[0]
+        evidence["failure_control"] = _signal_witness(
+            "failure_control", node, node.text.strip()
+        )
+    if mutations:
+        node = mutations[0]
+        evidence["state_mutation"] = _signal_witness(
+            "state_mutation", node, node.text.strip()
+        )
+    if retry_assignments:
+        symbol, node = retry_assignments[-1]
+        evidence["retry_assignment"] = _signal_witness(
+            "retry_assignment", node, f"result {symbol} assigned by multiple calls"
+        )
+    if retry_controls:
+        node = retry_controls[0]
+        evidence["retry_control"] = _signal_witness(
+            "retry_control", node, node.text.strip()
+        )
+    if multi_outcome_guards:
+        symbol, guards = multi_outcome_guards[0]
+        evidence["multi_outcome_guard"] = {
+            "kind": "multi_outcome_guard",
+            "line": 0,
+            "detail": f"{symbol} has distinct guarded outcomes: {', '.join(sorted(guards))}",
+        }
+    if compensation_calls:
+        node = compensation_calls[0]
+        evidence["compensation"] = _signal_witness(
+            "compensation", node, node.text.strip()
+        )
+    if accounting_calls:
+        node = accounting_calls[0]
+        evidence["accounting_operation"] = _signal_witness(
+            "accounting_operation", node, node.text.strip()
+        )
+    return evidence
+
+
+def _call_assignments(nodes: Iterable[Any]) -> list[tuple[str, Any]]:
+    assignments: list[tuple[str, Any]] = []
+    for node in nodes:
+        if node.type not in {"assignment_expression", "init_declarator"}:
+            continue
+        left = node.child_by_field_name("left") or node.child_by_field_name(
+            "declarator"
+        )
+        right = node.child_by_field_name("right") or node.child_by_field_name(
+            "value"
+        )
+        if left is None or right is None:
+            continue
+        calls = [item for item in right.walk() if item.type == "call_expression"]
+        identifiers = re.findall(r"[A-Za-z_]\w*", left.text)
+        if calls and identifiers:
+            assignments.append((identifiers[-1], calls[0]))
+    return assignments
+
+
+def _mentions_identifier(text: str, identifier: str) -> bool:
+    return bool(re.search(rf"\b{re.escape(identifier)}\b", text))
+
+
+def _backward_gotos(nodes: Iterable[Any]) -> list[Any]:
+    labels: dict[str, int] = {}
+    gotos: list[Any] = []
+    for node in nodes:
+        if node.type == "labeled_statement":
+            label = node.child_by_field_name("label")
+            if label is not None:
+                labels[label.text.strip()] = node.start_byte
+        elif node.type == "goto_statement":
+            gotos.append(node)
+    result = []
+    for node in gotos:
+        match = re.search(r"\bgoto\s+([A-Za-z_]\w*)", node.text)
+        if match and labels.get(match.group(1), node.start_byte) < node.start_byte:
+            result.append(node)
+    return result
+
+
+def _failure_branch_reaches(
+    cfg: Any,
+    guard_id: int,
+    success_start_byte: int,
+    symbol: str,
+) -> bool:
+    guard = cfg.blocks[guard_id]
+    failure_edge_kind = _failure_edge_kind(guard.text, symbol)
+    if failure_edge_kind is None:
+        return False
+    targets = [
+        edge.target
+        for edge in cfg.successors(guard_id)
+        if edge.kind == failure_edge_kind
+    ]
+    success_blocks = {
+        block.id
+        for block in cfg.blocks.values()
+        if block.start_byte == success_start_byte
+    }
+    pending = list(targets)
+    seen: set[int] = set()
+    while pending:
+        block_id = pending.pop()
+        if block_id in seen:
+            continue
+        if block_id in success_blocks:
+            return True
+        seen.add(block_id)
+        pending.extend(edge.target for edge in cfg.successors(block_id))
+    return False
+
+
+def _failure_edge_kind(condition: str, symbol: str) -> str | None:
+    compact = re.sub(r"\s+", "", condition)
+    escaped = re.escape(symbol)
+    if re.search(rf"(?:^|\()!{escaped}(?:\)|$)", compact) or re.search(
+        rf"\b{escaped}==0\b", compact
+    ):
+        return "false"
+    failure_forms = (
+        rf"\b{escaped}\b",
+        rf"\b{escaped}!=0\b",
+        rf"\b{escaped}<0\b",
+        rf"IS_ERR(?:_OR_NULL)?\({escaped}\)",
+    )
+    if any(re.search(pattern, compact) for pattern in failure_forms):
+        return "true"
+    return None
+
+
+def _callee_has_keyword(node: Any, keywords: tuple[str, ...]) -> bool:
+    callee = node.child_by_field_name("function")
+    spelling = callee.text.lower() if callee is not None else node.text.lower()
+    return any(keyword in spelling for keyword in keywords)
+
+
+def _signal_witness(kind: str, node: Any, detail: str) -> dict[str, Any]:
+    return {"kind": kind, "line": node.start_line, "detail": detail}
+
+
+def _fresh_review_queue(
+    records: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    selected: dict[tuple[str, str], dict[str, Any]] = {}
+    for raw in records:
+        record = dict(raw)
+        root_cause = str(record.get("root_cause_fingerprint", "")) or _stable_id(
+            "root_cause",
+            record.get("protocol_id", ""),
+            record.get("operation_id", ""),
+            record.get("violation_type", ""),
+            record.get("review_reason", ""),
+        )
+        record["root_cause_fingerprint"] = root_cause
+        key = (str(record.get("function", "")), root_cause)
+        existing = selected.get(key)
+        if existing is None or str(record.get("occurrence_fingerprint", "")) < str(
+            existing.get("occurrence_fingerprint", "")
+        ):
+            selected[key] = record
+    return [selected[key] for key in sorted(selected)]
+
+
+def confirmed_function_names(path: str | Path) -> tuple[str, ...]:
+    source = Path(path)
+    records = parse_confirmed_bugs_markdown(source.read_text(encoding="utf-8"))
+    names = set()
+    for record in records:
+        match = re.match(r"([A-Za-z_]\w*)", record.function)
+        if match:
+            names.add(match.group(1))
+    return tuple(sorted(names))
 
 
 def _source_paths(root: Path, include: Iterable[str]) -> list[Path]:
@@ -530,15 +1133,44 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-version", default="")
     parser.add_argument("--include", action="append", default=[])
     parser.add_argument("--max-files", type=int)
+    parser.add_argument(
+        "--exclude-confirmed-functions",
+        nargs="?",
+        const=str(DEFAULT_CONFIRMED_BUGS),
+        default=str(DEFAULT_CONFIRMED_BUGS),
+        metavar="MARKDOWN",
+        help=(
+            "exclude functions in confirmed_bugs.md (defaults to the project "
+            "ledger; optionally provide another ledger)"
+        ),
+    )
+    parser.add_argument(
+        "--include-confirmed-functions",
+        action="store_true",
+        help="disable the default confirmed-function exclusion for regression runs",
+    )
+    parser.add_argument(
+        "--include-regression-seeds",
+        action="store_true",
+        help="include operation entry_functions instead of producing a fresh queue",
+    )
     parser.add_argument("--out", default="")
     args = parser.parse_args(argv)
     protocols = [MetadataProtocol.read_json(path) for path in args.protocol]
+    excluded_functions: tuple[str, ...] = ()
+    if not args.include_confirmed_functions:
+        confirmed_path = Path(args.exclude_confirmed_functions)
+        if not confirmed_path.is_file():
+            parser.error(f"confirmed bug ledger does not exist: {confirmed_path}")
+        excluded_functions = confirmed_function_names(confirmed_path)
     report = discover_source_tree(
         args.source_root,
         protocols,
         source_version=args.source_version,
         include=args.include or ("*.c",),
         max_files=args.max_files,
+        excluded_functions=excluded_functions,
+        exclude_regression_seeds=not args.include_regression_seeds,
     )
     payload = json.dumps(report.to_dict(), indent=2) + "\n"
     if args.out:

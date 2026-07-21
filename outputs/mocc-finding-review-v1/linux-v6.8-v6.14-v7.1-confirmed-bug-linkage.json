@@ -1,0 +1,540 @@
+{
+  "schema_version": 1,
+  "bug_hunt_report_source": "outputs/mocc-finding-review-v1/linux-v6.8-v6.14-v7.1-development-bug-hunt-report.json",
+  "confirmed_bugs_source": "outputs/confirmed_bugs.md",
+  "summary": {
+    "candidate_links": 22,
+    "candidates_with_confirmed_bug": 22,
+    "candidates_without_confirmed_bug": 0,
+    "confirmed_bug_records": 18,
+    "confirmed_bug_records_linked": 11,
+    "confirmed_bug_records_unmatched": 7,
+    "by_linkage_class": {
+      "confirmed_fixed_duplicate": 9,
+      "confirmed_for_next": 1,
+      "confirmed_submitted": 12
+    },
+    "by_link_source": {
+      "added_functions_to_inspect": 1,
+      "persistent_candidates_next": 12,
+      "removed_or_cleared_functions": 2,
+      "repair_evidence_first": 7
+    },
+    "by_status_class": {
+      "confirmed_fixed_duplicate": 6,
+      "confirmed_for_next": 1,
+      "confirmed_submitted": 9,
+      "confirmed_submitted_reviewed": 2
+    },
+    "by_linked_status_class": {
+      "confirmed_fixed_duplicate": 2,
+      "confirmed_for_next": 1,
+      "confirmed_submitted": 7,
+      "confirmed_submitted_reviewed": 1
+    },
+    "interpretation": "development linkage only; confirmed records are motivating examples, regression targets, or already submitted/fixed bugs, not a frozen evaluation set"
+  },
+  "links": [
+    {
+      "review_id": "mocc_review_mocc_occurrence_1b96d3faaab09e3c91d2",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_3e4f1c944e82245ff46d",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_5748c6c26760e1c2f625",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_d8ce5780d59918326ede",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_e3968a5e986534d82167",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_028bc7698b4b215c4e89",
+      "function": "xfs_rtcopy_summary",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 8,
+          "filesystem": "xfs",
+          "function": "xfs_rtcopy_summary",
+          "bug_type": "swallowed summary-copy error",
+          "status": "source-level confirmed in v6.8; fixed in later mainline",
+          "evidence": "v6.8 returns 0 from out:; current mainline returns error",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_26ae1e03588221460d20",
+      "function": "xfs_rtcopy_summary",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "repair_evidence_first",
+      "confirmed_bugs": [
+        {
+          "bug_id": 8,
+          "filesystem": "xfs",
+          "function": "xfs_rtcopy_summary",
+          "bug_type": "swallowed summary-copy error",
+          "status": "source-level confirmed in v6.8; fixed in later mainline",
+          "evidence": "v6.8 returns 0 from out:; current mainline returns error",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_1fdcd64a328daf121598",
+      "function": "reserve_chunk_space",
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "violation_type": "metadata_state_divergence",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 15,
+          "filesystem": "btrfs",
+          "function": "reserve_chunk_space",
+          "bug_type": "zoned positive-success return skips chunk metadata reservation",
+          "status": "patch v2 submitted; Reviewed-by received",
+          "evidence": "[PATCH v2] btrfs: zoned: fix missing chunk metadata reservation, lore Message-ID tencent_7498732A1B9E13C552CFF1101E377288C407@qq.com",
+          "status_class": "confirmed_submitted_reviewed"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_1c504a8198f68f2b16af",
+      "function": "btrfs_recover_relocation",
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "violation_type": "incomplete_failure_completion",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 7,
+          "filesystem": "btrfs",
+          "function": "btrfs_recover_relocation",
+          "bug_type": "missing reloc_root cleanup on recovery failure path",
+          "status": "QEMU fault-injection confirmed; added to btrfs for-next",
+          "evidence": "[PATCH] btrfs: drop recovered reloc root refs on recovery failure, outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md",
+          "status_class": "confirmed_for_next"
+        }
+      ],
+      "linkage_class": "confirmed_for_next"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_084190f9e1fa5b21424c",
+      "function": "btrfs_init_new_device",
+      "protocol_id": "mocc.protocol_b.device_topology_rollback",
+      "violation_type": "incomplete_failure_completion",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 16,
+          "filesystem": "btrfs",
+          "function": "btrfs_init_new_device",
+          "bug_type": "failed sprout device left on transaction update list",
+          "status": "patch submitted",
+          "evidence": "[PATCH 1/3] btrfs: detach failed sprout device from transaction update list, lore Message-ID tencent_3DBB43FCDD4420406266A92678AE15833C09@qq.com",
+          "status_class": "confirmed_submitted"
+        },
+        {
+          "bug_id": 17,
+          "filesystem": "btrfs",
+          "function": "btrfs_init_new_device",
+          "bug_type": "active device pointers left on failed sprout device",
+          "status": "patch submitted",
+          "evidence": "[PATCH 2/3] btrfs: restore active device pointers after failed sprout, lore Message-ID tencent_3A451E4FED103C3756888298712A161E2607@qq.com",
+          "status_class": "confirmed_submitted"
+        },
+        {
+          "bug_id": 18,
+          "filesystem": "btrfs",
+          "function": "btrfs_init_new_device",
+          "bug_type": "sprout fs_devices state not rolled back after device-add failure",
+          "status": "patch submitted",
+          "evidence": "[PATCH 3/3] btrfs: roll back sprout setup after device add failure, lore Message-ID tencent_AA3028EA782A8414BAC141E8C40C52FDF30A@qq.com",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_494f361a7b84fadf6d2e",
+      "function": "ext4_fc_replay_add_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 1,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_add_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_5b6b5526d4f1d1930526",
+      "function": "ext4_fc_replay_add_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 1,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_add_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_67bc885339c21d674412",
+      "function": "ext4_fc_replay_add_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 1,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_add_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_c85a2865849c465c67b8",
+      "function": "ext4_fc_replay_add_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 1,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_add_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_e901bdddd2188d9c7135",
+      "function": "ext4_fc_replay_add_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 1,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_add_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_451a8159d7ebc634d05b",
+      "function": "ext4_fc_replay_del_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 2,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_del_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_733ee0e26506eb6c017e",
+      "function": "ext4_fc_replay_del_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 2,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_del_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_769c3f15a6f7dfa5c159",
+      "function": "ext4_fc_replay_del_range",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "failure_reported_as_success",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 2,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_del_range",
+          "bug_type": "swallowed error",
+          "status": "patch submitted",
+          "evidence": "/root/bug_submit/linux/0001-ext4-propagate-errors-from-fast-commit-range-replay.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "mocc_review_mocc_occurrence_894bc776d438d17f786e",
+      "function": "ext4_expand_extra_isize_ea",
+      "protocol_id": "mocc.protocol_c.activation_accounting",
+      "violation_type": "metadata_state_divergence",
+      "priority_queue": "persistent_candidates_next",
+      "confirmed_bugs": [
+        {
+          "bug_id": 4,
+          "filesystem": "ext4",
+          "function": "ext4_expand_extra_isize_ea",
+          "bug_type": "stale error after successful retry",
+          "status": "patch submitted / under review",
+          "evidence": "/root/bug_submit/patches/xattr-stale-error/0001-ext4-clear-error-before-retrying-inode-xattr-space-f.patch",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    },
+    {
+      "review_id": "",
+      "function": "ext4_fc_replay_inode",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "",
+      "priority_queue": "removed_or_cleared_functions",
+      "confirmed_bugs": [
+        {
+          "bug_id": 5,
+          "filesystem": "ext4",
+          "function": "ext4_fc_replay_inode",
+          "bug_type": "iloc.bh leak plus swallowed error",
+          "status": "already fixed upstream / duplicate finding",
+          "evidence": "upstream commit ec0a7500d8ea",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "",
+      "function": "xfs_rtcopy_summary",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "",
+      "priority_queue": "removed_or_cleared_functions",
+      "confirmed_bugs": [
+        {
+          "bug_id": 8,
+          "filesystem": "xfs",
+          "function": "xfs_rtcopy_summary",
+          "bug_type": "swallowed summary-copy error",
+          "status": "source-level confirmed in v6.8; fixed in later mainline",
+          "evidence": "v6.8 returns 0 from out:; current mainline returns error",
+          "status_class": "confirmed_fixed_duplicate"
+        }
+      ],
+      "linkage_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "review_id": "",
+      "function": "xfs_rtginode_ensure",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "violation_type": "",
+      "priority_queue": "added_functions_to_inspect",
+      "confirmed_bugs": [
+        {
+          "bug_id": 13,
+          "filesystem": "XFS",
+          "function": "xfs_rtginode_ensure",
+          "bug_type": "swallowed xfs_rtginode_load() error",
+          "status": "patch submitted",
+          "evidence": "[PATCH] xfs: propagate errors from xfs_rtginode_load, linux-xfs thread shown in local submission screenshot",
+          "status_class": "confirmed_submitted"
+        }
+      ],
+      "linkage_class": "confirmed_submitted"
+    }
+  ],
+  "unmatched_confirmed_bugs": [
+    {
+      "bug_id": 3,
+      "filesystem": "ext4",
+      "function": "ext4_init_orphan_info",
+      "bug_type": "buffer_head leak",
+      "status": "patch submitted",
+      "evidence": "/root/bug_submit/patches/orphan-v2/v2-0001-ext4-fix-buffer_head-leak-in-ext4_init_orphan_inf.patch",
+      "status_class": "confirmed_submitted"
+    },
+    {
+      "bug_id": 6,
+      "filesystem": "btrfs",
+      "function": "__add_reloc_root",
+      "bug_type": "mapping_node leak on duplicate insert",
+      "status": "patch v2 submitted; reviewer reply received",
+      "evidence": "[PATCH v2] btrfs: free mapping node on duplicate reloc root insert",
+      "status_class": "confirmed_submitted"
+    },
+    {
+      "bug_id": 9,
+      "filesystem": "ext4",
+      "function": "ext4_dx_add_entry",
+      "bug_type": "bh2 buffer_head leak",
+      "status": "source-level confirmed in v6.8; fixed in later mainline",
+      "evidence": "v6.8 htree split error paths omitted brelse(bh2); later code adds it",
+      "status_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "bug_id": 10,
+      "filesystem": "ext4",
+      "function": "ext4_ext_shift_extents",
+      "bug_type": "ext4_ext_path leak",
+      "status": "source-level confirmed in v6.14; fixed in latest mainline",
+      "evidence": "latest mainline sends !extent to out: and releases path",
+      "status_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "bug_id": 11,
+      "filesystem": "F2FS",
+      "function": "f2fs_rename() with RENAME_WHITEOUT",
+      "bug_type": "f2fs_filename crypto / casefold buffer leak",
+      "status": "source-level confirmed in v6.14; fixed in latest mainline",
+      "evidence": "latest mainline calls f2fs_free_filename(&fname) after whiteout creation",
+      "status_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "bug_id": 12,
+      "filesystem": "XFS",
+      "function": "xfs_qm_quotacheck_dqadjust",
+      "bug_type": "dquot reference leak",
+      "status": "source-level confirmed in v6.14; fixed in latest mainline",
+      "evidence": "latest mainline routes attach-buffer failure through xfs_qm_dqrele(dqp)",
+      "status_class": "confirmed_fixed_duplicate"
+    },
+    {
+      "bug_id": 14,
+      "filesystem": "F2FS",
+      "function": "find_in_level",
+      "bug_type": "dentry_folio leak on find_in_block() error",
+      "status": "v2 submitted; Reviewed-by received",
+      "evidence": "[PATCH v2] f2fs: fix dentry folio leak in find_in_level, Message-ID <20260719084514.586-1-3497809730@qq.com>",
+      "status_class": "confirmed_submitted_reviewed"
+    }
+  ]
+}

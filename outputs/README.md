@@ -16,6 +16,12 @@ snapshots cannot overwrite or mix with each other.
 - `mocc-protocol-a-v1/`: versioned Protocol A replay/recovery JSON and witness.
 - `mocc-protocol-b-v1/`: versioned Protocol B device/topology rollback JSON and witness.
 - `mocc-protocol-c-v1/`: versioned Protocol C activation/accounting JSON and witness.
+- `mocc-discovery-v1-linux-v6.8.json`: M7 development discovery scan across
+  Linux v6.8 `fs/` for Protocol A/B/C. It is not a frozen benchmark.
+- `mocc-discovery-v1/`: notes for interpreting the M7 discovery output.
+- `mocc-finding-review-v1/`: M8-M10 source review, triage, cross-version
+  matrix, repair evidence, development bug-hunt report, and confirmed-bug
+  linkage. These artifacts are development evidence, not a frozen benchmark.
 
 ## Linux v6.8
 

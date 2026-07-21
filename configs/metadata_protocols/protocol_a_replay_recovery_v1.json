@@ -9,6 +9,7 @@
     {
       "operation_id": "ext4_replay_add_range",
       "entry_functions": ["ext4_fc_replay_add_range"],
+      "discovery": {"semantic_patterns": ["failure_return_mismatch"]},
       "principal_objects": [{"role": "operation", "selector": "function"}],
       "callee_roles": [
         {"role_id": "record_modified", "callees": ["ext4_fc_record_modified_inode"], "necessary": true, "return_contract_ids": ["add.failure.nonzero"]},
@@ -21,6 +22,7 @@
     {
       "operation_id": "ext4_replay_del_range",
       "entry_functions": ["ext4_fc_replay_del_range"],
+      "discovery": {"semantic_patterns": ["failure_return_mismatch"]},
       "principal_objects": [{"role": "operation", "selector": "function"}],
       "callee_roles": [
         {"role_id": "record_modified", "callees": ["ext4_fc_record_modified_inode"], "necessary": true, "return_contract_ids": ["del.failure.nonzero"]},
@@ -31,6 +33,7 @@
     {
       "operation_id": "ext4_replay_inode",
       "entry_functions": ["ext4_fc_replay_inode"],
+      "discovery": {"semantic_patterns": ["failure_return_mismatch"]},
       "principal_objects": [{"role": "operation", "selector": "function"}],
       "callee_roles": [
         {"role_id": "record_modified", "callees": ["ext4_fc_record_modified_inode"], "necessary": true, "return_contract_ids": ["inode.failure.nonzero"]},
@@ -43,6 +46,7 @@
     {
       "operation_id": "xfs_copy_summary",
       "entry_functions": ["xfs_rtcopy_summary"],
+      "discovery": {"semantic_patterns": ["failure_return_mismatch"]},
       "principal_objects": [{"role": "operation", "selector": "function"}],
       "callee_roles": [
         {"role_id": "get_summary", "callees": ["xfs_rtget_summary"], "necessary": true, "return_contract_ids": ["copy.failure.nonzero"]},
@@ -52,6 +56,7 @@
     {
       "operation_id": "xfs_rtginode_ensure",
       "entry_functions": ["xfs_rtginode_ensure"],
+      "discovery": {"semantic_patterns": ["failure_return_mismatch"]},
       "principal_objects": [{"role": "operation", "selector": "function"}],
       "callee_roles": [
         {"role_id": "alloc_transaction", "callees": ["xfs_trans_alloc_empty"], "necessary": true, "return_contract_ids": ["ensure.failure.nonzero"]},

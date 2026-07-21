@@ -9,6 +9,7 @@
     {
       "operation_id": "btrfs_relocation_recovery",
       "entry_functions": ["btrfs_recover_relocation"],
+      "discovery": {"semantic_patterns": ["mutation_failure_cleanup"]},
       "principal_objects": [
         {"role": "fs_info", "selector": "arg0"},
         {"role": "fs_root", "selector": "fs_root", "field_or_member": "reloc_root"}
@@ -20,6 +21,7 @@
     {
       "operation_id": "btrfs_sprout_device_add",
       "entry_functions": ["btrfs_init_new_device"],
+      "discovery": {"semantic_patterns": ["mutation_failure_cleanup"]},
       "principal_objects": [
         {"role": "fs_info", "selector": "arg0"},
         {"role": "device", "selector": "device"},

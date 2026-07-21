@@ -9,6 +9,7 @@
     {
       "operation_id": "ext4_extra_isize_fallback",
       "entry_functions": ["ext4_expand_extra_isize_ea"],
+      "discovery": {"semantic_patterns": ["retry_return_provenance"]},
       "principal_objects": [
         {"role": "inode", "selector": "arg0"}
       ],
@@ -27,6 +28,13 @@
       "principal_objects": [
         {"role": "fs_info", "selector": "fs_info"}
       ],
+      "discovery": {
+        "semantic_patterns": ["conditional_accounting"],
+        "required_callees": [
+          "btrfs_zoned_activate_one_bg",
+          "btrfs_block_rsv_add"
+        ]
+      },
       "callee_roles": [
         {
           "role_id": "chunk_activation",

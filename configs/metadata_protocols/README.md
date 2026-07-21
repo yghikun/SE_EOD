@@ -11,6 +11,8 @@ Every protocol declares:
 - operation entries, principal objects, phases, and callee roles;
 - return contracts, effects, compensations, handler transfers, accounting
   constraints, and legal exits.
+- optional `operation.discovery` anchors used only by source-tree semantic
+  discovery.
 
 IDs are explicit configuration data and remain stable across serialization.
 All event IDs are unique across effects, compensations, and handlers. Effects
@@ -21,6 +23,12 @@ owner, and the effects it owns. `ABORTED` handlers may only own
 Return guards that overlap, or whose mutual exclusion cannot be proven by the
 M0 comparison checker, require distinct integer priorities. Higher values take
 precedence. Unknown fields and enum values are rejected rather than ignored.
+
+`operation.discovery` is a conservative discovery-only context. It can require
+additional callees or fields, forbid known out-of-scope callees, and raise the
+minimum role coverage needed before a non-entry function is sent to semantic
+review. These anchors do not change protocol state propagation, legal exits, or
+exact-entry analysis.
 
 `example_replay_recovery_v1.json` is a schema fixture, not an active analysis
 configuration. M0 does not load metadata protocols from `src.main` and does not
@@ -59,3 +67,6 @@ accounting. The first accounting relation is deliberately boolean:
 attempt arbitrary metadata arithmetic. `ret < 0`, `ret == 0`, and `ret > 0`
 are separate return outcomes. Reproduction commands and versioned output are
 recorded in `outputs/mocc-protocol-c-v1/README.md`.
+The Btrfs operation also declares discovery-only context requiring both
+activation and reservation calls before a renamed non-entry function is treated
+as the same operation for review.
