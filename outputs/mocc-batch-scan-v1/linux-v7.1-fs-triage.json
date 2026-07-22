@@ -1,310 +1,430 @@
 {
   "schema_version": 1,
-  "batch_report": "outputs\\mocc-batch-scan-v1\\linux-v7.1-fs.json",
+  "batch_report": "outputs/mocc-batch-scan-v1/linux-v7.1-fs.json",
   "source_version": "7.1",
   "result_semantics": "candidate_queue_not_bug_claims",
   "bug_claims_allowed": false,
   "summary": {
-    "triage_items": 8,
+    "triage_items": 15,
     "by_verdict": {
-      "likely_false_positive": 6,
-      "needs_external_semantics": 2
+      "needs_external_semantics": 2,
+      "uncertain": 13
     },
     "by_priority": {
       "P0": 2,
-      "P2": 6
+      "P2": 13
     },
     "by_protocol": {
       "mocc.protocol_a.replay_recovery": 2,
-      "mocc.protocol_d.transaction_lifecycle": 1,
-      "mocc.protocol_e.allocation_lifecycle": 5
+      "mocc.protocol_d.transaction_lifecycle": 9,
+      "mocc.protocol_e.allocation_lifecycle": 4
     },
     "manual_bug_review_candidates": 0,
     "needs_protocol_instance": 0,
     "needs_external_semantics": 2,
-    "likely_false_positive": 6
+    "likely_false_positive": 0
   },
   "items": [
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
+        "candidate_id": "moc_e823e68e3488c721e4bd",
         "protocol_id": "mocc.protocol_e.allocation_lifecycle",
-        "operation_id": "",
-        "source_file": "btrfs/inode-item.c",
-        "source_version": "7.1",
-        "filesystem": "btrfs",
-        "function": "btrfs_del_inode_ref",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "operation_id": "btrfs_parent_lookup_path_allocation",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "failure",
+        "exit_id": "btrfs.parent_lookup.failure",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 212,
-            "detail": "btrfs_del_item(trans, root, path)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 188,
-            "detail": "return -ENOMEM;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 187,
-            "detail": "(!path)",
-            "result_symbol": "path"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 186,
-            "detail": "btrfs_alloc_path() assigned to path"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 184,
-            "detail": "key.offset = ref_objectid"
+            "effect_id": "btrfs.search_path.allocation@mev_21980b27a1d24fe98497",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "search_path",
+              "expression": "path",
+              "identity": "EXACT",
+              "symbol_id": "sym_7c72168de286f97db556"
+            },
+            "scope": "LOCAL",
+            "owner": "btrfs_path_allocator",
+            "status": "OPEN",
+            "source_event": "mev_21980b27a1d24fe98497",
+            "required": true,
+            "spec_effect_id": "btrfs.search_path.allocation"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
-        "family_fingerprint": "mocc_family_8d01c5f6cc8fc796e0a9",
-        "occurrence_fingerprint": "mocc_occurrence_7f06a68cd83c27414a68"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "btrfs/free-space-tree.c",
+            "detail": "btrfs.search_path.allocation",
+            "line": 1428,
+            "event_id": "mev_21980b27a1d24fe98497"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/free-space-tree.c",
+            "detail": "return -ENOMEM;",
+            "line": 1431,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:btrfs.search_path.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect btrfs.search_path.allocation",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_21980b27a1d24fe98497"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "HANDLING_FAILURE",
+            "reason": "bounded summary lifecycle reaches failure exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/free-space-tree.c",
+            "line": 1431,
+            "event_id": "mev_21980b27a1d24fe98497"
+          },
+          {
+            "from": "HANDLING_FAILURE",
+            "to": "EXITED",
+            "reason": "return -ENOMEM;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/free-space-tree.c",
+            "line": 1431,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "btrfs/free-space-tree.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "__add_block_group_free_space",
+        "family_fingerprint": "mocc_family_a8095d0cf943359a9676",
+        "occurrence_fingerprint": "mocc_occurrence_8867eaff966d3bef3ef0",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_106c86dae5ac292c1932"
       },
       "triage": {
-        "review_id": "mocc_occurrence_7f06a68cd83c27414a68",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_8867eaff966d3bef3ef0",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 212: btrfs_del_item(trans, root, path)",
-          "failure_control line 188: return -ENOMEM;",
-          "failure_guard line 187: (!path)",
-          "fallible_call line 186: btrfs_alloc_path() assigned to path",
-          "state_mutation line 184: key.offset = ref_objectid"
+          "effect_created line 1428: btrfs.search_path.allocation",
+          "exit line 1431: return -ENOMEM;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }
     },
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
+        "candidate_id": "moc_67cc78828e18e876828c",
         "protocol_id": "mocc.protocol_e.allocation_lifecycle",
-        "operation_id": "",
-        "source_file": "btrfs/file.c",
-        "source_version": "7.1",
-        "filesystem": "btrfs",
-        "function": "btrfs_drop_extents",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "operation_id": "btrfs_parent_lookup_path_allocation",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "btrfs.parent_lookup.success",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 179,
-            "detail": "btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 174,
-            "detail": "goto out;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 172,
-            "detail": "(!path)",
-            "result_symbol": "path"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 171,
-            "detail": "btrfs_alloc_path() assigned to path"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 165,
-            "detail": "args->extent_inserted = false"
+            "effect_id": "btrfs.search_path.allocation@mev_f2ceba0a7bf783853ece",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "search_path",
+              "expression": "path",
+              "identity": "EXACT",
+              "symbol_id": "sym_b25d13aa9a2918d82f55"
+            },
+            "scope": "LOCAL",
+            "owner": "btrfs_path_allocator",
+            "status": "OPEN",
+            "source_event": "mev_f2ceba0a7bf783853ece",
+            "required": true,
+            "spec_effect_id": "btrfs.search_path.allocation"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
-        "family_fingerprint": "mocc_family_63fcb2ce1fd540a15781",
-        "occurrence_fingerprint": "mocc_occurrence_cd6d01f9acaf54e0da10"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "btrfs/qgroup.c",
+            "detail": "btrfs.search_path.allocation",
+            "line": 1083,
+            "event_id": "mev_f2ceba0a7bf783853ece"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/qgroup.c",
+            "detail": "return ret;",
+            "line": 1304,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:btrfs.search_path.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect btrfs.search_path.allocation",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_f2ceba0a7bf783853ece"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/qgroup.c",
+            "line": 1304,
+            "event_id": "mev_f2ceba0a7bf783853ece"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return ret;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/qgroup.c",
+            "line": 1304,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "btrfs/qgroup.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_quota_enable",
+        "family_fingerprint": "mocc_family_b7f85bdf322f40458dfa",
+        "occurrence_fingerprint": "mocc_occurrence_a558403a1ff9166e4b51",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_106c86dae5ac292c1932"
       },
       "triage": {
-        "review_id": "mocc_occurrence_cd6d01f9acaf54e0da10",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_a558403a1ff9166e4b51",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 179: btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)",
-          "failure_control line 174: goto out;",
-          "failure_guard line 172: (!path)",
-          "fallible_call line 171: btrfs_alloc_path() assigned to path",
-          "state_mutation line 165: args->extent_inserted = false"
+          "effect_created line 1083: btrfs.search_path.allocation",
+          "exit line 1304: return ret;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }
     },
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
+        "candidate_id": "moc_ab68bf6634f6babd79c8",
         "protocol_id": "mocc.protocol_e.allocation_lifecycle",
-        "operation_id": "",
-        "source_file": "btrfs/inode-item.c",
-        "source_version": "7.1",
-        "filesystem": "btrfs",
-        "function": "btrfs_insert_inode_ref",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "operation_id": "btrfs_parent_lookup_path_allocation",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "btrfs.parent_lookup.success",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 353,
-            "detail": "btrfs_free_path(path)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 313,
-            "detail": "return -ENOMEM;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 312,
-            "detail": "(!path)",
-            "result_symbol": "path"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 311,
-            "detail": "btrfs_alloc_path() assigned to path"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 309,
-            "detail": "key.offset = ref_objectid"
+            "effect_id": "btrfs.search_path.allocation@mev_ad6ba761c225c5a47884",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "search_path",
+              "expression": "path",
+              "identity": "EXACT",
+              "symbol_id": "sym_26f0038ec9d9226102cf"
+            },
+            "scope": "LOCAL",
+            "owner": "btrfs_path_allocator",
+            "status": "OPEN",
+            "source_event": "mev_ad6ba761c225c5a47884",
+            "required": true,
+            "spec_effect_id": "btrfs.search_path.allocation"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
-        "family_fingerprint": "mocc_family_111b23f8da66ec944bf8",
-        "occurrence_fingerprint": "mocc_occurrence_1784fbdf1cc5f3068ff3"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "btrfs/inode.c",
+            "detail": "btrfs.search_path.allocation",
+            "line": 9086,
+            "event_id": "mev_ad6ba761c225c5a47884"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/inode.c",
+            "detail": "return ret;",
+            "line": 9131,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:btrfs.search_path.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect btrfs.search_path.allocation",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_ad6ba761c225c5a47884"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/inode.c",
+            "line": 9131,
+            "event_id": "mev_ad6ba761c225c5a47884"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return ret;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/inode.c",
+            "line": 9131,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "btrfs/inode.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_symlink",
+        "family_fingerprint": "mocc_family_3eaa0242536526a5860d",
+        "occurrence_fingerprint": "mocc_occurrence_9e21bad18ca2c4a79a79",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_106c86dae5ac292c1932"
       },
       "triage": {
-        "review_id": "mocc_occurrence_1784fbdf1cc5f3068ff3",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_9e21bad18ca2c4a79a79",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 353: btrfs_free_path(path)",
-          "failure_control line 313: return -ENOMEM;",
-          "failure_guard line 312: (!path)",
-          "fallible_call line 311: btrfs_alloc_path() assigned to path",
-          "state_mutation line 309: key.offset = ref_objectid"
+          "effect_created line 9086: btrfs.search_path.allocation",
+          "exit line 9131: return ret;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }
     },
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
-        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
-        "operation_id": "",
-        "source_file": "btrfs/block-group.c",
-        "source_version": "7.1",
-        "filesystem": "btrfs",
-        "function": "btrfs_read_block_groups",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "candidate_id": "moc_2fa03b95cd2560a7d0b8",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "ext4_verity_journal_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "ext4.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 2694,
-            "detail": "btrfs_release_path(path)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 2658,
-            "detail": "return -ENOMEM;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 2657,
-            "detail": "(!path)",
-            "result_symbol": "path"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 2656,
-            "detail": "btrfs_alloc_path() assigned to path"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 2655,
-            "detail": "key.offset = 0"
+            "effect_id": "ext4.journal_handle.lifecycle@mev_17fa91f0c586407574f3",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "journal_handle",
+              "expression": "handle",
+              "identity": "EXACT",
+              "symbol_id": "sym_ce68fcdd3df65d4c31a5"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "ext4_journal_manager",
+            "status": "OPEN",
+            "source_event": "mev_17fa91f0c586407574f3",
+            "required": true,
+            "spec_effect_id": "ext4.journal_handle.lifecycle"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
-        "family_fingerprint": "mocc_family_0a5e6aeff46fc81780a0",
-        "occurrence_fingerprint": "mocc_occurrence_512afd994a02a6e4daff"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "ext4/extents.c",
+            "detail": "ext4.journal_handle.lifecycle",
+            "line": 5055,
+            "event_id": "mev_17fa91f0c586407574f3"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/extents.c",
+            "detail": "return ret > 0 ? ret2 : ret;",
+            "line": 5086,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:ext4.transaction.start",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect ext4.journal_handle.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_17fa91f0c586407574f3"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/extents.c",
+            "line": 5086,
+            "event_id": "mev_17fa91f0c586407574f3"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return ret > 0 ? ret2 : ret;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/extents.c",
+            "line": 5086,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "ext4/extents.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_convert_unwritten_extents",
+        "family_fingerprint": "mocc_family_97c7f060d7d17744d0d4",
+        "occurrence_fingerprint": "mocc_occurrence_138878426d50f029fd22",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_c303885bec68f90ab1a6"
       },
       "triage": {
-        "review_id": "mocc_occurrence_512afd994a02a6e4daff",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_138878426d50f029fd22",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 2694: btrfs_release_path(path)",
-          "failure_control line 2658: return -ENOMEM;",
-          "failure_guard line 2657: (!path)",
-          "fallible_call line 2656: btrfs_alloc_path() assigned to path",
-          "state_mutation line 2655: key.offset = 0"
+          "effect_created line 5055: ext4.journal_handle.lifecycle",
+          "exit line 5086: return ret > 0 ? ret2 : ret;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }
@@ -455,142 +575,900 @@
     },
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
-        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
-        "operation_id": "",
-        "source_file": "btrfs/tree-log.c",
-        "source_version": "7.1",
-        "filesystem": "btrfs",
-        "function": "inode_logged",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "candidate_id": "moc_8c4648d42e93092dad9a",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "ext4_verity_journal_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "ext4.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 3818,
-            "detail": "btrfs_release_path(path)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 3812,
-            "detail": "return -ENOMEM;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 3811,
-            "detail": "(!path)",
-            "result_symbol": "path"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 3810,
-            "detail": "btrfs_alloc_path() assigned to path"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 3807,
-            "detail": "key.offset = 0"
+            "effect_id": "ext4.journal_handle.lifecycle@mev_7d82ee73a4b375d5eb98",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "journal_handle",
+              "expression": "handle",
+              "identity": "EXACT",
+              "symbol_id": "sym_bbe779923c255b7540af"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "ext4_journal_manager",
+            "status": "OPEN",
+            "source_event": "mev_7d82ee73a4b375d5eb98",
+            "required": true,
+            "spec_effect_id": "ext4.journal_handle.lifecycle"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
-        "family_fingerprint": "mocc_family_7baf38b340250d6f69ba",
-        "occurrence_fingerprint": "mocc_occurrence_1e170728375d6675b12c"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "ext4/inline.c",
+            "detail": "ext4.journal_handle.lifecycle",
+            "line": 713,
+            "event_id": "mev_7d82ee73a4b375d5eb98"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inline.c",
+            "detail": "return 1;",
+            "line": 764,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:ext4.transaction.start",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect ext4.journal_handle.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_7d82ee73a4b375d5eb98"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inline.c",
+            "line": 764,
+            "event_id": "mev_7d82ee73a4b375d5eb98"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 1;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inline.c",
+            "line": 764,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "ext4/inline.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_generic_write_inline_data",
+        "family_fingerprint": "mocc_family_b8680ad8499af27b2657",
+        "occurrence_fingerprint": "mocc_occurrence_3ba316f25ba5048ff781",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_c303885bec68f90ab1a6"
       },
       "triage": {
-        "review_id": "mocc_occurrence_1e170728375d6675b12c",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_3ba316f25ba5048ff781",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 3818: btrfs_release_path(path)",
-          "failure_control line 3812: return -ENOMEM;",
-          "failure_guard line 3811: (!path)",
-          "fallible_call line 3810: btrfs_alloc_path() assigned to path",
-          "state_mutation line 3807: key.offset = 0"
+          "effect_created line 713: ext4.journal_handle.lifecycle",
+          "exit line 764: return 1;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }
     },
     {
       "record": {
-        "classification": "DISCOVERY_REVIEW",
+        "candidate_id": "moc_69d03044b8500f613b62",
         "protocol_id": "mocc.protocol_d.transaction_lifecycle",
-        "operation_id": "",
-        "source_file": "xfs/xfs_log_recover.c",
-        "source_version": "7.1",
-        "filesystem": "xfs",
-        "function": "xlog_finish_defer_ops",
-        "applicability_match_kind": "broad_semantic",
-        "semantic_pattern": "mutation_failure_cleanup",
-        "semantic_signals": [
-          "compensation",
-          "failure_control",
-          "failure_guard",
-          "fallible_call",
-          "state_mutation"
-        ],
-        "review_reason": "broad_semantic_pattern_requires_protocol_review",
-        "representative_witness": [
+        "operation_id": "ext4_verity_journal_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "ext4.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
           {
-            "kind": "compensation",
-            "line": 2545,
-            "detail": "list_del_init(&dfc->dfc_list)"
-          },
-          {
-            "kind": "failure_control",
-            "line": 2538,
-            "detail": "return error;"
-          },
-          {
-            "kind": "failure_guard",
-            "line": 2536,
-            "detail": "(error)",
-            "result_symbol": "error"
-          },
-          {
-            "kind": "fallible_call",
-            "line": 2534,
-            "detail": "xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,\n\t\t\t\tdfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error"
-          },
-          {
-            "kind": "state_mutation",
-            "line": 2532,
-            "detail": "resv.tr_logflags = XFS_TRANS_PERM_LOG_RES"
+            "effect_id": "ext4.journal_handle.lifecycle@mev_806a30e9bd7501613d5a",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "journal_handle",
+              "expression": "handle",
+              "identity": "EXACT",
+              "symbol_id": "sym_186f7a086926f1869f19"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "ext4_journal_manager",
+            "status": "OPEN",
+            "source_event": "mev_806a30e9bd7501613d5a",
+            "required": true,
+            "spec_effect_id": "ext4.journal_handle.lifecycle"
           }
         ],
-        "root_cause_fingerprint": "mocc_root_cause_099f3f7982bfbf77140f",
-        "family_fingerprint": "mocc_family_6bf22dfccd4f55769536",
-        "occurrence_fingerprint": "mocc_occurrence_ae1860e1f975ce853bcf"
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "ext4/inode.c",
+            "detail": "ext4.journal_handle.lifecycle",
+            "line": 1351,
+            "event_id": "mev_806a30e9bd7501613d5a"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inode.c",
+            "detail": "return ret;",
+            "line": 1417,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:ext4.transaction.start",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect ext4.journal_handle.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_806a30e9bd7501613d5a"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inode.c",
+            "line": 1417,
+            "event_id": "mev_806a30e9bd7501613d5a"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return ret;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/ext4/inode.c",
+            "line": 1417,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "ext4/inode.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_write_begin",
+        "family_fingerprint": "mocc_family_bfeffc564b553158d8c1",
+        "occurrence_fingerprint": "mocc_occurrence_f98cd489f05e397b0a88",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_c303885bec68f90ab1a6"
       },
       "triage": {
-        "review_id": "mocc_occurrence_ae1860e1f975ce853bcf",
-        "verdict": "likely_false_positive",
+        "review_id": "mocc_occurrence_f98cd489f05e397b0a88",
+        "verdict": "uncertain",
         "priority": "P2",
-        "confidence": "high",
-        "rationale": "The matched mutation is local preparation or local argument state, not a proven durable metadata effect.",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
         "evidence": [
-          "compensation line 2545: list_del_init(&dfc->dfc_list)",
-          "failure_control line 2538: return error;",
-          "failure_guard line 2536: (error)",
-          "fallible_call line 2534: xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,\n\t\t\t\tdfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error",
-          "state_mutation line 2532: resv.tr_logflags = XFS_TRANS_PERM_LOG_RES"
+          "effect_created line 1351: ext4.journal_handle.lifecycle",
+          "exit line 1417: return ret;"
         ],
         "followups": [
-          "teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects",
-          "do not promote without a protocol object binding"
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_43a7367da8fde14c276c",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "btrfs_parent_lookup_path_allocation",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "btrfs.parent_lookup.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "btrfs.search_path.allocation@mev_2701d420fa36c846651a",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "search_path",
+              "expression": "path",
+              "identity": "EXACT",
+              "symbol_id": "sym_8654f1c86e2bb2b63889"
+            },
+            "scope": "LOCAL",
+            "owner": "btrfs_path_allocator",
+            "status": "OPEN",
+            "source_event": "mev_2701d420fa36c846651a",
+            "required": true,
+            "spec_effect_id": "btrfs.search_path.allocation"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "btrfs/tree-log.c",
+            "detail": "btrfs.search_path.allocation",
+            "line": 3810,
+            "event_id": "mev_2701d420fa36c846651a"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/tree-log.c",
+            "detail": "return 1;",
+            "line": 3845,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:btrfs.search_path.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect btrfs.search_path.allocation",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_2701d420fa36c846651a"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/tree-log.c",
+            "line": 3845,
+            "event_id": "mev_2701d420fa36c846651a"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 1;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/btrfs/tree-log.c",
+            "line": 3845,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "btrfs/tree-log.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "inode_logged",
+        "family_fingerprint": "mocc_family_68fbdeaf5bffce5cd873",
+        "occurrence_fingerprint": "mocc_occurrence_c2dbfa8a270586f6e002",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_106c86dae5ac292c1932"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_c2dbfa8a270586f6e002",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 3810: btrfs.search_path.allocation",
+          "exit line 3845: return 1;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_c9d95ee2715ade973876",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "metadata_state_divergence",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/xfs_aops.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 62,
+            "event_id": "mev_4bd44bfb58f4c5dda9f3"
+          },
+          {
+            "kind": "effect_compensated",
+            "source": "xfs/xfs_aops.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 70,
+            "event_id": "mev_07fc722e2bd7cdb45a5d"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_aops.c",
+            "detail": "return 0;",
+            "line": 71,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_4bd44bfb58f4c5dda9f3"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "HANDLING_FAILURE",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_aops.c",
+            "line": 71,
+            "event_id": "mev_4bd44bfb58f4c5dda9f3"
+          },
+          {
+            "from": "HANDLING_FAILURE",
+            "to": "EXITED",
+            "reason": "return 0;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_aops.c",
+            "line": 71,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/xfs_aops.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xfs_setfilesize",
+        "family_fingerprint": "mocc_family_a0c2d28f4b1f869bb00e",
+        "occurrence_fingerprint": "mocc_occurrence_c08e090c7354a96ef01a",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_79c38008293c92a3bb61"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_c08e090c7354a96ef01a",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 62: xfs.transaction.lifecycle",
+          "effect_compensated line 70: xfs.transaction.lifecycle",
+          "exit line 71: return 0;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_1e4d1e8a232c65aa85e2",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "xfs.transaction.lifecycle@mev_e8f1fe1c60de0ec5ed84",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "transaction",
+              "expression": "tp",
+              "identity": "EXACT",
+              "symbol_id": "sym_534fde4816407f282bdf"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "xfs_transaction_manager",
+            "status": "OPEN",
+            "source_event": "mev_e8f1fe1c60de0ec5ed84",
+            "required": true,
+            "spec_effect_id": "xfs.transaction.lifecycle"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/xfs_trans.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 1381,
+            "event_id": "mev_e8f1fe1c60de0ec5ed84"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "detail": "return 0;",
+            "line": 1434,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_e8f1fe1c60de0ec5ed84"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1434,
+            "event_id": "mev_e8f1fe1c60de0ec5ed84"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 0;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1434,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/xfs_trans.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xfs_trans_alloc_dir",
+        "family_fingerprint": "mocc_family_97c9f71f8f932afd3aba",
+        "occurrence_fingerprint": "mocc_occurrence_cfaec856ddae285829ce",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_67da9ca487edddb03a43"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_cfaec856ddae285829ce",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 1381: xfs.transaction.lifecycle",
+          "exit line 1434: return 0;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_d7e46c3c905d3d6f7797",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "xfs.transaction.lifecycle@mev_4bccdf268c617688b638",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "transaction",
+              "expression": "tp",
+              "identity": "EXACT",
+              "symbol_id": "sym_1aa1f42e2fba4895d43b"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "xfs_transaction_manager",
+            "status": "OPEN",
+            "source_event": "mev_4bccdf268c617688b638",
+            "required": true,
+            "spec_effect_id": "xfs.transaction.lifecycle"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/xfs_trans.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 1263,
+            "event_id": "mev_4bccdf268c617688b638"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "detail": "return 0;",
+            "line": 1343,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_4bccdf268c617688b638"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1343,
+            "event_id": "mev_4bccdf268c617688b638"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 0;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1343,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/xfs_trans.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xfs_trans_alloc_ichange",
+        "family_fingerprint": "mocc_family_5f5a1f2c160a40867b8b",
+        "occurrence_fingerprint": "mocc_occurrence_634b54908c6d728b4cb8",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_67da9ca487edddb03a43"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_634b54908c6d728b4cb8",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 1263: xfs.transaction.lifecycle",
+          "exit line 1343: return 0;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_62a23ddd877e1c4996df",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "xfs.transaction.lifecycle@mev_53d3f21627beeff1276b",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "transaction",
+              "expression": "tp",
+              "identity": "EXACT",
+              "symbol_id": "sym_778b6b4e30b561c74141"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "xfs_transaction_manager",
+            "status": "OPEN",
+            "source_event": "mev_53d3f21627beeff1276b",
+            "required": true,
+            "spec_effect_id": "xfs.transaction.lifecycle"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/xfs_trans.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 1206,
+            "event_id": "mev_53d3f21627beeff1276b"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "detail": "return 0;",
+            "line": 1233,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_53d3f21627beeff1276b"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1233,
+            "event_id": "mev_53d3f21627beeff1276b"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 0;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1233,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/xfs_trans.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xfs_trans_alloc_icreate",
+        "family_fingerprint": "mocc_family_278203b3f6b4c89a403f",
+        "occurrence_fingerprint": "mocc_occurrence_fe7156b8eaaeaf7bbed7",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_67da9ca487edddb03a43"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_fe7156b8eaaeaf7bbed7",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 1206: xfs.transaction.lifecycle",
+          "exit line 1233: return 0;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_ca00fcaf5e3e7850bc6c",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "xfs.transaction.lifecycle@mev_f7dc881b4318ce5a211a",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "transaction",
+              "expression": "tp",
+              "identity": "EXACT",
+              "symbol_id": "sym_35d5e8c92d2dc339b7f6"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "xfs_transaction_manager",
+            "status": "OPEN",
+            "source_event": "mev_f7dc881b4318ce5a211a",
+            "required": true,
+            "spec_effect_id": "xfs.transaction.lifecycle"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/xfs_trans.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 1080,
+            "event_id": "mev_f7dc881b4318ce5a211a"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "detail": "return 0;",
+            "line": 1108,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_f7dc881b4318ce5a211a"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1108,
+            "event_id": "mev_f7dc881b4318ce5a211a"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return 0;",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/xfs_trans.c",
+            "line": 1108,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/xfs_trans.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xfs_trans_alloc_inode",
+        "family_fingerprint": "mocc_family_20cb994b1525ff26b877",
+        "occurrence_fingerprint": "mocc_occurrence_b28745824da1ba46d18f",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_67da9ca487edddb03a43"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_b28745824da1ba46d18f",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 1080: xfs.transaction.lifecycle",
+          "exit line 1108: return 0;"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
+        ],
+        "bug_claim_allowed": false
+      }
+    },
+    {
+      "record": {
+        "candidate_id": "moc_775a70ed15e61438cb17",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "xfs_acl_mode_transaction",
+        "violation_type": "incomplete_failure_completion",
+        "exit_kind": "success",
+        "exit_id": "xfs.transaction.success",
+        "principal_objects": [],
+        "open_effects": [
+          {
+            "effect_id": "xfs.transaction.lifecycle@mev_139589661a00819f0d4f",
+            "kind": "METADATA_UPDATE",
+            "object_ref": {
+              "role": "transaction",
+              "expression": "sc->tp",
+              "identity": "EXACT",
+              "symbol_id": "sym_9141ee07de8d3b48ccb6"
+            },
+            "scope": "TRANSACTION_SCOPED",
+            "owner": "xfs_transaction_manager",
+            "status": "OPEN",
+            "source_event": "mev_139589661a00819f0d4f",
+            "required": true,
+            "spec_effect_id": "xfs.transaction.lifecycle"
+          }
+        ],
+        "unresolved_failures": [],
+        "accounting_state": [],
+        "representative_witness": [
+          {
+            "kind": "effect_created",
+            "source": "xfs/scrub/tempfile.c",
+            "detail": "xfs.transaction.lifecycle",
+            "line": 862,
+            "event_id": "mev_139589661a00819f0d4f"
+          },
+          {
+            "kind": "exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/scrub/tempfile.c",
+            "detail": "return xrep_tempexch_reserve_quota(sc, tx);",
+            "line": 871,
+            "event_id": ""
+          }
+        ],
+        "uncertainty_causes": [],
+        "static_certainty": "high",
+        "return_attempt_id": "",
+        "return_provenance": "summary:xfs.transaction.alloc",
+        "control_trace": [
+          {
+            "from": "INIT",
+            "to": "ACTIVE",
+            "reason": "create effect xfs.transaction.lifecycle",
+            "source": "",
+            "line": 0,
+            "event_id": "mev_139589661a00819f0d4f"
+          },
+          {
+            "from": "ACTIVE",
+            "to": "COMMITTING",
+            "reason": "bounded summary lifecycle reaches success exit",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/scrub/tempfile.c",
+            "line": 871,
+            "event_id": "mev_139589661a00819f0d4f"
+          },
+          {
+            "from": "COMMITTING",
+            "to": "EXITED",
+            "reason": "return xrep_tempexch_reserve_quota(sc, tx);",
+            "source": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs/xfs/scrub/tempfile.c",
+            "line": 871,
+            "event_id": ""
+          }
+        ],
+        "classification": "DISCOVERY_REVIEW",
+        "source_file": "xfs/scrub/tempfile.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xrep_tempexch_trans_alloc",
+        "family_fingerprint": "mocc_family_c7877cc6dac047e4d76c",
+        "occurrence_fingerprint": "mocc_occurrence_1fc1c33b4bd4c975a22d",
+        "review_reason": "semantic_operation_applicability_requires_review",
+        "root_cause_fingerprint": "mocc_root_cause_67da9ca487edddb03a43"
+      },
+      "triage": {
+        "review_id": "mocc_occurrence_1fc1c33b4bd4c975a22d",
+        "verdict": "uncertain",
+        "priority": "P2",
+        "confidence": "low",
+        "rationale": "No specialized triage rule matched this review record.",
+        "evidence": [
+          "effect_created line 862: xfs.transaction.lifecycle",
+          "exit line 871: return xrep_tempexch_reserve_quota(sc, tx);"
+        ],
+        "followups": [
+          "add a triage rule or perform manual source review"
         ],
         "bug_claim_allowed": false
       }

@@ -1,7 +1,14 @@
 import json
 from pathlib import Path
 
-from src.metadata_batch_scan import _active_protocols, main, scan_source_tree
+import pytest
+
+from src.metadata_batch_scan import (
+    BatchScanCoverageError,
+    _active_protocols,
+    main,
+    scan_source_tree,
+)
 from src.metadata_validation_manifest import ProtocolFreeze
 
 
@@ -46,6 +53,35 @@ out:
     assert payload["summary"]["scanned_files"] == 1
     assert payload["summary"]["discovery_review_queue_entries"] >= 1
     assert payload["protocol_candidates"] == []
+    assert payload["coverage_health"]["status"] == "no_protocol_analysis_exercised"
+    assert payload["coverage_health"]["protocol_analysis_exercised"] is False
+
+
+def test_batch_scan_can_require_real_protocol_analysis(tmp_path):
+    _write_source(
+        tmp_path,
+        "fs/ext4/fresh.c",
+        """
+int fresh_case(void)
+{
+    int ret = ext4_ext_remove_space();
+    if (ret)
+        goto out;
+out:
+    return 0;
+}
+""",
+    )
+
+    with pytest.raises(BatchScanCoverageError, match="no exact or semantic"):
+        scan_source_tree(
+            tmp_path,
+            workspace=ROOT,
+            source_version="7.1",
+            include_confirmed_functions=True,
+            include_regression_seeds=True,
+            require_protocol_analysis=True,
+        )
 
 
 def test_active_protocols_are_filtered_by_rule_applicability():
@@ -98,6 +134,6 @@ out:
     )
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["summary"]["scanned_files"] == 1
     assert payload["result_semantics"] == "candidate_queue_not_bug_claims"

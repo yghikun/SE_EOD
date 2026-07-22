@@ -16,11 +16,11 @@ from .frontend.model import FunctionIR
 from .frontend.tree_sitter_frontend import TreeSitterFrontend
 from .metadata_confirmed_bug_linkage import parse_confirmed_bugs_markdown
 from .metadata_event import MetadataEvent, extract_metadata_events
-from .metadata_protocol import MetadataProtocol
+from .metadata_protocol import EffectTransition, MetadataProtocol
 from .metadata_protocol_analyzer import ProtocolAnalysisResult, analyze_function
 
 
-DISCOVERY_SCHEMA_VERSION = 3
+DISCOVERY_SCHEMA_VERSION = 5
 DEFAULT_CONFIRMED_BUGS = (
     Path(__file__).resolve().parents[1] / "outputs" / "confirmed_bugs.md"
 )
@@ -74,6 +74,7 @@ class ApplicabilityEvidence:
     matched_discovery_callees: tuple[str, ...]
     matched_discovery_fields: tuple[str, ...]
     unmatched_discovery_callees: tuple[str, ...]
+    relaxed_terminal_discovery_callees: tuple[str, ...]
     unmatched_discovery_fields: tuple[str, ...]
     forbidden_discovery_callees: tuple[str, ...]
     unique_anchor_ids: tuple[str, ...]
@@ -118,15 +119,24 @@ class ApplicabilityEvidence:
                 and self.required_role_coverage >= self.minimum_role_coverage
             )
             or (role_count >= 1 and supporting_count >= 1)
+            or (
+                role_count == 0
+                and self.matched_effect_ids
+                and (
+                    self.matched_discovery_callees
+                    or self.matched_discovery_fields
+                )
+            )
         )
 
-    def score(self) -> tuple[int, int, int, int, int, int]:
+    def score(self) -> tuple[int, int, int, int, int, int, int]:
         return (
             1 if self.match_kind == "exact_entry" else 0,
             len(self.unique_anchor_ids),
             self.semantic_anchor_count,
             -len(self.unmatched_required_role_ids),
             -len(self.unmatched_discovery_callees),
+            -len(self.relaxed_terminal_discovery_callees),
             -len(self.unmatched_discovery_fields),
         )
 
@@ -142,6 +152,9 @@ class ApplicabilityEvidence:
             "matched_discovery_callees": list(self.matched_discovery_callees),
             "matched_discovery_fields": list(self.matched_discovery_fields),
             "unmatched_discovery_callees": list(self.unmatched_discovery_callees),
+            "relaxed_terminal_discovery_callees": list(
+                self.relaxed_terminal_discovery_callees
+            ),
             "unmatched_discovery_fields": list(self.unmatched_discovery_fields),
             "forbidden_discovery_callees": list(self.forbidden_discovery_callees),
             "unique_anchor_ids": list(self.unique_anchor_ids),
@@ -258,6 +271,9 @@ class ProtocolDiscoveryReport:
         unknown = [
             item for analysis in self.analyses for item in analysis.unknown_records
         ]
+        applicability_counts = Counter(
+            item.applicability.match_kind for item in self.analyses
+        )
         family_counts = Counter(item["family_fingerprint"] for item in candidates)
         review_family_counts = Counter(
             item["family_fingerprint"] for item in review
@@ -281,6 +297,8 @@ class ProtocolDiscoveryReport:
                 "scanned_files": self.scanned_files,
                 "scanned_functions": self.scanned_functions,
                 "applicable_functions": len(self.analyses),
+                "exact_entry_functions": applicability_counts["exact_entry"],
+                "semantic_applicable_functions": applicability_counts["semantic"],
                 "protocol_candidate_occurrences": len(candidates),
                 "protocol_candidate_families": len(family_counts),
                 "discovery_review_occurrences": len(review),
@@ -516,6 +534,29 @@ def operation_applicability(
         matched_handlers = tuple(
             sorted({item.handler_spec_id for item in events if item.handler_spec_id})
         )
+        terminal_discovery_callees = _terminal_discovery_callees(
+            protocol,
+            operation.operation_id,
+        )
+        open_discovery_callees = tuple(
+            callee
+            for callee in discovery.required_callees
+            if callee not in terminal_discovery_callees
+        )
+        matched_open_discovery = tuple(
+            callee
+            for callee in matched_discovery_callees
+            if callee in open_discovery_callees
+        )
+        relaxed_terminal_discovery_callees = tuple(
+            sorted(
+                set(terminal_discovery_callees)
+                & set(discovery.required_callees)
+                - set(matched_discovery_callees)
+            )
+            if matched_open_discovery
+            else ()
+        )
         required_roles = {
             item.role_id for item in operation.callee_roles if item.necessary
         }
@@ -549,8 +590,10 @@ def operation_applicability(
                     sorted(
                         set(discovery.required_callees)
                         - set(matched_discovery_callees)
+                        - set(relaxed_terminal_discovery_callees)
                     )
                 ),
+                relaxed_terminal_discovery_callees,
                 tuple(
                     sorted(
                         set(discovery.required_fields)
@@ -563,6 +606,23 @@ def operation_applicability(
             )
         )
     return tuple(evidences)
+
+
+def _terminal_discovery_callees(
+    protocol: MetadataProtocol,
+    operation_id: str,
+) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {
+                callee
+                for summary in protocol.callee_summaries
+                if summary.operation_id == operation_id
+                and summary.transition is not EffectTransition.OPEN
+                for callee in summary.callees
+            }
+        )
+    )
 
 
 def _select_applicability(

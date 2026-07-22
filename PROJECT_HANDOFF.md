@@ -213,8 +213,9 @@ outputs/mocc-batch-scan-v1/linux-v7.1-fs.json
 ```text
 scanned_files: 334
 scanned_functions: 10302
+applicable_functions: 294
 protocol_candidate_occurrences: 0
-discovery_review_queue_entries: 8
+discovery_review_queue_entries: 15
 analysis_unknown: 0
 discovery_unknown: 0
 result_semantics: candidate_queue_not_bug_claims
@@ -230,23 +231,50 @@ outputs/mocc-batch-scan-v1/linux-v7.1-fs-triage.md
 当前 triage 结果：
 
 ```text
-triage_items: 8
-likely_false_positive: 6
+triage_items: 15
+P0: 2
+P2: 13
+uncertain: 13
 needs_external_semantics: 2
-needs_protocol_instance: 0
 manual_bug_review_candidates: 0
 ```
 
 解释：
 
-- 6 条 Btrfs/XFS `mutation_failure_cleanup` 宽语义命中被判为 likely false positive，
-  因为 matched mutation 是 local preparation / search key / reservation argument state，
-  不是已证明的 durable metadata effect；
-- 2 条 ext4 `failure_return_mismatch` 命中不是 bug，也不是立即应写入 active protocol 的实例；
-  它们现在被归类为 `needs_external_semantics`。
+- 2 条 ext4 `failure_return_mismatch` 命中仍归类为 `needs_external_semantics`；
+- 13 条 P2 `uncertain` 主要来自 D/E lifecycle acquire/open-first 扩展后的 semantic
+  review/unknown 队列，需要后续分层抽样、降噪和人工审查。
 
 这一步的意义是：当前工具已经可以跑全量候选队列，但 v7.1 这次扫描没有产生可以直接进入
 manual bug review 的精确协议候选。
+
+必须同时说明：该次扫描的 294 个 applicable functions 均为 semantic operation analysis；
+semantic matches 不会直接升级为 `PROTOCOL_CANDIDATE`。因此“0 个精确候选”不能解释为协议证明了
+10,302 个函数安全。schema v2 batch report 的 `coverage_health` 可用于确认协议分析是否真正执行；
+正式运行可使用 `--require-protocol-analysis` 将零协议覆盖直接视为失败。
+
+新增 bug-hunt ranking：
+
+```text
+outputs/mocc-batch-scan-v1/linux-v7.1-fs-bug-hunt-ranking.json
+```
+
+该 artifact 的语义是 `manual_bug_hunt_prioritization_not_bug_claims`。它把 15 条 triage
+item 按源码可见风险重新排序，并降权 acquire-failure guard、返回给调用者的 ownership transfer、
+自动清理和函数体内可见 terminal action。当前结果：
+
+```text
+ranked_items: 15
+manual_source_review_high: 1
+manual_source_review_medium: 9
+analyzer_capability_gap: 0
+likely_protocol_gap_or_false_positive: 5
+top_risk_score: 83
+```
+
+人工抽查 top-ranked items 后，尚未发现可以负责任称为真实 bug 的样本。前排样本主要有
+源码可见的 `btrfs_free_path()`、`ext4_journal_stop()`、`xfs_trans_commit()` /
+`xfs_trans_cancel()`，或属于 ownership transfer / analyzer object-identity 能力缺口。
 
 ## 7. ext4 replay bookkeeping 审计状态
 
@@ -345,6 +373,12 @@ python -m src.metadata_validation_labels `
   --labels configs/validation/reviewer_a_labels_v1.json `
   --labels configs/validation/reviewer_b_labels_v1.json `
   --adjudication configs/validation/adjudication_v1.json
+python -m src.metadata_validation_run `
+  --out outputs/mocc-validation-v1/unseen-batch-1-predictions.json
+python -m src.metadata_validation_selection `
+  --source 7.1=linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c `
+  --samples-per-protocol 0 `
+  --out outputs/mocc-validation-v1/batch-2-selection-smoke.json
 ```
 
 当前预期摘要：
@@ -360,7 +394,31 @@ reviewer label templates: 2
 adjudication template: 1
 ```
 
-这些 validation 文件仍是入口和模板，不是 evaluation result。
+这些 validation 文件仍是入口和模板，不是 evaluation result。validation runner 的
+label-blind 审计结果为：10 个样本、2 个 analyzable、8 个 out of scope、无可用指标；
+2 个 analyzable 样本分别为 Protocol B legal 与 Protocol E legal。
+这仍暴露了 batch 1 的样本适用性设计缺陷，不能把 out of scope 计作 legal。
+
+新增 validation selection audit 用于 batch 2 预注册：它从 frozen protocol 和 pinned
+source roots 生成 protocol-applicable candidate pool 与 `draft_manifest`，输出语义是
+`selection_audit_not_evaluation`。当前 smoke artifact
+`outputs/mocc-validation-v1/batch-2-selection-smoke.json` 只覆盖一个小范围文件，候选池为
+0；它同时审计出 32/32 个 registered exact-entry identities 都是 construction overlap，
+所以当前 freeze 下 batch 2 不能靠 exact entry 抽样。正式 batch 2 需要把全量多版本
+source roots 作为独立长任务运行并冻结 selection seed；若 semantic/fresh discovery 仍为
+0，应先扩展 protocol applicability。
+
+已完成一次关键 protocol applicability 扩展：transaction/allocation lifecycle discovery
+现在以 acquire/open callee 作为 semantic analysis 入口，terminal callee（commit/stop/free）
+不再作为 discovery 硬门槛，而由 analyzer 判断是否满足 obligation。对应证据字段为
+`relaxed_terminal_discovery_callees`。targeted selection audit 已更新：
+
+- Btrfs targeted pool：118，其中 Protocol B 为 8、Protocol E 为 110；
+- XFS targeted pool：5，均为 Protocol D；
+- ext4 targeted pool：47，均为 Protocol D。
+
+这些输出仍是 `selection_audit_not_evaluation`，尚未冻结为 batch 2 manifest，也没有 reviewer
+label。
 
 ### 10.2 单函数协议分析
 
@@ -415,10 +473,11 @@ python -m src.metadata_batch_triage `
 当前 v7.1 预期摘要：
 
 ```text
-triage_items: 8
-likely_false_positive: 6
+triage_items: 15
+P0: 2
+P2: 13
+uncertain: 13
 needs_external_semantics: 2
-needs_protocol_instance: 0
 manual_bug_review_candidates: 0
 ```
 
@@ -455,7 +514,7 @@ git diff --check
 当前测试基线：
 
 ```text
-238 passed
+277 passed
 ```
 
 `git diff --check` 在 Windows 工作区可能只提示 LF/CRLF 转换 warning；没有 trailing
@@ -492,7 +551,22 @@ outputs/mocc-finding-review-v1/
 
 当前最值得继续的是三条线，优先级如下。
 
-### P0：闭合 ext4 replay bookkeeping 的外部语义
+### P0：重新预注册可执行的 validation batch
+
+当前 batch 1 已被冻结并完成 label-blind analyzability audit；lifecycle discovery 扩展后
+只有 2/10 样本进入协议分析，仍不足以计算指标。不得查看未来标签后回调 active protocol。
+应使用独立 selection protocol 构建新的 batch 2：在冻结前验证每个样本至少有一个 exact/semantic operation match，同时保留
+fresh-discovery negatives，并在 manifest 中冻结 selection query、候选池和抽样随机种子。
+
+可执行入口已经存在：`python -m src.metadata_validation_selection --source VERSION=PATH ...`。
+它不会读取 reviewer labels，也不会修改 frozen batch 1；当前 targeted audits 已证明 D/E
+lifecycle 扩展能产生非零 candidate pool。下一步应扩大到全量 source roots，确认每个 active
+protocol 均有可分析样本后，再冻结 batch 2 manifest。
+
+验收条件：协议级覆盖不为零、每个 active protocol 均有可分析正/负样本、out-of-scope
+单独计数、双 reviewer 完成前不计算效果指标。
+
+### P1：闭合 ext4 replay bookkeeping 的外部语义
 
 目标：回答 `ext4_ext_replay_set_iblocks()` 和 `ext4_ext_clear_bb()` 的失败是否必须导致
 fast-commit replay abort。
@@ -505,7 +579,7 @@ fast-commit replay abort。
 4. 如果语义支持 best-effort，则把这两个 review 降级为 false positive / out of scope；
 5. 不论哪种结论，都不能直接修改 frozen active protocol，除非同步更新 freeze 和文档。
 
-### P1：完成 blind validation 标注链
+### P2：完成 blind validation 标注链
 
 目标：让规则 maturity 有机会从 development 进入 validation/frozen。
 
@@ -517,16 +591,17 @@ fast-commit replay abort。
 4. 生成单独 evaluation artifact；
 5. 不把 validation label 回流到 construction evidence。
 
-### P2：减少 broad discovery 假阳性
+### P3：减少 lifecycle semantic 队列噪声
 
-目标：把当前 6 条 local-preparation 类 false positive 从源头降低。
+目标：把 acquire/open-first 扩展后产生的 13 条 P2 uncertain 队列分层降噪，同时保留可能的真实
+lifecycle miss。
 
 需要做：
 
-1. 把 triage 中识别到的 local/search-key/reservation preparation 模式迁入 discovery filter；
-2. 保留 conservative unknown，不要过度过滤真实 metadata effect；
-3. 更新 discovery/triage 测试；
-4. 重新跑 v7.1 batch scan，确认 review_queue 从 8 更接近 2。
+1. 按 protocol、operation、candidate/unknown、`relaxed_terminal_discovery_callees` 分层抽样；
+2. 把明显 local preparation / search-key / reservation-only 模式迁入 discovery filter；
+3. 保留 conservative unknown，不要过度过滤真实 lifecycle effect；
+4. 更新 discovery/triage 测试并重新跑 v7.1 batch scan/triage。
 
 ## 13. 交接检查
 

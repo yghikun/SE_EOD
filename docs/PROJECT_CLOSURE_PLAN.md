@@ -91,7 +91,7 @@ ANALYSIS_UNKNOWN
 - evidence-backed rule registry、maturity 和 active operation coverage audit；
 - representative trace 和 CFG snapshot；
 - source review、version matrix、repair evidence 和 confirmed linkage；
-- `238 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、reviewer/adjudication、batch scan、batch triage 和 ext4 replay bookkeeping source-fact audit 负例。
+- `277 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、validation runner、validation selection audit、reviewer/adjudication、batch scan 覆盖门禁、batch triage、bug-hunt ranking、lifecycle acquire/open discovery、lifecycle analyzer guard/cleanup/transfer/wrapper terminal/implicit-exit epilogue/repeated-condition terminal、member object identity / parameter-member publication / reviewed scrub wrapper terminal 和 ext4 replay bookkeeping source-fact audit 负例。
 
 旧 SE-EOD `src.main`、resource/dataflow、candidate、ranking/LLM 和实验辅助代码已删除；
 保留的旧输出只是历史数据，不是当前可执行能力。
@@ -107,9 +107,16 @@ witness 和 fresh discovery。仍缺少：
 - allocation publication/ownership transfer、namespace/orphan、quota/refcount
   和 deferred ownership coverage target 的规则取证与协议实例；
 - 独立冻结 benchmark 的双 reviewer 真实标注、adjudication、指标计算和规模化采集；
+- 首批 blind batch 的 label-blind analyzability audit 已完成；lifecycle discovery 扩展后
+  2/10 个样本可分析、8/10 个样本仍为 out of scope，覆盖不足，不能在该批次上计算指标；
+- batch 2 的 selection audit 入口已实现，但正式全量 selection run、候选池冻结和
+  manifest v2 freeze 尚未完成；当前 registered exact-entry identities 全部与
+  construction evidence 重叠，因此 batch 2 需要 semantic/fresh discovery 或更宽的
+  protocol applicability。D/E lifecycle discovery 已扩展为 acquire/open-first，并在
+  targeted selection 中产生非零可审计池；仍需全量运行覆盖所有 active protocol。
 - Protocol A/B/C/D/E 已有第一批 blind/unlabeled freeze manifest 与 reviewer/adjudication 模板，但尚无 protocol-versioned evaluation result。
 - freeze-bound batch scanner 已可生成全量 candidate/review/unknown 队列，但输出语义仍是 candidate queue，不是 bug 结论。
-- v7.1 batch triage 已完成初筛：8 条 review 中 6 条 likely false positive、2 条 needs external semantics、0 条 needs protocol instance、0 条 manual bug-review candidate；两个 ext4 replay bookkeeping helper 已生成源码事实审计，但缺少独立 replay bookkeeping 义务前不能升级为协议或 bug。
+- v7.1 batch triage 已完成初筛：15 条 triage item，其中 2 条 P0 `needs_external_semantics`、13 条 P2 `uncertain`；这些来自 expanded semantic review/unknown 队列，仍不能升级为协议或 bug 结论。
 
 ### 3.3 明确非目标
 
@@ -589,6 +596,7 @@ Documentation updated:
 
 - [ ] 开发、验证、测试和 discovery 分离；
 - [ ] 双 reviewer 和裁决完成；
+- [ ] 冻结 evaluation batch 在揭示标签前通过 protocol applicability gate；
 - [ ] baseline、消融、指标和统计可重算；
 - [ ] unknown coverage、人工成本和协议成本被报告；
 - [x] freeze-bound batch scanner 能输出 candidate/review/unknown 队列；

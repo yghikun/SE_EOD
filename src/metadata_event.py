@@ -547,11 +547,9 @@ def _resolve_call_argument(
     if not arguments or index >= len(arguments) or index < -len(arguments):
         return ResolvedObjectRef(role, "", ObjectIdentity.UNKNOWN)
     expression = " ".join(arguments[index].strip().split())
-    root_match = re.search(r"([A-Za-z_]\w*)", expression)
-    root = root_match.group(1) if root_match else ""
-    symbol = next((item for item in function.symbols if item.name == root), None)
-    if symbol is not None:
-        return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, symbol.symbol_id)
+    resolved = _resolve_exact_symbol_or_member(function, expression)
+    if resolved:
+        return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, resolved)
     return ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN)
 
 
@@ -570,17 +568,15 @@ def _resolve_summary_object(
                 ResolvedObjectRef(role, "", ObjectIdentity.UNKNOWN),
                 ("summary_result_not_captured",),
             )
-        symbol = next(
-            (item for item in function.symbols if item.name == result_symbol), None
-        )
-        if symbol is None:
+        symbol_id = _resolve_exact_symbol_or_member(function, result_symbol)
+        if not symbol_id:
             return (
                 ResolvedObjectRef(role, result_symbol, ObjectIdentity.UNKNOWN),
                 ("summary_object_identity_unknown",),
             )
         return (
             ResolvedObjectRef(
-                role, result_symbol, ObjectIdentity.EXACT, symbol.symbol_id
+                role, result_symbol, ObjectIdentity.EXACT, symbol_id
             ),
             (),
         )
@@ -601,19 +597,48 @@ def _resolve_summary_object(
         expression = _strip_outer_parens(normalized[1:].strip())
     else:
         expression = _strip_outer_parens(expression)
-    root_match = re.fullmatch(r"[A-Za-z_]\w*", expression)
-    if root_match is None:
+    symbol_id = _resolve_exact_symbol_or_member(function, expression)
+    if not symbol_id:
         return (
             ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN),
             ("summary_object_identity_unknown",),
         )
-    symbol = next((item for item in function.symbols if item.name == expression), None)
-    if symbol is None:
-        return (
-            ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN),
-            ("summary_object_identity_unknown",),
-        )
-    return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, symbol.symbol_id), ()
+    return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, symbol_id), ()
+
+
+def _auto_cleanup_macro_symbol(function: FunctionIR, name: str) -> str:
+    if not name or function.body_node is None:
+        return ""
+    pattern = re.compile(rf"\bBTRFS_PATH_AUTO_FREE\s*\(\s*{re.escape(name)}\s*\)")
+    if not any(pattern.search(node.text) for node in function.body_node.walk()):
+        return ""
+    return _stable_id("sym", function.function_id, "BTRFS_PATH_AUTO_FREE", name)
+
+
+def _resolve_exact_symbol_or_member(function: FunctionIR, expression: str) -> str:
+    normalized = _strip_outer_parens(" ".join(expression.strip().split()))
+    if normalized.startswith("&"):
+        normalized = _strip_outer_parens(normalized[1:].strip())
+    if not normalized:
+        return ""
+    symbol = next((item for item in function.symbols if item.name == normalized), None)
+    if symbol is not None:
+        return symbol.symbol_id
+    cleanup_symbol = _auto_cleanup_macro_symbol(function, normalized)
+    if cleanup_symbol:
+        return cleanup_symbol
+    member_match = re.fullmatch(
+        r"([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)+)",
+        normalized,
+    )
+    if member_match is None:
+        return ""
+    root, member_path = member_match.groups()
+    root_symbol = next((item for item in function.symbols if item.name == root), None)
+    if root_symbol is None:
+        return ""
+    canonical_member_path = re.sub(r"\s+", "", member_path)
+    return _stable_id("sym", root_symbol.symbol_id, canonical_member_path)
 
 
 def _strip_outer_parens(value: str) -> str:
@@ -650,10 +675,22 @@ def _call_result_symbol(function: FunctionIR, location: SourceRange) -> str:
     node = min(enclosing, key=lambda item: item.end_byte - item.start_byte)
     left = node.child_by_field_name("left") or node.child_by_field_name("declarator")
     if left is not None:
-        match = re.search(r"([A-Za-z_]\w*)\s*$", left.text.strip())
-        if match:
-            return match.group(1)
+        expression = _normalize_lvalue_for_result(left.text.strip())
+        if expression:
+            return expression
     match = re.match(r"\s*([A-Za-z_]\w*)\s*=", node.text)
+    return match.group(1) if match else ""
+
+
+def _normalize_lvalue_for_result(text: str) -> str:
+    compact = re.sub(r"\s+", "", _strip_outer_parens(text))
+    member_match = re.fullmatch(
+        r"(?:\*+)?([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)+)",
+        compact,
+    )
+    if member_match:
+        return "".join(member_match.groups())
+    match = re.search(r"([A-Za-z_]\w*)\s*$", text)
     return match.group(1) if match else ""
 
 
@@ -677,6 +714,12 @@ def _event_id(
         )
     )
     return "mev_" + hashlib.sha256(payload.encode("utf-8", errors="replace")).hexdigest()[:20]
+
+
+def _stable_id(prefix: str, *parts: object) -> str:
+    payload = "\x1f".join(str(part) for part in parts)
+    digest = hashlib.sha256(payload.encode("utf-8", errors="replace")).hexdigest()[:20]
+    return f"{prefix}_{digest}"
 
 
 def events_by_source(events: Iterable[MetadataEvent]) -> dict[int, tuple[MetadataEvent, ...]]:

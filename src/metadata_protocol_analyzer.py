@@ -6,13 +6,18 @@ import re
 import argparse
 import json
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Iterable
 
 from .cfg import build_cfg
 from .frontend.model import BasicBlockIR, CFGEdgeIR, FunctionIR, ControlFlowGraphIR
 from .metadata_candidate_rules import AnalysisUnknown, MetadataCandidate, generate_candidates
-from .metadata_event import MetadataEvent, EventStrength, extract_metadata_events
+from .metadata_event import (
+    MetadataEvent,
+    EventStrength,
+    ObjectIdentity,
+    extract_metadata_events,
+)
 from .metadata_protocol import (
     CompletionMode,
     EffectStatus,
@@ -547,6 +552,23 @@ def _analyze_summary_lifecycles(
         for observation in observations:
             base_state = MetadataOperationInstance(operation_id, protocol.protocol_id)
             _apply_path_events(base_state, protocol, events, observation, cfg)
+            if not _state_has_open_event_instance(base_state, event):
+                continue
+            _apply_reviewed_terminal_wrappers(base_state, function, protocol, observation, cfg)
+            _apply_same_condition_terminal_events(base_state, events, observation, cfg)
+            _apply_implicit_exit_terminal_epilogue(
+                base_state,
+                function,
+                events,
+                observation,
+                cfg,
+            )
+            _apply_automatic_scope_cleanup(base_state, function, observation, cfg)
+            return_transfers_open_object = _apply_return_ownership_transfer(
+                base_state,
+                function,
+                observation,
+            )
             base_state.return_value = observation.text.strip()
             base_state.return_provenance = f"summary:{event.summary_id}"
             base_state.witness.append(
@@ -557,7 +579,11 @@ def _analyze_summary_lifecycles(
                     observation.line,
                 )
             )
-            possibilities = _lifecycle_return_outcomes(observation.text)
+            possibilities = (
+                ((LegalExitKind.SUCCESS, ReturnOutcome.SUCCESS),)
+                if return_transfers_open_object
+                else _lifecycle_return_outcomes(observation.text)
+            )
             branch_results: list[
                 tuple[
                     tuple[MetadataCandidate, ...],
@@ -568,6 +594,14 @@ def _analyze_summary_lifecycles(
             for exit_kind, outcome in possibilities:
                 state = base_state.clone()
                 state.return_outcome = outcome.value
+                if exit_kind is LegalExitKind.SUCCESS and _return_is_success(
+                    observation.text
+                ):
+                    _apply_success_parameter_member_transfer(
+                        state,
+                        function,
+                        observation,
+                    )
                 state.complete(
                     _lifecycle_completion_mode(state, exit_kind),
                     f"bounded summary lifecycle reaches {exit_kind.value} exit",
@@ -597,13 +631,22 @@ def _analyze_summary_lifecycles(
                 for generated, unresolved, _ in branch_results
             ):
                 continue
+            material_results = tuple(
+                item
+                for item in branch_results
+                if not _only_closed_lifecycle_mode_mismatch(*item[:2])
+            )
+            if not material_results:
+                continue
+            if len(material_results) == 1 and not material_results[0][0] and not material_results[0][1]:
+                continue
             if all(
                 generated and not unresolved
-                for generated, unresolved, _ in branch_results
+                for generated, unresolved, _ in material_results
             ):
-                candidates.extend(branch_results[0][0])
+                candidates.extend(material_results[0][0])
                 continue
-            representative = branch_results[0][2]
+            representative = material_results[0][2]
             unknown.append(
                 AnalysisUnknown(
                     protocol.protocol_id,
@@ -621,6 +664,522 @@ def _analyze_summary_lifecycles(
                 )
             )
     return candidates, unknown
+
+
+def _only_closed_lifecycle_mode_mismatch(
+    generated: tuple[MetadataCandidate, ...],
+    unresolved: tuple[AnalysisUnknown, ...],
+) -> bool:
+    """Ignore the impossible half of a symbolic lifecycle return.
+
+    Lifecycle summaries conservatively enumerate both success and failure for
+    returns such as ``return error;``.  If a transaction/path object is already
+    terminal (no open effects and no unresolved failures), the opposite return
+    interpretation can only produce a generic state-divergence candidate due to
+    success-vs-rollback completion mode mismatch.  That is not a bug signal for
+    the resource lifecycle itself; the other branch carries the concrete closed
+    lifecycle result.
+    """
+
+    if unresolved or len(generated) != 1:
+        return False
+    candidate = generated[0]
+    return (
+        candidate.violation_type.value == "metadata_state_divergence"
+        and not candidate.open_effects
+        and not candidate.unresolved_failures
+    )
+
+
+def _state_has_open_event_instance(
+    state: MetadataOperationInstance,
+    event: MetadataEvent,
+) -> bool:
+    return any(
+        effect.source_event == event.event_id
+        for effect in state.effect_ledger.values()
+    )
+
+
+_REVIEWED_TERMINAL_WRAPPERS: dict[str, tuple[str, EffectTransition, str]] = {
+    # xfs_defer_ops_capture_and_commit either cancels the transaction before
+    # returning an error or commits it before returning success/error from
+    # xfs_trans_commit.  For the lifecycle obligation, the input transaction is
+    # terminal after this call.
+    "xfs_defer_ops_capture_and_commit": (
+        "xfs.transaction.lifecycle",
+        EffectTransition.COMMIT,
+        "",
+    ),
+    # Reviewed against fs/xfs/scrub/common.c: xchk_trans_cancel(sc) calls
+    # xfs_trans_cancel(sc->tp) and clears sc->tp.
+    "xchk_trans_cancel": (
+        "xfs.transaction.lifecycle",
+        EffectTransition.COMPENSATE,
+        "tp",
+    ),
+    # Reviewed against fs/xfs/scrub/repair.h: xrep_trans_commit(sc) calls
+    # xfs_trans_commit(sc->tp) and clears sc->tp.
+    "xrep_trans_commit": (
+        "xfs.transaction.lifecycle",
+        EffectTransition.COMMIT,
+        "tp",
+    ),
+}
+
+
+def _apply_reviewed_terminal_wrappers(
+    state: MetadataOperationInstance,
+    function: FunctionIR,
+    protocol: MetadataProtocol,
+    observation: ReturnObservation,
+    cfg: ControlFlowGraphIR,
+) -> None:
+    if protocol.protocol_id != "mocc.protocol_d.transaction_lifecycle":
+        return
+    path = set(observation.path)
+    for call in sorted(function.calls, key=lambda item: item.source_range.start_byte):
+        wrapper = _REVIEWED_TERMINAL_WRAPPERS.get(call.callee_spelling)
+        if wrapper is None or not call.arguments:
+            continue
+        target_effect_id, transition, member_field = wrapper
+        block_id = _block_for_byte(cfg, call.source_range.start_byte)
+        if block_id not in path:
+            continue
+        expression = _strip_call_argument(call.arguments[0])
+        if not expression:
+            continue
+        for effect in tuple(state.effect_ledger.values()):
+            if (
+                effect.status is EffectStatus.OPEN
+                and effect.spec_effect_id == target_effect_id
+                and _same_object_or_member_argument(
+                    effect.object_ref.expression,
+                    expression,
+                    member_field,
+                )
+            ):
+                changed = (
+                    state.commit_effect(target_effect_id, effect.object_ref)
+                    if transition is EffectTransition.COMMIT
+                    else state.compensate(target_effect_id, effect.object_ref)
+                )
+                if changed:
+                    witness_kind = (
+                        "effect_committed"
+                        if transition is EffectTransition.COMMIT
+                        else "effect_compensated"
+                    )
+                    state.witness.append(
+                        WitnessStep(
+                            witness_kind,
+                            call.source_range.file,
+                            f"{target_effect_id} via reviewed wrapper {call.callee_spelling}",
+                            call.source_range.start_line,
+                            f"reviewed_wrapper:{call.callee_spelling}",
+                        )
+                    )
+
+
+def _strip_call_argument(argument: str) -> str:
+    return _strip_parens(" ".join(argument.strip().split()))
+
+
+def _same_object_or_member_argument(
+    effect_expression: str,
+    argument_expression: str,
+    member_field: str,
+) -> bool:
+    if _same_returned_object(effect_expression, argument_expression):
+        return True
+    if not member_field:
+        return False
+    effect = re.sub(r"\s+", "", effect_expression.strip())
+    argument = re.sub(r"\s+", "", argument_expression.strip())
+    return effect in {f"{argument}->{member_field}", f"{argument}.{member_field}"}
+
+
+def _apply_same_condition_terminal_events(
+    state: MetadataOperationInstance,
+    events: tuple[MetadataEvent, ...],
+    observation: ReturnObservation,
+    cfg: ControlFlowGraphIR,
+) -> None:
+    path_positions = {block_id: index for index, block_id in enumerate(observation.path)}
+    true_conditions = _true_conditions_on_path(observation.path, cfg)
+    if not true_conditions:
+        return
+    for event in events:
+        if (
+            not event.summary_id
+            or event.strength is not EventStrength.MUST
+            or event.effect_transition
+            not in {EffectTransition.COMMIT, EffectTransition.COMPENSATE}
+        ):
+            continue
+        event_block = _block_for_byte(cfg, event.source_location.start_byte)
+        if event_block is None or event_block in path_positions:
+            continue
+        guard_condition = _nearest_true_condition_for_block(cfg, event_block)
+        if guard_condition is None or guard_condition[0] not in path_positions:
+            continue
+        guard_block_id, guard_text = guard_condition
+        matching_prior = [
+            (index, block_id)
+            for index, block_id, text in true_conditions
+            if index < path_positions[guard_block_id]
+            and _same_condition_text(text, guard_text)
+        ]
+        if not matching_prior:
+            continue
+        start_index, _ = matching_prior[-1]
+        if _condition_symbols_redefined(
+            _condition_identifiers(guard_text),
+            observation.path[start_index + 1 : path_positions[guard_block_id]],
+            cfg,
+        ):
+            continue
+        if event.effect_transition is EffectTransition.COMMIT:
+            if state.commit_effect(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_committed",
+                        event.source_location.file,
+                        f"{event.target_effect_id} via repeated condition",
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+        elif event.effect_transition is EffectTransition.COMPENSATE:
+            if state.compensate(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_compensated",
+                        event.source_location.file,
+                        f"{event.target_effect_id} via repeated condition",
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+
+
+def _true_conditions_on_path(
+    path: tuple[int, ...],
+    cfg: ControlFlowGraphIR,
+) -> list[tuple[int, int, str]]:
+    result: list[tuple[int, int, str]] = []
+    for index, (source, target) in enumerate(zip(path, path[1:])):
+        block = cfg.blocks[source]
+        if block.kind != "condition":
+            continue
+        edge = next(
+            (item for item in cfg.successors(source) if item.target == target),
+            None,
+        )
+        if edge is not None and edge.kind == "true":
+            result.append((index, source, block.text))
+    return result
+
+
+def _nearest_true_condition_for_block(
+    cfg: ControlFlowGraphIR,
+    block_id: int,
+) -> tuple[int, str] | None:
+    candidates: list[tuple[int, int, str]] = []
+    for block in cfg.blocks.values():
+        if block.kind != "condition":
+            continue
+        true_edges = [edge for edge in cfg.successors(block.id) if edge.kind == "true"]
+        if not true_edges:
+            continue
+        if any(_simple_path(cfg, edge.target, block_id) for edge in true_edges):
+            candidates.append((block.start_line, block.id, block.text))
+    if not candidates:
+        return None
+    _, block_id, text = max(candidates, key=lambda item: item[0])
+    return block_id, text
+
+
+def _same_condition_text(left: str, right: str) -> bool:
+    return _strip_parens(" ".join(left.split())) == _strip_parens(" ".join(right.split()))
+
+
+def _condition_identifiers(condition: str) -> tuple[str, ...]:
+    ignored = {
+        "if",
+        "unlikely",
+        "likely",
+        "IS_ERR",
+        "IS_ERR_OR_NULL",
+        "NULL",
+        "true",
+        "false",
+    }
+    return tuple(
+        sorted(
+            {
+                token
+                for token in re.findall(r"\b[A-Za-z_]\w*\b", condition)
+                if token not in ignored
+            }
+        )
+    )
+
+
+def _condition_symbols_redefined(
+    symbols: tuple[str, ...],
+    path: tuple[int, ...],
+    cfg: ControlFlowGraphIR,
+) -> bool:
+    return any(
+        _block_redefines_symbol(cfg.blocks[block_id], symbol)
+        for block_id in path
+        for symbol in symbols
+    )
+
+
+def _apply_implicit_exit_terminal_epilogue(
+    state: MetadataOperationInstance,
+    function: FunctionIR,
+    events: tuple[MetadataEvent, ...],
+    observation: ReturnObservation,
+    cfg: ControlFlowGraphIR,
+) -> None:
+    """Recover terminal epilogues missed by macro-loop break/continue CFG artifacts.
+
+    Tree-sitter sees some Linux list-walk macros as plain expression statements,
+    so a `break` or `continue` inside the macro body can be wired directly to
+    the synthetic function exit.  When the function has a later same-object
+    terminal call followed by an explicit return, treat the implicit exit as an
+    analyzer artifact and apply that epilogue terminal.
+    """
+
+    if observation.text != "<implicit return>" or len(observation.path) < 2:
+        return
+    source = observation.path[-2]
+    edge = next(
+        (item for item in cfg.successors(source) if item.target == observation.path[-1]),
+        None,
+    )
+    if edge is None or edge.kind not in {"break", "continue"}:
+        return
+    source_block = cfg.blocks[source]
+    terminal_events = [
+        item
+        for item in events
+        if item.summary_id
+        and item.strength is EventStrength.MUST
+        and item.effect_transition in {
+            EffectTransition.COMMIT,
+            EffectTransition.COMPENSATE,
+        }
+        and item.source_location.start_byte > source_block.start_byte
+        and _has_explicit_return_after(function, item.source_location.start_byte)
+    ]
+    for event in terminal_events:
+        if event.effect_transition is EffectTransition.COMMIT:
+            if state.commit_effect(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_committed",
+                        event.source_location.file,
+                        f"{event.target_effect_id} via implicit-exit epilogue",
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+        elif event.effect_transition is EffectTransition.COMPENSATE:
+            if state.compensate(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_compensated",
+                        event.source_location.file,
+                        f"{event.target_effect_id} via implicit-exit epilogue",
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+
+
+def _has_explicit_return_after(function: FunctionIR, start_byte: int) -> bool:
+    if function.body_node is None:
+        return False
+    return any(
+        node.type == "return_statement" and node.start_byte > start_byte
+        for node in function.body_node.walk()
+    )
+
+
+def _apply_automatic_scope_cleanup(
+    state: MetadataOperationInstance,
+    function: FunctionIR,
+    observation: ReturnObservation,
+    cfg: ControlFlowGraphIR,
+) -> None:
+    """Model reviewed C cleanup attributes/macros that release local objects at exit.
+
+    This is deliberately narrow: a cleanup macro only closes an already-open exact
+    local effect when the same identifier is visible on the concrete exit path.
+    """
+
+    for effect in tuple(state.effect_ledger.values()):
+        if (
+            not effect.required
+            or effect.status is not EffectStatus.OPEN
+            or effect.object_ref.identity is not ObjectIdentity.EXACT
+        ):
+            continue
+        expression = effect.object_ref.expression.strip()
+        if not re.fullmatch(r"[A-Za-z_]\w*", expression):
+            continue
+        cleanup_block = _automatic_cleanup_block_on_path(expression, observation, cfg)
+        if cleanup_block is None:
+            continue
+        if state.compensate(effect.spec_effect_id or effect.effect_id, effect.object_ref):
+            state.witness.append(
+                WitnessStep(
+                    "effect_compensated",
+                    function.file.as_posix(),
+                    f"{effect.spec_effect_id or effect.effect_id} via automatic cleanup",
+                    cleanup_block.start_line,
+                    "auto_cleanup",
+                )
+            )
+
+
+def _automatic_cleanup_block_on_path(
+    expression: str,
+    observation: ReturnObservation,
+    cfg: ControlFlowGraphIR,
+) -> BasicBlockIR | None:
+    pattern = re.compile(
+        rf"\bBTRFS_PATH_AUTO_FREE\s*\(\s*{re.escape(expression)}\s*\)"
+    )
+    for block_id in observation.path:
+        block = cfg.blocks[block_id]
+        if block.start_line > observation.line:
+            continue
+        if pattern.search(block.text):
+            return block
+    return None
+
+
+def _apply_return_ownership_transfer(
+    state: MetadataOperationInstance,
+    function: FunctionIR,
+    observation: ReturnObservation,
+) -> bool:
+    if not _function_returns_pointer(function):
+        return False
+    returned = _returned_expression(observation.text)
+    if not returned:
+        return False
+    transferred = False
+    for effect in tuple(state.effect_ledger.values()):
+        if (
+            not effect.required
+            or effect.status is not EffectStatus.OPEN
+            or effect.object_ref.identity is not ObjectIdentity.EXACT
+            or not _same_returned_object(effect.object_ref.expression, returned)
+        ):
+            continue
+        state.effect_ledger[effect.effect_id] = replace(
+            effect,
+            status=EffectStatus.TRANSFERRED,
+            owner="caller",
+        )
+        state.witness.append(
+            WitnessStep(
+                "effect_transferred",
+                function.file.as_posix(),
+                f"{effect.spec_effect_id or effect.effect_id} returned to caller",
+                observation.line,
+                effect.source_event,
+            )
+        )
+        transferred = True
+    return transferred
+
+
+def _apply_success_parameter_member_transfer(
+    state: MetadataOperationInstance,
+    function: FunctionIR,
+    observation: ReturnObservation,
+) -> bool:
+    transferred = False
+    for effect in tuple(state.effect_ledger.values()):
+        if (
+            not effect.required
+            or effect.status is not EffectStatus.OPEN
+            or effect.object_ref.identity is not ObjectIdentity.EXACT
+            or not _member_root_has_symbol_kind(
+                function,
+                effect.object_ref.expression,
+                "parameter",
+            )
+        ):
+            continue
+        state.effect_ledger[effect.effect_id] = replace(
+            effect,
+            status=EffectStatus.TRANSFERRED,
+            owner="caller",
+        )
+        state.witness.append(
+            WitnessStep(
+                "effect_transferred",
+                function.file.as_posix(),
+                f"{effect.spec_effect_id or effect.effect_id} published through parameter member",
+                observation.line,
+                effect.source_event,
+            )
+        )
+        transferred = True
+    return transferred
+
+
+def _returned_expression(return_text: str) -> str:
+    match = re.fullmatch(r"\s*return\s+(.+?)\s*;\s*", " ".join(return_text.split()))
+    if match is None:
+        return ""
+    expression = match.group(1).strip()
+    while expression.startswith("(") and expression.endswith(")"):
+        inner = expression[1:-1].strip()
+        if not inner:
+            break
+        expression = inner
+    return expression
+
+
+def _same_returned_object(open_expression: str, returned_expression: str) -> bool:
+    opened = re.sub(r"\s+", "", open_expression.strip())
+    returned = re.sub(r"\s+", "", returned_expression.strip())
+    if re.fullmatch(r"[A-Za-z_]\w*", opened) is not None:
+        return opened == returned
+    return opened.startswith(f"{returned}->") or opened.startswith(f"{returned}.")
+
+
+def _member_root_has_symbol_kind(
+    function: FunctionIR,
+    expression: str,
+    symbol_kind: str,
+) -> bool:
+    match = re.fullmatch(
+        r"([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)+)",
+        re.sub(r"\s+", "", expression.strip()),
+    )
+    if match is None:
+        return False
+    root = match.group(1)
+    symbol = next((item for item in function.symbols if item.name == root), None)
+    return symbol is not None and symbol.kind == symbol_kind
+
+
+def _function_returns_pointer(function: FunctionIR) -> bool:
+    if "*" in function.return_type:
+        return True
+    header = function.source.split("{", 1)[0]
+    before_parameters = header.split("(", 1)[0]
+    return "*" in before_parameters
 
 
 def _lifecycle_return_outcomes(
@@ -1105,7 +1664,12 @@ def _apply_path_events(
             )
         elif event.effect_spec_id:
             spec = effects[event.effect_spec_id]
-            if not _event_guard_holds_on_path(event, spec.guard, observation.path, cfg, events):
+            guard = (
+                event.guard
+                if event.summary_id and event.effect_transition is EffectTransition.OPEN
+                else spec.guard
+            )
+            if not _event_guard_holds_on_path(event, guard, observation.path, cfg, events):
                 continue
             instance_id = f"{spec.effect_id}@{event.event_id}"
             status = EffectStatus.OPEN
@@ -1238,9 +1802,11 @@ def _event_guard_holds_on_path(
     if guard == "always":
         return True
     block_id = _block_for_byte(cfg, event.source_location.start_byte)
-    if block_id not in path or not event.result_symbol:
+    if block_id not in path:
         return False
     start_index = path.index(block_id)
+    if not event.result_symbol:
+        return _call_condition_guard_holds_on_path(event, guard, path, cfg, start_index)
     later_redefinitions = {
         _block_for_byte(cfg, item.source_location.start_byte)
         for item in events
@@ -1261,6 +1827,45 @@ def _event_guard_holds_on_path(
         edge = next((item for item in cfg.successors(current) if item.target == target), None)
         if edge is not None:
             return _branch_possible(contract, [contract], block.text, edge.kind, event.result_symbol)
+    return False
+
+
+def _call_condition_guard_holds_on_path(
+    event: MetadataEvent,
+    guard: str,
+    path: tuple[int, ...],
+    cfg: ControlFlowGraphIR,
+    start_index: int,
+) -> bool:
+    if not event.callee or not _guard_is_zero_success(guard):
+        return False
+    for index in range(start_index, len(path) - 1):
+        block = cfg.blocks[path[index]]
+        if block.kind != "condition" or event.callee not in block.text:
+            continue
+        target = path[index + 1]
+        edge = next((item for item in cfg.successors(block.id) if item.target == target), None)
+        if edge is None or edge.kind not in {"true", "false"}:
+            return False
+        return _zero_success_call_guard_matches_branch(block.text, event.callee, edge.kind)
+    return False
+
+
+def _guard_is_zero_success(guard: str) -> bool:
+    return re.fullmatch(r"\s*(?:ret|return)\s*==\s*0\s*", _strip_parens(guard)) is not None
+
+
+def _zero_success_call_guard_matches_branch(
+    condition: str,
+    callee: str,
+    edge_kind: str,
+) -> bool:
+    compact = " ".join(condition.strip().split())
+    expression = _strip_parens(compact)
+    if re.search(rf"(?:\bif\s*\(\s*)?!\s*{re.escape(callee)}\s*\(", expression):
+        return edge_kind == "true"
+    if re.search(rf"(?:\bif\s*\(\s*)?{re.escape(callee)}\s*\(", expression):
+        return edge_kind == "false"
     return False
 
 

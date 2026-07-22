@@ -1,11 +1,10 @@
-"""Sparse-download Linux filesystem sources needed by se_eod.
+"""Sparse-download pinned Linux filesystem sources needed by MOCC-SE.
 
 Default result:
   linux-sources/linux-v6.8-fs/
     fs/ext4/*.c
 
-The directory is still a Git checkout, so src.main can record the real Linux
-commit and tag via git rev-parse / git describe.
+The directory remains a Git checkout so scans can record the exact commit and tag.
 """
 
 from __future__ import annotations
@@ -104,7 +103,10 @@ def ensure_sparse_checkout(
     print(f"linux_git_commit={commit}")
     print(f"linux_git_tag={tag}")
     print(f"linux_path={target}")
-    print(f"scan_command=python -m src.main --linux {target} --out outputs/linux-v6.8/ext4/error_paths.csv")
+    print(
+        "scan_command=python -m src.metadata_batch_scan "
+        f"--source-root {target / 'fs'} --source-version {ref.removeprefix('v')}"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

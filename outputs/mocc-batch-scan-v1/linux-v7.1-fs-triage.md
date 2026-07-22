@@ -2,121 +2,105 @@
 
 This is an initial source triage ledger. It is not a confirmed-bug list and not a frozen benchmark result.
 
-- batch report: `outputs\mocc-batch-scan-v1\linux-v7.1-fs.json`
+- batch report: `outputs/mocc-batch-scan-v1/linux-v7.1-fs.json`
 - source version: `7.1`
 - result semantics: `candidate_queue_not_bug_claims`
 - bug claims allowed: `False`
 
 Summary:
 
-- `triage_items`: 8
-- `by_verdict`: {'likely_false_positive': 6, 'needs_external_semantics': 2}
-- `by_priority`: {'P0': 2, 'P2': 6}
-- `by_protocol`: {'mocc.protocol_a.replay_recovery': 2, 'mocc.protocol_d.transaction_lifecycle': 1, 'mocc.protocol_e.allocation_lifecycle': 5}
+- `triage_items`: 15
+- `by_verdict`: {'needs_external_semantics': 2, 'uncertain': 13}
+- `by_priority`: {'P0': 2, 'P2': 13}
+- `by_protocol`: {'mocc.protocol_a.replay_recovery': 2, 'mocc.protocol_d.transaction_lifecycle': 9, 'mocc.protocol_e.allocation_lifecycle': 4}
 - `manual_bug_review_candidates`: 0
 - `needs_protocol_instance`: 0
 - `needs_external_semantics`: 2
-- `likely_false_positive`: 6
+- `likely_false_positive`: 0
 
-## 1. btrfs_del_inode_ref
+## 1. __add_block_group_free_space
 
-- review id: `mocc_occurrence_7f06a68cd83c27414a68`
+- review id: `mocc_occurrence_8867eaff966d3bef3ef0`
 - classification: `DISCOVERY_REVIEW`
 - protocol: `mocc.protocol_e.allocation_lifecycle`
-- source: `btrfs/inode-item.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- source: `btrfs/free-space-tree.c`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 212: btrfs_del_item(trans, root, path)
-- failure_control line 188: return -ENOMEM;
-- failure_guard line 187: (!path)
-- fallible_call line 186: btrfs_alloc_path() assigned to path
-- state_mutation line 184: key.offset = ref_objectid
+- effect_created line 1428: btrfs.search_path.allocation
+- exit line 1431: return -ENOMEM;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
 
-## 2. btrfs_drop_extents
+## 2. btrfs_quota_enable
 
-- review id: `mocc_occurrence_cd6d01f9acaf54e0da10`
+- review id: `mocc_occurrence_a558403a1ff9166e4b51`
 - classification: `DISCOVERY_REVIEW`
 - protocol: `mocc.protocol_e.allocation_lifecycle`
-- source: `btrfs/file.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- source: `btrfs/qgroup.c`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 179: btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)
-- failure_control line 174: goto out;
-- failure_guard line 172: (!path)
-- fallible_call line 171: btrfs_alloc_path() assigned to path
-- state_mutation line 165: args->extent_inserted = false
+- effect_created line 1083: btrfs.search_path.allocation
+- exit line 1304: return ret;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
 
-## 3. btrfs_insert_inode_ref
+## 3. btrfs_symlink
 
-- review id: `mocc_occurrence_1784fbdf1cc5f3068ff3`
+- review id: `mocc_occurrence_9e21bad18ca2c4a79a79`
 - classification: `DISCOVERY_REVIEW`
 - protocol: `mocc.protocol_e.allocation_lifecycle`
-- source: `btrfs/inode-item.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- source: `btrfs/inode.c`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 353: btrfs_free_path(path)
-- failure_control line 313: return -ENOMEM;
-- failure_guard line 312: (!path)
-- fallible_call line 311: btrfs_alloc_path() assigned to path
-- state_mutation line 309: key.offset = ref_objectid
+- effect_created line 9086: btrfs.search_path.allocation
+- exit line 9131: return ret;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
 
-## 4. btrfs_read_block_groups
+## 4. ext4_convert_unwritten_extents
 
-- review id: `mocc_occurrence_512afd994a02a6e4daff`
+- review id: `mocc_occurrence_138878426d50f029fd22`
 - classification: `DISCOVERY_REVIEW`
-- protocol: `mocc.protocol_e.allocation_lifecycle`
-- source: `btrfs/block-group.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `ext4/extents.c`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 2694: btrfs_release_path(path)
-- failure_control line 2658: return -ENOMEM;
-- failure_guard line 2657: (!path)
-- fallible_call line 2656: btrfs_alloc_path() assigned to path
-- state_mutation line 2655: key.offset = 0
+- effect_created line 5055: ext4.journal_handle.lifecycle
+- exit line 5086: return ret > 0 ? ret2 : ret;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
 
 ## 5. ext4_ext_clear_bb
 
@@ -170,53 +154,192 @@ Follow-ups:
 - seek independent ext4 fast-commit replay contract, maintainer review, accepted fix, or fault-injection evidence
 - do not promote into an active protocol instance until that semantic obligation is frozen
 
-## 7. inode_logged
+## 7. ext4_generic_write_inline_data
 
-- review id: `mocc_occurrence_1e170728375d6675b12c`
+- review id: `mocc_occurrence_3ba316f25ba5048ff781`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `ext4/inline.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 713: ext4.journal_handle.lifecycle
+- exit line 764: return 1;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 8. ext4_write_begin
+
+- review id: `mocc_occurrence_f98cd489f05e397b0a88`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `ext4/inode.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 1351: ext4.journal_handle.lifecycle
+- exit line 1417: return ret;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 9. inode_logged
+
+- review id: `mocc_occurrence_c2dbfa8a270586f6e002`
 - classification: `DISCOVERY_REVIEW`
 - protocol: `mocc.protocol_e.allocation_lifecycle`
 - source: `btrfs/tree-log.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 3818: btrfs_release_path(path)
-- failure_control line 3812: return -ENOMEM;
-- failure_guard line 3811: (!path)
-- fallible_call line 3810: btrfs_alloc_path() assigned to path
-- state_mutation line 3807: key.offset = 0
+- effect_created line 3810: btrfs.search_path.allocation
+- exit line 3845: return 1;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
 
-## 8. xlog_finish_defer_ops
+## 10. xfs_setfilesize
 
-- review id: `mocc_occurrence_ae1860e1f975ce853bcf`
+- review id: `mocc_occurrence_c08e090c7354a96ef01a`
 - classification: `DISCOVERY_REVIEW`
 - protocol: `mocc.protocol_d.transaction_lifecycle`
-- source: `xfs/xfs_log_recover.c`
-- pattern: `mutation_failure_cleanup`
-- verdict: `likely_false_positive`
+- source: `xfs/xfs_aops.c`
+- pattern: ``
+- verdict: `uncertain`
 - priority: `P2`
-- confidence: `high`
-- rationale: The matched mutation is local preparation or local argument state, not a proven durable metadata effect.
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
 
 Evidence:
 
-- compensation line 2545: list_del_init(&dfc->dfc_list)
-- failure_control line 2538: return error;
-- failure_guard line 2536: (error)
-- fallible_call line 2534: xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,
-				dfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error
-- state_mutation line 2532: resv.tr_logflags = XFS_TRANS_PERM_LOG_RES
+- effect_created line 62: xfs.transaction.lifecycle
+- effect_compensated line 70: xfs.transaction.lifecycle
+- exit line 71: return 0;
 
 Follow-ups:
 
-- teach broad discovery to distinguish local/search-key/reservation preparation from metadata effects
-- do not promote without a protocol object binding
+- add a triage rule or perform manual source review
+
+## 11. xfs_trans_alloc_dir
+
+- review id: `mocc_occurrence_cfaec856ddae285829ce`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `xfs/xfs_trans.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 1381: xfs.transaction.lifecycle
+- exit line 1434: return 0;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 12. xfs_trans_alloc_ichange
+
+- review id: `mocc_occurrence_634b54908c6d728b4cb8`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `xfs/xfs_trans.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 1263: xfs.transaction.lifecycle
+- exit line 1343: return 0;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 13. xfs_trans_alloc_icreate
+
+- review id: `mocc_occurrence_fe7156b8eaaeaf7bbed7`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `xfs/xfs_trans.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 1206: xfs.transaction.lifecycle
+- exit line 1233: return 0;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 14. xfs_trans_alloc_inode
+
+- review id: `mocc_occurrence_b28745824da1ba46d18f`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `xfs/xfs_trans.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 1080: xfs.transaction.lifecycle
+- exit line 1108: return 0;
+
+Follow-ups:
+
+- add a triage rule or perform manual source review
+
+## 15. xrep_tempexch_trans_alloc
+
+- review id: `mocc_occurrence_1fc1c33b4bd4c975a22d`
+- classification: `DISCOVERY_REVIEW`
+- protocol: `mocc.protocol_d.transaction_lifecycle`
+- source: `xfs/scrub/tempfile.c`
+- pattern: ``
+- verdict: `uncertain`
+- priority: `P2`
+- confidence: `low`
+- rationale: No specialized triage rule matched this review record.
+
+Evidence:
+
+- effect_created line 862: xfs.transaction.lifecycle
+- exit line 871: return xrep_tempexch_reserve_quota(sc, tx);
+
+Follow-ups:
+
+- add a triage rule or perform manual source review

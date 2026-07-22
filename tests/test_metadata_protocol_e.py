@@ -37,6 +37,21 @@ void *btrfs_get_parent(void *child)
     return next(item for item in unit.functions if item.name == "btrfs_get_parent")
 
 
+def _function_without_path_declaration(tmp_path: Path, body: str):
+    source = f"""
+void *btrfs_get_parent(void *child)
+{{
+    struct btrfs_path *other;
+    int ret;
+    {body}
+}}
+"""
+    path = tmp_path / "allocation_macro_fixture.c"
+    path.write_text(source, encoding="utf-8")
+    unit = TreeSitterFrontend(source_root=tmp_path).parse(path)
+    return next(item for item in unit.functions if item.name == "btrfs_get_parent")
+
+
 def test_protocol_e_round_trip_preserves_allocation_summaries():
     protocol = _protocol()
 
@@ -90,6 +105,226 @@ def test_alloc_then_free_is_legal_on_failure(tmp_path):
 
     assert result is not None
     assert not result.candidates
+    assert not result.unknown
+
+
+def test_alloc_with_auto_free_macro_is_legal_on_return(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    BTRFS_PATH_AUTO_FREE(path);
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    use_path(path);
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_auto_free_macro_declares_exact_path_object(tmp_path):
+    function = _function_without_path_declaration(
+        tmp_path,
+        """
+    BTRFS_PATH_AUTO_FREE(path);
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    use_path(path);
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    opened = next(
+        item for item in result.events if item["summary_id"] == "btrfs.search_path.alloc"
+    )
+    assert opened["object_ref"]["expression"] == "path"
+    assert opened["object_ref"]["identity"] == ObjectIdentity.EXACT.value
+    assert opened["strength"] == EventStrength.MUST.value
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_manual_free_after_auto_free_macro_uses_exact_path_object(tmp_path):
+    function = _function_without_path_declaration(
+        tmp_path,
+        """
+    BTRFS_PATH_AUTO_FREE(path);
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    btrfs_free_path(path);
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    freed = next(
+        item for item in result.events if item["summary_id"] == "btrfs.search_path.free"
+    )
+    assert freed["object_ref"]["expression"] == "path"
+    assert freed["object_ref"]["identity"] == ObjectIdentity.EXACT.value
+    assert freed["strength"] == EventStrength.MUST.value
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_alloc_returned_to_caller_is_legal_ownership_transfer(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    path = btrfs_alloc_path();
+    if (!path)
+        return NULL;
+    return path;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_allocated_member_of_returned_object_transfers_to_caller(tmp_path):
+    source = """
+struct holder {
+    struct btrfs_path *path;
+};
+
+struct holder *btrfs_get_parent(void *child)
+{
+    struct holder *ret;
+
+    ret = kzalloc_obj(*ret, 0);
+    if (!ret)
+        return NULL;
+
+    ret->path = btrfs_alloc_path();
+    if (!ret->path)
+        return NULL;
+
+    return ret;
+}
+"""
+    path = tmp_path / "allocation_member_fixture.c"
+    path.write_text(source, encoding="utf-8")
+    unit = TreeSitterFrontend(source_root=tmp_path).parse(path)
+    function = next(item for item in unit.functions if item.name == "btrfs_get_parent")
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    opened = next(
+        item for item in result.events if item["summary_id"] == "btrfs.search_path.alloc"
+    )
+    assert opened["object_ref"]["expression"] == "ret->path"
+    assert opened["object_ref"]["identity"] == ObjectIdentity.EXACT.value
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_cleanup_label_free_is_legal_on_error_exit(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    ret = search(path);
+    if (ret < 0)
+        goto out_free_path;
+    use_path(path);
+out_free_path:
+    btrfs_free_path(path);
+    return ERR_PTR(ret);
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_macro_loop_break_to_implicit_exit_uses_later_free_epilogue(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    list_for_each_entry(other, child, list) {
+        if (ret > 0)
+            break;
+    }
+    btrfs_free_path(path);
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_macro_loop_continue_to_implicit_exit_uses_later_free_epilogue(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    list_for_each_entry(other, child, list) {
+        if (ret > 0)
+            continue;
+    }
+    btrfs_free_path(path);
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert not result.candidates
+    assert not result.unknown
+
+
+def test_macro_loop_implicit_exit_without_later_free_still_reports_open_path(tmp_path):
+    function = _function(
+        tmp_path,
+        """
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    list_for_each_entry(other, child, list) {
+        if (ret > 0)
+            break;
+    }
+    return child;
+""",
+    )
+
+    result = analyze_function(function, _protocol())
+
+    assert result is not None
+    assert len(result.candidates) == 1
     assert not result.unknown
 
 

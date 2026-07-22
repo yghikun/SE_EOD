@@ -92,14 +92,18 @@ def test_current_batch_report_triage_summary_matches_expected_groups():
     ).to_dict()
 
     assert report["bug_claims_allowed"] is False
-    assert report["summary"]["triage_items"] == 8
+    assert report["summary"]["triage_items"] == 15
     assert report["summary"]["manual_bug_review_candidates"] == 0
     assert report["summary"]["needs_protocol_instance"] == 0
     assert report["summary"]["needs_external_semantics"] == 2
-    assert report["summary"]["likely_false_positive"] == 6
+    assert report["summary"]["likely_false_positive"] == 0
     assert report["summary"]["by_verdict"] == {
-        "likely_false_positive": 6,
         "needs_external_semantics": 2,
+        "uncertain": 13,
+    }
+    assert report["summary"]["by_priority"] == {
+        "P0": 2,
+        "P2": 13,
     }
 
 
@@ -123,6 +127,8 @@ def test_cli_writes_batch_triage_json_and_markdown(tmp_path):
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     markdown = out_md.read_text(encoding="utf-8")
-    assert payload["summary"]["triage_items"] == 8
+    assert payload["summary"]["triage_items"] == 15
+    assert payload["summary"]["by_priority"]["P0"] == 2
+    assert payload["summary"]["by_priority"]["P2"] == 13
     assert "MOCC-SE Batch Scan Triage" in markdown
     assert "not a confirmed-bug list" in markdown

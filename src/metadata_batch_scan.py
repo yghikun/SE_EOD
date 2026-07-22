@@ -33,7 +33,11 @@ from .metadata_validation_manifest import (
 )
 
 
-BATCH_SCAN_SCHEMA_VERSION = 1
+BATCH_SCAN_SCHEMA_VERSION = 2
+
+
+class BatchScanCoverageError(RuntimeError):
+    """A batch scan traversed input but exercised no frozen protocol analysis."""
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,8 @@ class BatchScanReport:
             for item in analysis["unknown"]
         ]
         unknown_queue.extend(discovery_payload["quarantine"])
+        applicable_functions = summary["applicable_functions"]
+        scanned_functions = summary["scanned_functions"]
         return {
             "schema_version": BATCH_SCAN_SCHEMA_VERSION,
             "result_semantics": "candidate_queue_not_bug_claims",
@@ -68,6 +74,29 @@ class BatchScanReport:
             "freeze_id": self.freeze_id,
             "manifest_id": self.manifest_id,
             "validation_gate": self.validation_gate,
+            "coverage_health": {
+                "status": (
+                    "protocol_analysis_exercised"
+                    if applicable_functions
+                    else "no_protocol_analysis_exercised"
+                ),
+                "protocol_analysis_exercised": bool(applicable_functions),
+                "applicable_functions": applicable_functions,
+                "exact_entry_functions": summary["exact_entry_functions"],
+                "semantic_applicable_functions": summary[
+                    "semantic_applicable_functions"
+                ],
+                "scanned_functions": scanned_functions,
+                "applicability_rate": (
+                    applicable_functions / scanned_functions
+                    if scanned_functions
+                    else 0.0
+                ),
+                "interpretation": (
+                    "protocol candidates and protocol unknowns are meaningful only "
+                    "for applicable functions; broad reviews are a separate queue"
+                ),
+            },
             "summary": {
                 "scanned_files": summary["scanned_files"],
                 "scanned_functions": summary["scanned_functions"],
@@ -101,6 +130,7 @@ def scan_source_tree(
     exclude_confirmed_functions: str | Path = DEFAULT_CONFIRMED_BUGS,
     include_confirmed_functions: bool = False,
     include_regression_seeds: bool = False,
+    require_protocol_analysis: bool = False,
 ) -> BatchScanReport:
     root = Path(workspace).resolve()
     freeze = ProtocolFreeze.read_json(root / freeze_path)
@@ -145,7 +175,7 @@ def scan_source_tree(
         excluded_functions=excluded_functions,
         exclude_regression_seeds=not include_regression_seeds,
     )
-    return BatchScanReport(
+    report = BatchScanReport(
         workspace=root.as_posix(),
         source_root=Path(source_root).resolve().as_posix(),
         source_version=source_version,
@@ -161,6 +191,12 @@ def scan_source_tree(
         },
         discovery=discovery,
     )
+    if require_protocol_analysis and not discovery.analyses:
+        raise BatchScanCoverageError(
+            "batch scan exercised no exact or semantic protocol analysis; "
+            "review_queue entries, if any, are broad discovery only"
+        )
+    return report
 
 
 def _active_protocols(
@@ -215,23 +251,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--include-confirmed-functions", action="store_true")
     parser.add_argument("--include-regression-seeds", action="store_true")
+    parser.add_argument(
+        "--require-protocol-analysis",
+        action="store_true",
+        help="fail when no exact or semantic protocol analysis is exercised",
+    )
     parser.add_argument("--out", default="")
     args = parser.parse_args(argv)
-    report = scan_source_tree(
-        args.source_root,
-        workspace=args.workspace,
-        source_version=args.source_version,
-        freeze_path=args.freeze,
-        manifest_path=args.manifest,
-        include=args.include or ("*.c",),
-        max_files=args.max_files,
-        labels=args.labels,
-        adjudication=args.adjudication,
-        require_complete_labels=args.require_complete_labels,
-        exclude_confirmed_functions=args.exclude_confirmed_functions,
-        include_confirmed_functions=args.include_confirmed_functions,
-        include_regression_seeds=args.include_regression_seeds,
-    )
+    try:
+        report = scan_source_tree(
+            args.source_root,
+            workspace=args.workspace,
+            source_version=args.source_version,
+            freeze_path=args.freeze,
+            manifest_path=args.manifest,
+            include=args.include or ("*.c",),
+            max_files=args.max_files,
+            labels=args.labels,
+            adjudication=args.adjudication,
+            require_complete_labels=args.require_complete_labels,
+            exclude_confirmed_functions=args.exclude_confirmed_functions,
+            include_confirmed_functions=args.include_confirmed_functions,
+            include_regression_seeds=args.include_regression_seeds,
+            require_protocol_analysis=args.require_protocol_analysis,
+        )
+    except BatchScanCoverageError as exc:
+        parser.error(str(exc))
     payload = json.dumps(report.to_dict(), indent=2) + "\n"
     if args.out:
         target = Path(args.out)

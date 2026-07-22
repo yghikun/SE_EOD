@@ -12,17 +12,29 @@ mocc-protocol-b-v1/
 mocc-protocol-c-v1/
 mocc-discovery-v2/
 mocc-batch-scan-v1/
+mocc-validation-v1/
 mocc-finding-review-v1/
 ```
 
 - `mocc-protocol-*-v1/` contains versioned Protocol A/B/C development witnesses.
 - `mocc-discovery-v2/` contains the M11 fresh review report, source triage and
   historical ext4 helper fault-model development evidence.
-- `mocc-batch-scan-v1/` contains freeze-bound full-source candidate queues and
-  initial source triage ledgers. It also contains the ext4 replay bookkeeping
-  source-fact audit for the two v7.1 `needs_external_semantics` hits. These
-  reports explicitly use `candidate_queue_not_bug_claims` or
-  `source_facts_not_bug_claims` semantics.
+- `mocc-batch-scan-v1/` contains freeze-bound full-source candidate queues,
+  initial source triage ledgers and the bug-hunt ranking artifact. It also
+  contains the ext4 replay bookkeeping source-fact audit for the two v7.1
+  `needs_external_semantics` hits. These reports explicitly use
+  `candidate_queue_not_bug_claims`, `manual_bug_hunt_prioritization_not_bug_claims`
+  or `source_facts_not_bug_claims` semantics.
+- `mocc-validation-v1/` contains label-blind predictions and protocol
+  applicability audits for frozen validation manifests and draft selection
+  audits for future blind batches. Batch 1 currently has 2/10 analyzable
+  samples after lifecycle discovery expansion and 8/10 out-of-scope samples, so
+  its prediction artifact is a failed-coverage diagnostic, not a precision/recall
+  result. Batch 2 selection artifacts use
+  `selection_audit_not_evaluation` semantics until a manifest is frozen and
+  independently labeled. The current selection smoke artifact also records
+  that all registered exact-entry identities are construction overlaps, so
+  exact-entry sampling is not available under the present freeze.
 - `mocc-finding-review-v1/` contains the M8-M10 development review, version
   matrix, repair evidence, bug-hunt report and confirmed-bug linkage.
 - `confirmed_bugs.md` records manually/history/dynamically supported findings
@@ -30,9 +42,9 @@ mocc-finding-review-v1/
 
 The directory name `mocc-discovery-v2` is an experiment-generation label, not
 the JSON schema version. Retained reports may use discovery schema v2. Newly
-generated reports use schema v3, which adds a separate operation
-`control_trace` to candidates and analysis-unknown records; historical reports
-are not rewritten in place.
+generated reports use schema v5, which separates exact-entry and semantic
+applicability counts and records lifecycle terminal callees that were relaxed
+for acquire/open-first discovery; historical reports are not rewritten in place.
 
 These artifacts are development and review evidence, not a frozen independent
 benchmark. `DISCOVERY_REVIEW` is not equivalent to `PROTOCOL_CANDIDATE` or a

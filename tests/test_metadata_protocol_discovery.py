@@ -21,6 +21,18 @@ PROTOCOL_A = (
     / "metadata_protocols"
     / "protocol_a_replay_recovery_v1.json"
 )
+PROTOCOL_D = (
+    ROOT
+    / "configs"
+    / "metadata_protocols"
+    / "protocol_d_transaction_lifecycle_v2.json"
+)
+PROTOCOL_E = (
+    ROOT
+    / "configs"
+    / "metadata_protocols"
+    / "protocol_e_allocation_lifecycle_v2.json"
+)
 
 
 def _write_source(root: Path, relative: str, source: str) -> Path:
@@ -270,6 +282,125 @@ int renamed(void)
     assert analysis["discovery_review"][0]["classification"] == "DISCOVERY_REVIEW"
 
 
+def test_lifecycle_discovery_enters_analysis_on_xfs_transaction_acquire_only(tmp_path):
+    protocol = MetadataProtocol.read_json(PROTOCOL_D)
+    path = _write_source(
+        tmp_path,
+        "fs/xfs/fresh_transaction.c",
+        """
+int fresh_xfs_transaction(void *mp)
+{
+    struct xfs_trans *tp;
+    int error;
+
+    error = xfs_trans_alloc(mp, 0, 0, 0, 0, &tp);
+    if (error)
+        return error;
+    return 0;
+}
+""",
+    )
+    function = TreeSitterFrontend(source_root=tmp_path).parse(path).functions[0]
+
+    evidence = operation_applicability(function, protocol)
+    selected = next(
+        item for item in evidence if item.operation_id == "xfs_acl_mode_transaction"
+    )
+    report = discover_source_tree(tmp_path, [protocol], source_version="7.1").to_dict()
+    analysis = report["analyses"][0]
+
+    assert selected.applicable
+    assert selected.matched_discovery_callees == ("xfs_trans_alloc",)
+    assert selected.unmatched_discovery_callees == ()
+    assert selected.relaxed_terminal_discovery_callees == ("xfs_trans_commit",)
+    assert analysis["applicability"]["match_kind"] == "semantic"
+    assert analysis["discovery_review"][0]["classification"] == "DISCOVERY_REVIEW"
+    assert analysis["discovery_review"][0]["violation_type"] == (
+        "incomplete_failure_completion"
+    )
+
+
+def test_lifecycle_discovery_enters_analysis_on_ext4_journal_start_only(tmp_path):
+    protocol = MetadataProtocol.read_json(PROTOCOL_D)
+    _write_source(
+        tmp_path,
+        "fs/ext4/fresh_journal.c",
+        """
+int fresh_ext4_journal(void *inode)
+{
+    handle_t *handle;
+
+    handle = ext4_journal_start(inode, 1, 2);
+    if (IS_ERR(handle))
+        return PTR_ERR(handle);
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol], source_version="7.1").to_dict()
+    analysis = report["analyses"][0]
+
+    assert report["summary"]["applicable_functions"] == 1
+    assert analysis["applicability"]["matched_discovery_callees"] == [
+        "ext4_journal_start"
+    ]
+    assert analysis["applicability"]["relaxed_terminal_discovery_callees"] == [
+        "ext4_journal_stop"
+    ]
+    assert analysis["discovery_review"][0]["classification"] == "DISCOVERY_REVIEW"
+
+
+def test_lifecycle_discovery_enters_analysis_on_btrfs_allocation_only(tmp_path):
+    protocol = MetadataProtocol.read_json(PROTOCOL_E)
+    _write_source(
+        tmp_path,
+        "fs/btrfs/fresh_path.c",
+        """
+void *fresh_btrfs_path(void *child)
+{
+    struct btrfs_path *path;
+
+    path = btrfs_alloc_path();
+    if (!path)
+        return ERR_PTR(-12);
+    return child;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol], source_version="7.1").to_dict()
+    analysis = report["analyses"][0]
+
+    assert report["summary"]["applicable_functions"] == 1
+    assert analysis["applicability"]["matched_discovery_callees"] == [
+        "btrfs_alloc_path"
+    ]
+    assert analysis["applicability"]["relaxed_terminal_discovery_callees"] == [
+        "btrfs_free_path"
+    ]
+    assert analysis["discovery_review"][0]["classification"] == "DISCOVERY_REVIEW"
+
+
+def test_lifecycle_terminal_without_acquire_is_not_semantically_applicable(tmp_path):
+    protocol = MetadataProtocol.read_json(PROTOCOL_E)
+    path = _write_source(
+        tmp_path,
+        "fs/btrfs/free_only.c",
+        """
+void free_only(struct btrfs_path *path)
+{
+    btrfs_free_path(path);
+}
+""",
+    )
+    function = TreeSitterFrontend(source_root=tmp_path).parse(path).functions[0]
+
+    evidence = operation_applicability(function, protocol)
+
+    assert not any(item.applicable for item in evidence)
+
+
 def test_semantic_analysis_unknown_is_kept_out_of_protocol_unknown(tmp_path):
     protocol = _mini_discovery_protocol(
         discovery={"required_callees": ["context_gate"]}
@@ -436,7 +567,7 @@ def test_discovery_cli_writes_versioned_report(tmp_path):
     )
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 5
     assert payload["source_version"] == "fixture-v1"
     assert payload["summary"]["discovery_review_occurrences"] >= 1
 
