@@ -699,7 +699,7 @@ def _freeze_artifact(root: Path, path: Path, kind: str) -> FreezeArtifact:
         logical_id=logical_id,
         schema_version=schema_version,
         semantic_version=semantic_version,
-        content_sha256=_sha256(path),
+        content_sha256=_frozen_artifact_sha256(path),
     )
 
 
@@ -732,6 +732,10 @@ def _resolve_workspace_path(root: Path, value: str) -> Path:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _frozen_artifact_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _read_json(path: str | Path) -> dict[str, Any]:

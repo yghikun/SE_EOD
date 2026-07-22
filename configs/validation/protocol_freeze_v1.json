@@ -44,7 +44,7 @@
       "logical_id": "mocc.protocol_b.device_topology_rollback",
       "schema_version": 1,
       "semantic_version": "1.0.0",
-      "content_sha256": "b27fd750dd4295db72778603462ab7a2d50511effca9e32d59ac1843c136bcd3"
+      "content_sha256": "8e0a42cb5b7bdbc0cd198c71cd5d46fcd0e8a3c8b404aff29a3082be3eb10f40"
     },
     {
       "path": "configs/metadata_protocols/protocol_c_activation_accounting_v1.json",
