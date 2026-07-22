@@ -272,9 +272,11 @@ likely_protocol_gap_or_false_positive: 5
 top_risk_score: 83
 ```
 
-人工抽查 top-ranked items 后，尚未发现可以负责任称为真实 bug 的样本。前排样本主要有
-源码可见的 `btrfs_free_path()`、`ext4_journal_stop()`、`xfs_trans_commit()` /
-`xfs_trans_cancel()`，或属于 ownership transfer / analyzer object-identity 能力缺口。
+人工抽查 top-ranked items 后，尚未发现可以负责任称为 confirmed bug 的样本。当前最强
+manual source-review 候选是 `xrep_tempexch_trans_alloc()`：源码事实 audit 显示它在分配
+`sc->tp` 后直接返回 quota reserve 结果，且 6 个调用点错误传播前没有本地可见 cleanup。
+该结论仍是 source-fact audit，不是 bug claim；下一步需要 XFS scrub transaction ownership
+语义、maintainer/patch 证据或 fault-injection 证据。
 
 ## 7. ext4 replay bookkeeping 审计状态
 
@@ -328,6 +330,40 @@ python scripts/validate_ext4_fc_replay_helpers.py
 
 它只证明手写源码控制流模型中的错误传播差异，不等于完整内核 fault injection、真实磁盘损坏
 或上游接受。
+
+## 7.1 XFS tempfile exchange transaction 审计状态
+
+为当前 top-ranked XFS scrub 候选新增了源码事实审计模块：
+
+```text
+src/metadata_xfs_tempexch_transaction_audit.py
+tests/test_metadata_xfs_tempexch_transaction_audit.py
+```
+
+生成的审计产物：
+
+```text
+outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.json
+outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.md
+```
+
+v7.1 源码事实：
+
+- `xrep_tempexch_trans_alloc()` 在 `xfs_trans_alloc(..., &sc->tp)` 成功后直接
+  `return xrep_tempexch_reserve_quota(sc, tx);`；
+- `xrep_tempexch_reserve_quota()` 内部存在 `return error;`，以及直接返回
+  `xfs_trans_reserve_quota_nblks(...)` 的失败传播路径；
+- 6 个调用点在错误传播前没有本地可见 `xchk_trans_cancel()`、`xfs_trans_cancel()`、
+  `xrep_trans_commit()` 或 tempfile unlock cleanup。
+
+保守结论：
+
+```text
+conclusion: strong_manual_review_candidate_not_confirmed_bug
+bug_claim_allowed: false
+```
+
+这是目前最值得继续确认的候选，但仍需要独立语义或动态证据才能升级。
 
 ## 8. 当前不变量
 
@@ -503,7 +539,28 @@ helpers_with_partial_metadata_mutation_before_failure: 1
 bug_claims_allowed: 0
 ```
 
-### 10.7 测试
+### 10.7 XFS tempfile exchange transaction source-fact audit
+
+```powershell
+python -m src.metadata_xfs_tempexch_transaction_audit `
+  --source-root linux-sources/linux-v7.1-fs/fs `
+  --source-version 7.1 `
+  --out-json outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.json `
+  --out-md outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.md
+```
+
+当前预期摘要：
+
+```text
+target_helper_allocates_sc_tp: true
+target_helper_returns_quota_result: true
+quota_helper_has_failure_return_without_cleanup: true
+callers: 6
+callers_returning_error_without_visible_cleanup: 6
+bug_claims_allowed: 0
+```
+
+### 10.8 测试
 
 ```powershell
 python -m compileall -q src tests scripts
@@ -514,7 +571,7 @@ git diff --check
 当前测试基线：
 
 ```text
-277 passed
+279 passed
 ```
 
 `git diff --check` 在 Windows 工作区可能只提示 LF/CRLF 转换 warning；没有 trailing
@@ -539,7 +596,7 @@ outputs/mocc-finding-review-v1/
 - `mocc-protocol-*-v1/`：Protocol A/B/C 开发 witness；
 - `mocc-discovery-v2/`：fresh discovery、source triage 和历史 ext4 fault-model 开发证据；
 - `mocc-batch-scan-v1/`：freeze-bound 全量候选队列、batch triage、ext4 replay bookkeeping
-  source-fact audit；
+  与 XFS tempfile exchange transaction source-fact audit；
 - `mocc-finding-review-v1/`：development review、version matrix、repair evidence、
   bug-hunt report 和 confirmed-bug linkage；
 - `confirmed_bugs.md`：人工/历史/动态支持的 finding 状态记录。

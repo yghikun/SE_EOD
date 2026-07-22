@@ -22,7 +22,8 @@ mocc-finding-review-v1/
 - `mocc-batch-scan-v1/` contains freeze-bound full-source candidate queues,
   initial source triage ledgers and the bug-hunt ranking artifact. It also
   contains the ext4 replay bookkeeping source-fact audit for the two v7.1
-  `needs_external_semantics` hits. These reports explicitly use
+  `needs_external_semantics` hits and the XFS tempfile exchange transaction
+  source-fact audit for the current top manual-review candidate. These reports explicitly use
   `candidate_queue_not_bug_claims`, `manual_bug_hunt_prioritization_not_bug_claims`
   or `source_facts_not_bug_claims` semantics.
 - `mocc-validation-v1/` contains label-blind predictions and protocol

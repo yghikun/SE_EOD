@@ -91,7 +91,7 @@ ANALYSIS_UNKNOWN
 - evidence-backed rule registry、maturity 和 active operation coverage audit；
 - representative trace 和 CFG snapshot；
 - source review、version matrix、repair evidence 和 confirmed linkage；
-- `277 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、validation runner、validation selection audit、reviewer/adjudication、batch scan 覆盖门禁、batch triage、bug-hunt ranking、lifecycle acquire/open discovery、lifecycle analyzer guard/cleanup/transfer/wrapper terminal/implicit-exit epilogue/repeated-condition terminal、member object identity / parameter-member publication / reviewed scrub wrapper terminal 和 ext4 replay bookkeeping source-fact audit 负例。
+- `279 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、validation runner、validation selection audit、reviewer/adjudication、batch scan 覆盖门禁、batch triage、bug-hunt ranking、lifecycle acquire/open discovery、lifecycle analyzer guard/cleanup/transfer/wrapper terminal/implicit-exit epilogue/repeated-condition terminal、member object identity / parameter-member publication / reviewed scrub wrapper terminal、ext4 replay bookkeeping source-fact audit 负例和 XFS tempfile exchange transaction source-fact audit。
 
 旧 SE-EOD `src.main`、resource/dataflow、candidate、ranking/LLM 和实验辅助代码已删除；
 保留的旧输出只是历史数据，不是当前可执行能力。
