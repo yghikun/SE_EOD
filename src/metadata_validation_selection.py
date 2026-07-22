@@ -16,7 +16,7 @@ from .metadata_validation_manifest import (
     DEFAULT_FREEZE,
     ProtocolFreeze,
     _construction_functions,
-    _sha256,
+    _text_sha256,
     validate_protocol_freeze,
 )
 
@@ -292,7 +292,7 @@ def _candidate_from_analysis(
         "filesystem": filesystem,
         "source_version": source_version,
         "source_path": source_path,
-        "source_sha256": _sha256(source),
+        "source_sha256": _text_sha256(source),
         "function": result.function,
         "applicability_match_kind": analysis.applicability.match_kind,
         "candidate_count": len(result.candidates),

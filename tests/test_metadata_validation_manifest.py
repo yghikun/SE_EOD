@@ -7,7 +7,7 @@ from src.metadata_validation_manifest import (
     ProtocolFreeze,
     ValidationManifest,
     MetadataValidationManifestError,
-    _frozen_artifact_sha256,
+    _text_sha256,
     _version_applies,
     validate_validation_manifest,
 )
@@ -121,13 +121,13 @@ def test_duplicate_json_fields_are_rejected(tmp_path):
         ProtocolFreeze.read_json(target)
 
 
-def test_frozen_artifact_hash_is_line_ending_stable(tmp_path):
+def test_text_hash_is_line_ending_stable(tmp_path):
     lf = tmp_path / "lf.json"
     crlf = tmp_path / "crlf.json"
     lf.write_bytes(b'{\n  "key": "value"\n}\n')
     crlf.write_bytes(b'{\r\n  "key": "value"\r\n}\r\n')
 
-    assert _frozen_artifact_sha256(lf) == _frozen_artifact_sha256(crlf)
+    assert _text_sha256(lf) == _text_sha256(crlf)
 
 
 def test_freeze_and_manifest_round_trip():

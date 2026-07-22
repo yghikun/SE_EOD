@@ -562,7 +562,7 @@ def validate_validation_manifest(
                 )
 
         source = _resolve_workspace_path(root, sample.source_path)
-        if _sha256(source) != sample.source_sha256:
+        if _text_sha256(source) != sample.source_sha256:
             raise MetadataValidationManifestError(
                 f"{sample_path}.source_sha256", "source file digest has drifted"
             )
@@ -699,7 +699,7 @@ def _freeze_artifact(root: Path, path: Path, kind: str) -> FreezeArtifact:
         logical_id=logical_id,
         schema_version=schema_version,
         semantic_version=semantic_version,
-        content_sha256=_frozen_artifact_sha256(path),
+        content_sha256=_text_sha256(path),
     )
 
 
@@ -734,7 +734,7 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _frozen_artifact_sha256(path: Path) -> str:
+def _text_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
