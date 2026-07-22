@@ -7,7 +7,12 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from .metadata_protocol import CompletionMode, LegalExitKind, MetadataProtocol, ReturnOutcome, ViolationType
-from .metadata_tracker import EffectRecord, FailureToken, MetadataOperationInstance
+from .metadata_tracker import (
+    EffectRecord,
+    FailureToken,
+    MetadataOperationInstance,
+    OperationControlState,
+)
 
 
 @dataclass(frozen=True)
@@ -35,6 +40,7 @@ class MetadataCandidate:
     static_certainty: str
     return_attempt_id: str = ""
     return_provenance: str = ""
+    control_trace: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -53,6 +59,7 @@ class MetadataCandidate:
             "static_certainty": self.static_certainty,
             "return_attempt_id": self.return_attempt_id,
             "return_provenance": self.return_provenance,
+            "control_trace": list(self.control_trace),
         }
 
 
@@ -64,6 +71,7 @@ class AnalysisUnknown:
     exit_id: str
     reasons: tuple[str, ...]
     witness: tuple[dict[str, Any], ...]
+    control_trace: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -74,6 +82,7 @@ class AnalysisUnknown:
             "classification": "ANALYSIS_UNKNOWN",
             "reasons": list(self.reasons),
             "representative_witness": list(self.witness),
+            "control_trace": list(self.control_trace),
         }
 
 
@@ -83,6 +92,9 @@ def verify_success_exit(
     phase: str,
     outcome: ReturnOutcome,
 ) -> ExitVerification:
+    control = _verify_control_exit(state)
+    if control is not None:
+        return control
     exit_spec = _matching_exit(protocol, state.operation_id, LegalExitKind.SUCCESS, phase, outcome)
     if exit_spec is None:
         return ExitVerification(False, False, "phase or return outcome is not a legal success exit")
@@ -110,6 +122,9 @@ def verify_failure_exit(
     phase: str,
     outcome: ReturnOutcome,
 ) -> ExitVerification:
+    control = _verify_control_exit(state)
+    if control is not None:
+        return control
     exit_spec = _matching_exit(protocol, state.operation_id, LegalExitKind.FAILURE, phase, outcome)
     if exit_spec is None:
         return ExitVerification(False, False, "phase or return outcome is not a legal failure exit")
@@ -223,6 +238,24 @@ def _matching_exit(protocol, operation_id, kind, phase, outcome):
     return None
 
 
+def _verify_control_exit(
+    state: MetadataOperationInstance,
+) -> ExitVerification | None:
+    if state.control_state is OperationControlState.UNKNOWN:
+        return ExitVerification(
+            False,
+            True,
+            "operation control state is unknown",
+        )
+    if state.control_state is not OperationControlState.EXITED:
+        return ExitVerification(
+            False,
+            True,
+            f"operation control state has not exited: {state.control_state.value}",
+        )
+    return None
+
+
 def _candidate(
     state: MetadataOperationInstance,
     protocol: MetadataProtocol,
@@ -259,6 +292,7 @@ def _candidate(
         static_certainty=certainty,
         return_attempt_id=state.return_attempt_id,
         return_provenance=state.return_provenance,
+        control_trace=tuple(item.to_dict() for item in state.control_history),
     )
 
 
@@ -275,6 +309,7 @@ def _unknown(
         exit_id,
         tuple(sorted(set(state.uncertainty_causes) | {reason})),
         tuple(value.to_dict() for value in state.witness),
+        tuple(value.to_dict() for value in state.control_history),
     )
 
 

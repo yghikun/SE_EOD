@@ -436,7 +436,7 @@ def test_discovery_cli_writes_versioned_report(tmp_path):
     )
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["schema_version"] == 2
+    assert payload["schema_version"] == 3
     assert payload["source_version"] == "fixture-v1"
     assert payload["summary"]["discovery_review_occurrences"] >= 1
 

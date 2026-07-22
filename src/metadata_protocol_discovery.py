@@ -20,7 +20,7 @@ from .metadata_protocol import MetadataProtocol
 from .metadata_protocol_analyzer import ProtocolAnalysisResult, analyze_function
 
 
-DISCOVERY_SCHEMA_VERSION = 2
+DISCOVERY_SCHEMA_VERSION = 3
 DEFAULT_CONFIRMED_BUGS = (
     Path(__file__).resolve().parents[1] / "outputs" / "confirmed_bugs.md"
 )

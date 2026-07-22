@@ -1,0 +1,50 @@
+{
+  "binding_schema_version": 1,
+  "binding_id": "xfs.transaction",
+  "family_id": "transaction_lifecycle",
+  "filesystem": "xfs",
+  "linux_versions": ["6.8", "6.14", "7.1"],
+  "role_bindings": {"resource": "transaction"},
+  "actions": [
+    {
+      "action_id": "acquire",
+      "callees": ["xfs_trans_alloc"],
+      "object_binding": {
+        "abstract_role": "resource",
+        "source": "argument",
+        "argument_index": 5,
+        "normalization": "address_of_output"
+      },
+      "guard": "ret == 0",
+      "strength": "must",
+      "max_call_depth": 1
+    },
+    {
+      "action_id": "commit",
+      "callees": ["xfs_trans_commit"],
+      "object_binding": {
+        "abstract_role": "resource",
+        "source": "argument",
+        "argument_index": 0,
+        "normalization": "identity"
+      },
+      "guard": "always",
+      "strength": "must",
+      "max_call_depth": 1
+    },
+    {
+      "action_id": "rollback",
+      "callees": ["xfs_trans_cancel"],
+      "object_binding": {
+        "abstract_role": "resource",
+        "source": "argument",
+        "argument_index": 0,
+        "normalization": "identity"
+      },
+      "guard": "always",
+      "strength": "must",
+      "max_call_depth": 1
+    }
+  ],
+  "description": "Binds XFS transaction allocation, commit, and cancellation APIs to the transaction lifecycle family."
+}

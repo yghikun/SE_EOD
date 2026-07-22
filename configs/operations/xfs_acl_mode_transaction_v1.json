@@ -1,0 +1,52 @@
+{
+  "operation_schema_version": 1,
+  "operation_id": "xfs_acl_mode_transaction",
+  "family_id": "transaction_lifecycle",
+  "binding_id": "xfs.transaction",
+  "entry_functions": ["xfs_acl_set_mode"],
+  "phases": ["ENTRY", "SUCCESS", "FAILURE"],
+  "role_instances": [
+    {"abstract_role": "resource", "selector": "summary-bound"}
+  ],
+  "discovery": {
+    "required_callees": ["xfs_trans_alloc", "xfs_trans_commit"],
+    "semantic_patterns": ["mutation_failure_cleanup"]
+  },
+  "return_contracts": [
+    {"contract_id": "xfs.transaction.failure", "guard": "ret != 0", "outcome": "failure"},
+    {"contract_id": "xfs.transaction.success", "guard": "ret == 0", "outcome": "success"}
+  ],
+  "effect": {
+    "event_id": "xfs.transaction.open",
+    "effect_id": "xfs.transaction.lifecycle",
+    "abstract_role": "resource",
+    "kind": "METADATA_UPDATE",
+    "scope": "TRANSACTION_SCOPED",
+    "owner": "xfs_transaction_manager",
+    "phase": "ENTRY",
+    "required": true,
+    "description": "A successfully allocated XFS transaction must be committed, cancelled, or transferred before exit."
+  },
+  "summary_ids": {
+    "acquire": "xfs.transaction.alloc",
+    "commit": "xfs.transaction.commit",
+    "rollback": "xfs.transaction.cancel"
+  },
+  "legal_exits": [
+    {
+      "exit_id": "xfs.transaction.success",
+      "kind": "success",
+      "phases": ["SUCCESS"],
+      "completion_modes": ["COMMITTED"],
+      "return_outcomes": ["success"]
+    },
+    {
+      "exit_id": "xfs.transaction.failure",
+      "kind": "failure",
+      "phases": ["FAILURE"],
+      "completion_modes": ["ROLLED_BACK", "COMMITTED", "ABORTED", "RECOVERY_DELEGATED", "DEFERRED"],
+      "return_outcomes": ["failure"]
+    }
+  ],
+  "description": "Development operation instance for the XFS ACL mode transaction."
+}

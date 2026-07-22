@@ -9,7 +9,15 @@ from enum import Enum
 from typing import Any, Iterable
 
 from .frontend.model import FunctionIR, SourceRange
-from .metadata_protocol import EffectKind, MetadataProtocol, ObjectRef, OperationEntry
+from .metadata_protocol import (
+    ArgumentNormalization,
+    EffectKind,
+    EffectTransition,
+    MetadataProtocol,
+    ObjectRef,
+    OperationEntry,
+    SummaryBindingSource,
+)
 
 
 class MetadataEventKind(str, Enum):
@@ -76,6 +84,9 @@ class MetadataEvent:
     effect_spec_id: str = ""
     compensation_spec_id: str = ""
     handler_spec_id: str = ""
+    summary_id: str = ""
+    effect_transition: EffectTransition | None = None
+    target_effect_id: str = ""
     expression: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,6 +110,11 @@ class MetadataEvent:
             "effect_spec_id": self.effect_spec_id,
             "compensation_spec_id": self.compensation_spec_id,
             "handler_spec_id": self.handler_spec_id,
+            "summary_id": self.summary_id,
+            "effect_transition": (
+                self.effect_transition.value if self.effect_transition else ""
+            ),
+            "target_effect_id": self.target_effect_id,
             "expression": self.expression,
         }
 
@@ -169,7 +185,13 @@ def extract_metadata_events(
             ),
             None,
         )
-        if role is None and generic_kind is None and effect_spec is None and compensation_spec is None and handler_spec is None:
+        summary_specs = [
+            item
+            for item in protocol.callee_summaries
+            if item.operation_id == operation.operation_id
+            and call.callee_spelling in item.callees
+        ]
+        if role is None and generic_kind is None and effect_spec is None and compensation_spec is None and handler_spec is None and not summary_specs:
             continue
         uncertainty: list[str] = []
         if call.callee_kind != "direct":
@@ -219,7 +241,9 @@ def extract_metadata_events(
             [(item, None) for item in effect_specs]
             + [(None, item) for item in compensation_specs]
         )
-        if not matching_specs:
+        if not matching_specs and (
+            role is not None or generic_kind is not None or handler_spec is not None
+        ):
             matching_specs = [(None, None)]
         for matched_effect, matched_compensation in matching_specs:
             selected_object = declared_object
@@ -274,6 +298,77 @@ def extract_metadata_events(
                 handler_spec_id=handler_spec.handler_id if handler_spec else "",
                 expression=call.callee_spelling,
             ))
+        for summary in summary_specs:
+            summary_object, binding_causes = _resolve_summary_object(
+                function,
+                call.arguments,
+                summary.object_binding.role,
+                summary.object_binding.source,
+                summary.object_binding.argument_index,
+                summary.object_binding.normalization,
+                result_symbol,
+            )
+            summary_causes = list(binding_causes)
+            if call.callee_kind != "direct":
+                summary_causes.append("summary_requires_direct_call")
+            if summary.strength == "may":
+                summary_causes.append("may_callee_summary")
+            summary_strength = (
+                EventStrength.MUST if not summary_causes else EventStrength.MAY
+            )
+            summary_kind = {
+                EffectTransition.OPEN: MetadataEventKind(
+                    next(
+                        item.kind.value
+                        for item in protocol.effects
+                        if item.effect_id == summary.target_effect_id
+                    )
+                ),
+                EffectTransition.COMMIT: MetadataEventKind.COMMIT,
+                EffectTransition.COMPENSATE: MetadataEventKind.COMPENSATE,
+                EffectTransition.TRANSFER: {
+                    "ABORTED": MetadataEventKind.ABORT,
+                    "RECOVERY_DELEGATED": MetadataEventKind.RECOVERY_DELEGATE,
+                    "DEFERRED": MetadataEventKind.DEFER_CLEANUP,
+                }[
+                    summary.completion_mode.value
+                    if summary.completion_mode is not None
+                    else "RECOVERY_DELEGATED"
+                ],
+            }[summary.transition]
+            events.append(
+                MetadataEvent(
+                    event_id=_event_id(
+                        protocol.protocol_id,
+                        operation.operation_id,
+                        summary_kind.value,
+                        call.source_range,
+                        call.callee_spelling,
+                        summary.summary_id,
+                    ),
+                    protocol_id=protocol.protocol_id,
+                    operation_id=operation.operation_id,
+                    kind=summary_kind,
+                    object_ref=summary_object,
+                    container_ref=None,
+                    field_or_member="",
+                    guard=summary.guard,
+                    strength=summary_strength,
+                    source_location=call.source_range,
+                    uncertainty_causes=tuple(sorted(set(summary_causes))),
+                    callee=call.callee_spelling,
+                    result_symbol=result_symbol,
+                    effect_spec_id=(
+                        summary.target_effect_id
+                        if summary.transition is EffectTransition.OPEN
+                        else ""
+                    ),
+                    summary_id=summary.summary_id,
+                    effect_transition=summary.transition,
+                    target_effect_id=summary.target_effect_id,
+                    expression=call.callee_spelling,
+                )
+            )
     events.extend(_assignment_events(function, protocol, operation))
     return tuple(sorted(events, key=lambda item: (item.source_location.start_byte, item.event_id)))
 
@@ -458,6 +553,86 @@ def _resolve_call_argument(
     if symbol is not None:
         return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, symbol.symbol_id)
     return ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN)
+
+
+def _resolve_summary_object(
+    function: FunctionIR,
+    arguments: tuple[str, ...],
+    role: str,
+    source: SummaryBindingSource,
+    index: int | None,
+    normalization: ArgumentNormalization,
+    result_symbol: str,
+) -> tuple[ResolvedObjectRef, tuple[str, ...]]:
+    if source is SummaryBindingSource.RESULT:
+        if not result_symbol:
+            return (
+                ResolvedObjectRef(role, "", ObjectIdentity.UNKNOWN),
+                ("summary_result_not_captured",),
+            )
+        symbol = next(
+            (item for item in function.symbols if item.name == result_symbol), None
+        )
+        if symbol is None:
+            return (
+                ResolvedObjectRef(role, result_symbol, ObjectIdentity.UNKNOWN),
+                ("summary_object_identity_unknown",),
+            )
+        return (
+            ResolvedObjectRef(
+                role, result_symbol, ObjectIdentity.EXACT, symbol.symbol_id
+            ),
+            (),
+        )
+    assert index is not None
+    if index >= len(arguments):
+        return (
+            ResolvedObjectRef(role, "", ObjectIdentity.UNKNOWN),
+            ("summary_argument_out_of_range",),
+        )
+    expression = " ".join(arguments[index].strip().split())
+    if normalization is ArgumentNormalization.ADDRESS_OF_OUTPUT:
+        normalized = _strip_outer_parens(expression)
+        if not normalized.startswith("&"):
+            return (
+                ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN),
+                ("summary_binding_shape_mismatch",),
+            )
+        expression = _strip_outer_parens(normalized[1:].strip())
+    else:
+        expression = _strip_outer_parens(expression)
+    root_match = re.fullmatch(r"[A-Za-z_]\w*", expression)
+    if root_match is None:
+        return (
+            ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN),
+            ("summary_object_identity_unknown",),
+        )
+    symbol = next((item for item in function.symbols if item.name == expression), None)
+    if symbol is None:
+        return (
+            ResolvedObjectRef(role, expression, ObjectIdentity.UNKNOWN),
+            ("summary_object_identity_unknown",),
+        )
+    return ResolvedObjectRef(role, expression, ObjectIdentity.EXACT, symbol.symbol_id), ()
+
+
+def _strip_outer_parens(value: str) -> str:
+    result = value.strip()
+    while result.startswith("(") and result.endswith(")"):
+        depth = 0
+        encloses_all = True
+        for index, char in enumerate(result):
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0 and index != len(result) - 1:
+                    encloses_all = False
+                    break
+        if not encloses_all or depth != 0:
+            break
+        result = result[1:-1].strip()
+    return result
 
 
 def _call_result_symbol(function: FunctionIR, location: SourceRange) -> str:

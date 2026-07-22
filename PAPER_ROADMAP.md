@@ -119,12 +119,13 @@ path sensitivity and witness
 论文中的核心抽象是参数化扩展状态机，而不是一个为所有文件系统硬编码的扁平状态
 图。通用分析器传播操作控制状态、effect ledger、failure token、accounting
 obligation 和 return provenance；每个文件系统协议实例化对象角色、阶段、返回契约、
-补偿/handler 关系和元数据不变量。当前可执行片段只支持 phase、effect closure、
-return contract、accounting constraint 和 legal exit 可表达的约束。
+补偿/handler 关系和元数据不变量。当前可执行片段支持 phase、effect closure、
+return contract、accounting constraint、legal exit，以及 schema v2 的一层有界 callee
+effect summary；递归或通用跨过程展开仍不支持。
 
 现有 `MetadataOperationInstance`、`metadata_tracker.py` 和合法出口验证器已经提供
 该模型的可执行片段。本阶段只统一形式化定义和文档术语，不实现独立的状态机运行时，
-也不把尚未支持的通用 handler summary、任意元数据算术或完整 crash-consistency
+也不把尚未支持的递归/通用 handler summary、任意元数据算术或完整 crash-consistency
 证明写成已实现能力。
 
 ### Phase M0：协议核心模型
@@ -155,13 +156,15 @@ parameterized EFSM configuration and legal-exit predicate
 
 ```text
 MetadataOperationInstance
+OperationControlState + control trace
 effect ledger
 failure token + attempt_id
 accounting obligations
 join/widening uncertainty
 ```
 
-验收：retry stale error、global effect after abort 和 positive-success 均有最小正反例。
+验收：retry stale error、global effect after abort、positive-success、非法控制转移和
+control-state join 均有最小正反例。
 
 ### Phase M3：合法出口
 
@@ -178,6 +181,37 @@ join/widening uncertainty
 ### Phase M6：Protocol C
 
 完成 retry result provenance、positive-success 和 reservation/accounting，开发回归覆盖 #4、#16。
+
+### Phase M7：多规则知识闭环
+
+建立 evidence-backed rule registry，将 authority、evidence class、construction/evaluation
+usage、dataset split、规则 maturity、支持片段和 protocol/operation binding 分开记录。
+当前 v2.2 以 1 条 normative、7 条 confirmed 和 2 条 heuristic development rule 覆盖 A/B/C/D/E
+的 12 个 operation；planned coverage target 不得写成 executable rule。Protocol D 已有
+XFS 与 ext4 两个 transaction lifecycle 开发实例，但尚未经过独立 frozen/unseen 验证，
+Protocol E 已有 Btrfs path allocation/release 开发实例，但尚未覆盖 publication 或 ownership
+transfer。因此不能据此宣称已对大多数文件系统泛化或已闭合整个 allocation 规则族。
+
+ext4/JBD2 handle lifecycle 已由三个版本固定的官方 contract 支持并升级为 normative；
+7 条规则通过独立主线修复或维护者/审阅者邮件升级为 confirmed。sprout multi-effect
+rollback 的主线历史修复只覆盖另一项全局状态，XFS transaction 文档只覆盖正常 commit，
+因此这 2 条保持 heuristic。全部 authority 结论不替代 validation/frozen maturity。
+验收：新增 active operation 没有 rule binding 时校验失败；normative rule
+没有 contract 时失败；confirmed rule 缺少两类独立支持证据时失败；construction 和
+evaluation 数据污染时失败；registry 不参与候选判定和 evidence ranking。
+
+### Phase M8：P0 规则族扩展
+
+按 registry coverage target 的顺序完成：
+
+```text
+replay/recovery cross-filesystem frozen validation
+transaction lifecycle
+allocation lifecycle
+```
+
+每个新规则必须先完成来源审查，再编码协议，并同时增加 legal、violation 和 unknown
+测试。只有现有 schema 无法表达已取证语义时，才启动 versioned schema 扩展。
 
 ## 5. Benchmark 路线
 
@@ -337,6 +371,8 @@ uncertain
 
 ### 第 4 阶段：Benchmark 和 baseline
 
+- M7 registry 与 P0 rule target；
+- 规则来源审查和 protocol binding；
 - 冻结数据；
 - 双 reviewer；
 - baseline 和消融；
@@ -379,7 +415,9 @@ uncertain
 
 ## 12. 路线图 Definition of Done
 
-- [ ] M0-M6 全部通过各自门禁；
+- [ ] M0-M8 全部通过各自门禁；
+- [x] 当前 active operation 全部绑定 evidence-backed development rule；
+- [ ] P0 coverage target 完成来源、协议和正/反/unknown 闭环；
 - [ ] 协议开发集与冻结测试集完全分离；
 - [ ] 三类候选均有正例、反例和 unknown；
 - [ ] Precision、Recall、F1、P@K 和置信区间可重算；

@@ -83,29 +83,36 @@ ANALYSIS_UNKNOWN
 
 - frontend-neutral IR 和 tree-sitter adapter；
 - 函数内 CFG；
-- parameterized protocol schema 和 Protocol A/B/C；
+- 向后兼容 v1 的 parameterized protocol schema v2 和 Protocol A/B/C/D/E；
+- explicit operation control state、control trace 和 effect 子状态机；
 - metadata event、effect ledger、failure attempt 和 accounting obligation；
 - 合法成功/失败出口、三类违规和 unknown 隔离；
 - source-tree exact analysis 与 broad semantic review 隔离；
+- evidence-backed rule registry、maturity 和 active operation coverage audit；
 - representative trace 和 CFG snapshot；
 - source review、version matrix、repair evidence 和 confirmed linkage；
-- 精简后 `138 passed` 测试基线。
+- `230 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、reviewer/adjudication 和 batch scan 负例。
 
 旧 SE-EOD `src.main`、resource/dataflow、candidate、ranking/LLM 和实验辅助代码已删除；
 保留的旧输出只是历史数据，不是当前可执行能力。
 
 ### 3.2 未实现
 
-MOCC-SE 的 M0-M11 开发链已实现 schema v1、return contract、metadata event、
-effect/failure/accounting 状态、合法出口、三类候选、unknown 隔离、Protocol A/B/C
+MOCC-SE 的 M0-M11 开发链已实现 schema v2（兼容 v1）、return contract、metadata event、
+effect/failure/accounting 状态、合法出口、三类候选、unknown 隔离、Protocol A/B/C/D/E
 witness 和 fresh discovery。仍缺少：
 
-- 独立冻结 benchmark 的规模化采集与 adjudication；
-- Protocol A/B/C 独立冻结 benchmark 与 protocol-versioned evaluation output。
+- registry 中 10 条 development rule 的独立 validation/frozen 升级；
+- 9 条原 heuristic rule 的独立证据审计已完成：7 条升级 confirmed，sprout rollback 与 XFS 完整 failure lifecycle 因证据只覆盖部分义务而保持 heuristic；
+- allocation publication/ownership transfer、namespace/orphan、quota/refcount
+  和 deferred ownership coverage target 的规则取证与协议实例；
+- 独立冻结 benchmark 的双 reviewer 真实标注、adjudication、指标计算和规模化采集；
+- Protocol A/B/C/D/E 已有第一批 blind/unlabeled freeze manifest 与 reviewer/adjudication 模板，但尚无 protocol-versioned evaluation result。
+- freeze-bound batch scanner 已可生成全量 candidate/review/unknown 队列，但输出语义仍是 candidate queue，不是 bug 结论。
 
 ### 3.3 明确非目标
 
-完整 Kbuild/Clang、通用 points-to/SSA/SMT、完整跨函数 handler/effect summary、任意
+完整 Kbuild/Clang、通用 points-to/SSA/SMT、递归或通用跨函数 handler/effect summary、任意
 metadata invariant DSL 和完整 crash-consistency 证明不属于当前实现 backlog。只有研究
 范围重新评审后才能恢复为代码任务。
 
@@ -122,6 +129,7 @@ ReturnContract
 EffectKind/Scope/Status
 CompensationSpec
 HandlerSpec
+CalleeEffectSummary / SummaryObjectBinding
 AccountingConstraint
 CompletionMode
 ViolationType
@@ -207,7 +215,8 @@ return outcome belongs to current attempt
 完成条件：事务 effect 和 in-memory global effect 不混淆，多对象补偿可解释。
 
 状态：M5 MVP 已完成。v6.8/v6.14 开发与版本一致性输出记录在
-`outputs/mocc-protocol-b-v1/`；独立冻结评估仍属于后续 Gate 5。
+`outputs/mocc-protocol-b-v1/`；blind validation sample 已冻结在
+`configs/validation/validation_manifest_v1.json`，但独立标注和指标仍属于后续 Gate 5。
 
 ### B3：Protocol C state/accounting `P0`
 
@@ -223,9 +232,28 @@ return outcome belongs to current attempt
 第一版只要求布尔关系，不要求任意算术证明。
 
 状态：M6 MVP 已完成。v6.8/v6.14/v7.1 开发与版本一致性输出记录在
-`outputs/mocc-protocol-c-v1/`；独立冻结评估仍属于后续 Gate 5。
+`outputs/mocc-protocol-c-v1/`；blind validation sample 已冻结在
+`configs/validation/validation_manifest_v1.json`，但独立标注和指标仍属于后续 Gate 5。
 
 ## 6. 配置闭合
+
+规则知识层必须由 `configs/metadata_rules/` 记录。每条 executable rule 必须记录
+authority、evidence class、usage、dataset split、maturity、支持/不支持语义以及
+protocol/operation binding。只有 normative rule 强制要求 contract；confirmed rule 至少
+需要两条来自不同 evidence class 的支持证据。普通实现源码只能作为 implementation
+evidence，不能冒充规范。coverage target 不得被统计为已支持规则，新增 active operation
+不得绕过 registry coverage audit。
+
+external kernel documentation、upstream commit 和 maintainer discussion 必须使用版本化或
+不可变 locator，并记录 SHA-256 与逐字摘录；`python -m src.metadata_evidence_verifier`
+必须能够重新下载并验证。当前 14 份外部材料达到这一门禁，authority 分布为 1 normative、
+7 confirmed、2 heuristic；全部 maturity 仍是 development。
+
+协议配置优先分为 `ProtocolFamily F`、`FilesystemBinding B_fs` 和 `OperationInstance I`，
+再组合为 `RuntimeProtocol = F tensor B_fs tensor I`。family 不能包含具体文件系统 API；
+binding 只能映射 API、对象、guard 和 owner，不能增加正确性义务；operation 只能声明
+入口、适用性和实例化，不能重新定义 action。当前仅 Protocol D/E 完成物理分层，A-C
+仍是受支持的扁平兼容配置。
 
 每个 protocol 文件必须记录：
 
@@ -247,6 +275,7 @@ accounting constraints
 必须提供：
 
 - schema validation；
+- package 引用、跨层 ID、角色和重复字段校验；
 - protocol ID 稳定性；
 - API/field drift 报告；
 - wrapper summary 冲突诊断；
@@ -267,6 +296,11 @@ validation
 test
 discovery
 ```
+
+当前状态：`configs/validation/protocol_freeze_v1.json` 固定 14 个 active 配置 artifact；
+`configs/validation/validation_manifest_v1.json` 固定 10 个 blind、unlabeled validation
+sample；`reviewer_a_labels_v1.json`、`reviewer_b_labels_v1.json` 和 `adjudication_v1.json`
+是空模板。它们只证明数据分离和标注流程边界已经实现，不产生 precision/recall/F1。
 
 现有 19 条 finding 和 ext4 pilot 属于 development。
 
@@ -462,6 +496,7 @@ threat
 ### Gate 0：文档和范围
 
 - 主张、术语、开发集和非目标冻结；
+- evidence-backed rule registry 与 coverage targets 分离；
 - README、完整架构、交接和闭合计划一致。
 
 ### Gate 1：M0
@@ -487,7 +522,7 @@ threat
 
 ### Gate 5：冻结评估
 
-- benchmark、baseline、指标、消融和统计完成；
+- blind manifest 与标注模板已冻结；仍需完成双 reviewer 真实标注、adjudication、baseline、指标、消融和统计；
 - 不再修改 test label 或核心 protocol。
 
 ### Gate 6：Finding 和 artifact
@@ -531,6 +566,7 @@ Documentation updated:
 | accounting 过度承诺 | 需要任意算术 | 第一版降为布尔 obligation |
 | 前端工程拖延 | 长期没有协议闭环 | tree-sitter/IR 先完成 M0-M5 |
 | benchmark 泄漏 | 已知 finding 进入 test | development/test 完全隔离 |
+| 协议自我验证 | 从待测源码构造规则并在同一数据评估 | 区分 evidence usage/split，冻结 locator 污染门禁 |
 | 证据污染语义 | history/LLM 删除候选 | 静态与 ranking 分层 |
 
 ## 15. 最终 Definition of Done
@@ -540,7 +576,11 @@ Documentation updated:
 - [x] M0-M11 开发链通过；
 - [x] 三类违规均有端到端 fixture；
 - [x] `PARTIAL_UNRESOLVED` 和 `ANALYSIS_UNKNOWN` 分离；
+- [x] operation control state 与 effect lifecycle 分层传播，legal exit 要求 `EXITED`；
 - [x] protocol/schema/output versioned；
+- [x] active Protocol A/B/C/D/E 的 12 个 operation 均绑定 evidence-backed development rule；
+- [x] XFS 与 ext4 Protocol D 的有界 transaction lifecycle 正/反/unknown 和三版本开发回归通过；
+- [x] Btrfs Protocol E 的 allocation/release 正/反/unknown 和三版本开发回归通过；
 - [ ] 所有 must effect 和 handler transfer 可审计；
 - [x] 精简后全量测试和 Linux CFG golden 通过。
 
@@ -550,6 +590,7 @@ Documentation updated:
 - [ ] 双 reviewer 和裁决完成；
 - [ ] baseline、消融、指标和统计可重算；
 - [ ] unknown coverage、人工成本和协议成本被报告；
+- [x] freeze-bound batch scanner 能输出 candidate/review/unknown 队列；
 - [ ] 至少跨两个文件系统和两个 Linux 版本。
 
 ### Finding
@@ -570,6 +611,11 @@ Documentation updated:
 
 ## 16. 立即执行
 
-当前任务以 [`../PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) 为准：M6 Protocol C activation/reservation/accounting 已完成。
+当前任务以 [`../PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) 为准。第一版 rule registry
+已闭合 active operation coverage、第二个文件系统的 transaction 开发实例和首个 Btrfs
+allocation/release 实例；下一步按 P0 target 完成 replay/transaction 的 frozen unseen
+验证，并扩展 allocation publication/ownership transfer，不能把当前 release 实例视为整个
+allocation lifecycle 已闭合。
 
-Protocol C 的 M6 MVP 已闭合；在冻结评估门禁完成前不启动大规模 benchmark、LLM 调优、ranking 校准或正式论文表格。
+在 blind validation 标注和 adjudication 完成前不启动正式指标、LLM 调优、ranking 校准或论文
+结果表格。

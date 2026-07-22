@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Type, TypeVar
 
 
-METADATA_PROTOCOL_SCHEMA_VERSION = 1
+METADATA_PROTOCOL_SCHEMA_VERSION = 2
+SUPPORTED_METADATA_PROTOCOL_SCHEMA_VERSIONS = frozenset({1, 2})
 
 
 class EffectKind(str, Enum):
@@ -39,6 +40,23 @@ class EffectStatus(str, Enum):
     TRANSFERRED = "TRANSFERRED"
     COMMITTED = "COMMITTED"
     UNKNOWN = "UNKNOWN"
+
+
+class EffectTransition(str, Enum):
+    OPEN = "OPEN"
+    COMMIT = "COMMIT"
+    COMPENSATE = "COMPENSATE"
+    TRANSFER = "TRANSFER"
+
+
+class ArgumentNormalization(str, Enum):
+    IDENTITY = "identity"
+    ADDRESS_OF_OUTPUT = "address_of_output"
+
+
+class SummaryBindingSource(str, Enum):
+    ARGUMENT = "argument"
+    RESULT = "result"
 
 
 class CompletionMode(str, Enum):
@@ -498,6 +516,157 @@ class HandlerSpec:
 
 
 @dataclass(frozen=True)
+class SummaryObjectBinding:
+    role: str
+    source: SummaryBindingSource = SummaryBindingSource.ARGUMENT
+    argument_index: int | None = None
+    normalization: ArgumentNormalization = ArgumentNormalization.IDENTITY
+
+    @classmethod
+    def from_dict(
+        cls, data: Mapping[str, Any], path: str = "object_binding"
+    ) -> "SummaryObjectBinding":
+        value = _mapping(data, path)
+        _known_keys(
+            value,
+            {"role", "source", "argument_index", "normalization"},
+            path,
+        )
+        source = (
+            _enum(value, "source", path, SummaryBindingSource)
+            if "source" in value
+            else SummaryBindingSource.ARGUMENT
+        )
+        argument_index = (
+            _integer(value, "argument_index", path)
+            if "argument_index" in value
+            else None
+        )
+        if source is SummaryBindingSource.ARGUMENT:
+            if argument_index is None or argument_index < 0:
+                raise MetadataProtocolValidationError(
+                    f"{path}.argument_index",
+                    "argument binding requires a non-negative argument index",
+                )
+        elif argument_index is not None:
+            raise MetadataProtocolValidationError(
+                f"{path}.argument_index",
+                "result binding must not declare an argument index",
+            )
+        normalization = (
+            _enum(value, "normalization", path, ArgumentNormalization)
+            if "normalization" in value
+            else ArgumentNormalization.IDENTITY
+        )
+        if (
+            source is SummaryBindingSource.RESULT
+            and normalization is not ArgumentNormalization.IDENTITY
+        ):
+            raise MetadataProtocolValidationError(
+                f"{path}.normalization",
+                "result binding only supports identity normalization",
+            )
+        return cls(
+            role=_identifier(value, "role", path),
+            source=source,
+            argument_index=argument_index,
+            normalization=normalization,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {
+            "role": self.role,
+            "source": self.source.value,
+            "normalization": self.normalization.value,
+        }
+        if self.argument_index is not None:
+            data["argument_index"] = self.argument_index
+        return data
+
+
+@dataclass(frozen=True)
+class CalleeEffectSummary:
+    summary_id: str
+    operation_id: str
+    callees: tuple[str, ...]
+    transition: EffectTransition
+    target_effect_id: str
+    object_binding: SummaryObjectBinding
+    guard: str = "always"
+    strength: str = "must"
+    max_call_depth: int = 1
+    owner: str = ""
+    completion_mode: CompletionMode | None = None
+
+    @classmethod
+    def from_dict(
+        cls, data: Mapping[str, Any], path: str = "callee_summary"
+    ) -> "CalleeEffectSummary":
+        value = _mapping(data, path)
+        _known_keys(
+            value,
+            {
+                "summary_id",
+                "operation_id",
+                "callees",
+                "transition",
+                "target_effect_id",
+                "object_binding",
+                "guard",
+                "strength",
+                "max_call_depth",
+                "owner",
+                "completion_mode",
+            },
+            path,
+        )
+        max_call_depth = _integer(value, "max_call_depth", path)
+        if max_call_depth != 1:
+            raise MetadataProtocolValidationError(
+                f"{path}.max_call_depth",
+                "only bounded one-call summaries (max_call_depth == 1) are supported",
+            )
+        return cls(
+            summary_id=_identifier(value, "summary_id", path),
+            operation_id=_identifier(value, "operation_id", path),
+            callees=_string_tuple(value, "callees", path, nonempty=True),
+            transition=_enum(value, "transition", path, EffectTransition),
+            target_effect_id=_identifier(value, "target_effect_id", path),
+            object_binding=SummaryObjectBinding.from_dict(
+                _required(value, "object_binding", path),
+                f"{path}.object_binding",
+            ),
+            guard=_optional_text(value, "guard", path) or "always",
+            strength=_strength(value, path),
+            max_call_depth=max_call_depth,
+            owner=_optional_identifier(value, "owner", path),
+            completion_mode=(
+                _enum(value, "completion_mode", path, CompletionMode)
+                if "completion_mode" in value
+                else None
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {
+            "summary_id": self.summary_id,
+            "operation_id": self.operation_id,
+            "callees": list(self.callees),
+            "transition": self.transition.value,
+            "target_effect_id": self.target_effect_id,
+            "object_binding": self.object_binding.to_dict(),
+            "guard": self.guard,
+            "strength": self.strength,
+            "max_call_depth": self.max_call_depth,
+        }
+        if self.owner:
+            data["owner"] = self.owner
+        if self.completion_mode is not None:
+            data["completion_mode"] = self.completion_mode.value
+        return data
+
+
+@dataclass(frozen=True)
 class AccountingConstraint:
     constraint_id: str
     operation_id: str
@@ -600,6 +769,7 @@ class MetadataProtocol:
     effects: tuple[EffectSpec, ...]
     compensations: tuple[CompensationSpec, ...]
     handlers: tuple[HandlerSpec, ...]
+    callee_summaries: tuple[CalleeEffectSummary, ...]
     accounting_constraints: tuple[AccountingConstraint, ...]
     legal_exits: tuple[LegalExitSpec, ...]
     description: str = ""
@@ -612,17 +782,22 @@ class MetadataProtocol:
             {
                 "schema_version", "protocol_version", "protocol_id", "filesystems",
                 "linux_versions", "phases", "operations", "return_contracts",
-                "effects", "compensations", "handlers", "accounting_constraints",
+                "effects", "compensations", "handlers", "callee_summaries", "accounting_constraints",
                 "legal_exits", "description",
             },
             "protocol",
         )
         schema_version = _integer(value, "schema_version", "protocol")
-        if schema_version != METADATA_PROTOCOL_SCHEMA_VERSION:
+        if schema_version not in SUPPORTED_METADATA_PROTOCOL_SCHEMA_VERSIONS:
             raise MetadataProtocolValidationError(
                 "protocol.schema_version",
                 f"unsupported metadata protocol schema version {schema_version}; "
-                f"expected {METADATA_PROTOCOL_SCHEMA_VERSION}",
+                "expected one of: 1, 2",
+            )
+        if schema_version == 1 and "callee_summaries" in value:
+            raise MetadataProtocolValidationError(
+                "protocol.callee_summaries",
+                "callee summaries require metadata protocol schema version 2",
             )
         protocol_version = _text(value, "protocol_version", "protocol")
         if not _SEMVER.fullmatch(protocol_version):
@@ -642,6 +817,16 @@ class MetadataProtocol:
             effects=_object_list(value, "effects", "protocol", EffectSpec.from_dict),
             compensations=_object_list(value, "compensations", "protocol", CompensationSpec.from_dict),
             handlers=_object_list(value, "handlers", "protocol", HandlerSpec.from_dict),
+            callee_summaries=(
+                _object_list(
+                    value,
+                    "callee_summaries",
+                    "protocol",
+                    CalleeEffectSummary.from_dict,
+                )
+                if schema_version >= 2
+                else ()
+            ),
             accounting_constraints=_object_list(
                 value, "accounting_constraints", "protocol", AccountingConstraint.from_dict
             ),
@@ -669,8 +854,20 @@ class MetadataProtocol:
         except OSError as exc:
             raise MetadataProtocolValidationError(str(source), f"cannot read protocol: {exc}") from exc
         try:
-            return cls.from_json(payload)
+            data = json.loads(payload)
+            if isinstance(data, Mapping) and "protocol_package_schema_version" in data:
+                from .metadata_protocol_package import compose_protocol_package
+
+                return cls.from_dict(compose_protocol_package(source))
+            return cls.from_dict(data)
+        except json.JSONDecodeError as exc:
+            raise MetadataProtocolValidationError(
+                str(source),
+                f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}",
+            ) from exc
         except MetadataProtocolValidationError as exc:
+            raise MetadataProtocolValidationError(str(source), str(exc)) from exc
+        except ValueError as exc:
             raise MetadataProtocolValidationError(str(source), str(exc)) from exc
 
     def validate(self) -> None:
@@ -680,6 +877,7 @@ class MetadataProtocol:
         _unique((item.effect_id for item in self.effects), "protocol.effects", "effect_id")
         _unique((item.compensation_id for item in self.compensations), "protocol.compensations", "compensation_id")
         _unique((item.handler_id for item in self.handlers), "protocol.handlers", "handler_id")
+        _unique((item.summary_id for item in self.callee_summaries), "protocol.callee_summaries", "summary_id")
         _unique((item.constraint_id for item in self.accounting_constraints), "protocol.accounting_constraints", "constraint_id")
         _unique((item.exit_id for item in self.legal_exits), "protocol.legal_exits", "exit_id")
         _unique(
@@ -698,6 +896,7 @@ class MetadataProtocol:
             *self.effects,
             *self.compensations,
             *self.handlers,
+            *self.callee_summaries,
             *self.accounting_constraints,
             *self.legal_exits,
         ]
@@ -813,6 +1012,48 @@ class MetadataProtocol:
                         f"ABORTED handler cannot own non-transaction effect {effect_id!r}",
                     )
 
+        allowed_transfer_modes = {
+            CompletionMode.ABORTED,
+            CompletionMode.RECOVERY_DELEGATED,
+            CompletionMode.DEFERRED,
+        }
+        for item in self.callee_summaries:
+            target = effects.get(item.target_effect_id)
+            path = f"protocol.callee_summaries.{item.summary_id}"
+            if target is None:
+                raise MetadataProtocolValidationError(
+                    f"{path}.target_effect_id",
+                    f"references undefined effect {item.target_effect_id!r}",
+                )
+            if target.operation_id != item.operation_id:
+                raise MetadataProtocolValidationError(
+                    f"{path}.target_effect_id", "target effect belongs to another operation"
+                )
+            if target.object_ref.role != item.object_binding.role:
+                raise MetadataProtocolValidationError(
+                    f"{path}.object_binding.role",
+                    "summary object role does not match its target effect",
+                )
+            if item.transition is EffectTransition.TRANSFER:
+                if not item.owner or item.completion_mode not in allowed_transfer_modes:
+                    raise MetadataProtocolValidationError(
+                        path,
+                        "TRANSFER requires an owner and ABORTED, RECOVERY_DELEGATED, or DEFERRED completion_mode",
+                    )
+                if (
+                    item.completion_mode is CompletionMode.ABORTED
+                    and target.scope is not EffectScope.TRANSACTION_SCOPED
+                ):
+                    raise MetadataProtocolValidationError(
+                        f"{path}.completion_mode",
+                        "ABORTED summary cannot own a non-transaction effect",
+                    )
+            elif item.owner or item.completion_mode is not None:
+                raise MetadataProtocolValidationError(
+                    path,
+                    "owner and completion_mode are only valid for TRANSFER summaries",
+                )
+
         for item in self.accounting_constraints:
             self._validate_object(item.operation_id, item.subject, f"protocol.accounting_constraints.{item.constraint_id}")
             for phase in item.phases:
@@ -883,6 +1124,11 @@ class MetadataProtocol:
             "effects": [item.to_dict() for item in self.effects],
             "compensations": [item.to_dict() for item in self.compensations],
             "handlers": [item.to_dict() for item in self.handlers],
+            **(
+                {"callee_summaries": [item.to_dict() for item in self.callee_summaries]}
+                if self.schema_version >= 2
+                else {}
+            ),
             "accounting_constraints": [item.to_dict() for item in self.accounting_constraints],
             "legal_exits": [item.to_dict() for item in self.legal_exits],
             "description": self.description,

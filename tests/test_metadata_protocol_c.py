@@ -29,6 +29,7 @@ from src.metadata_tracker import (
     AccountingObligation,
     EffectRecord,
     MetadataOperationInstance,
+    OperationControlState,
 )
 
 
@@ -60,8 +61,13 @@ def _state() -> MetadataOperationInstance:
         "mocc.protocol_c.activation_accounting",
     )
     state.principal_objects["fs_info"] = _object()
-    state.completion_mode = CompletionMode.COMMITTED
+    state.transition_control(OperationControlState.ACTIVE, "fixture operation")
     return state
+
+
+def _finish_state(state: MetadataOperationInstance) -> None:
+    state.complete(CompletionMode.COMMITTED, "fixture completion")
+    state.exit_operation("fixture return")
 
 
 def _event() -> MetadataEvent:
@@ -154,6 +160,7 @@ def test_accounting_satisfied_and_unknown_states_stay_separate():
         "reserved",
         True,
     )
+    _finish_state(state)
 
     candidates, unknown = generate_candidates(
         state,
@@ -166,11 +173,13 @@ def test_accounting_satisfied_and_unknown_states_stay_separate():
     assert not candidates
     assert not unknown
 
+    state = _state()
     state.accounting_obligations["btrfs.pending_requires_reservation"] = AccountingObligation(
         "btrfs.pending_requires_reservation",
         _object(),
         "pending metadata work exists => matching reservation exists",
     )
+    _finish_state(state)
     candidates, unknown = generate_candidates(
         state,
         protocol,

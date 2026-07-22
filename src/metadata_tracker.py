@@ -11,6 +11,16 @@ from .metadata_event import MetadataEvent, ObjectIdentity, ResolvedObjectRef
 from .metadata_protocol import CompletionMode, EffectKind, EffectScope, EffectStatus
 
 
+class OperationControlState(str, Enum):
+    INIT = "INIT"
+    ACTIVE = "ACTIVE"
+    COMMITTING = "COMMITTING"
+    HANDLING_FAILURE = "HANDLING_FAILURE"
+    RETRYING = "RETRYING"
+    EXITED = "EXITED"
+    UNKNOWN = "UNKNOWN"
+
+
 class FailureResolution(str, Enum):
     UNRESOLVED = "UNRESOLVED"
     PROPAGATED = "PROPAGATED"
@@ -109,10 +119,61 @@ class WitnessStep:
         }
 
 
+@dataclass(frozen=True)
+class ControlTransition:
+    from_state: OperationControlState
+    to_state: OperationControlState
+    reason: str
+    source: str = ""
+    line: int = 0
+    event_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "from": self.from_state.value,
+            "to": self.to_state.value,
+            "reason": self.reason,
+            "source": self.source,
+            "line": self.line,
+            "event_id": self.event_id,
+        }
+
+
+_CONTROL_TRANSITIONS = {
+    OperationControlState.INIT: {
+        OperationControlState.ACTIVE,
+    },
+    OperationControlState.ACTIVE: {
+        OperationControlState.COMMITTING,
+        OperationControlState.HANDLING_FAILURE,
+        OperationControlState.RETRYING,
+        OperationControlState.EXITED,
+    },
+    OperationControlState.COMMITTING: {
+        OperationControlState.HANDLING_FAILURE,
+        OperationControlState.EXITED,
+    },
+    OperationControlState.HANDLING_FAILURE: {
+        OperationControlState.COMMITTING,
+        OperationControlState.RETRYING,
+        OperationControlState.EXITED,
+    },
+    OperationControlState.RETRYING: {
+        OperationControlState.COMMITTING,
+        OperationControlState.HANDLING_FAILURE,
+        OperationControlState.EXITED,
+    },
+    OperationControlState.EXITED: set(),
+    OperationControlState.UNKNOWN: set(),
+}
+
+
 @dataclass
 class MetadataOperationInstance:
     operation_id: str
     protocol_id: str
+    control_state: OperationControlState = OperationControlState.INIT
+    control_history: list[ControlTransition] = field(default_factory=list)
     principal_objects: dict[str, ResolvedObjectRef] = field(default_factory=dict)
     phase_facts: set[str] = field(default_factory=set)
     effect_ledger: dict[str, EffectRecord] = field(default_factory=dict)
@@ -131,6 +192,8 @@ class MetadataOperationInstance:
         return MetadataOperationInstance(
             operation_id=self.operation_id,
             protocol_id=self.protocol_id,
+            control_state=self.control_state,
+            control_history=list(self.control_history),
             principal_objects=dict(self.principal_objects),
             phase_facts=set(self.phase_facts),
             effect_ledger=dict(self.effect_ledger),
@@ -146,8 +209,65 @@ class MetadataOperationInstance:
             return_provenance=self.return_provenance,
         )
 
+    def transition_control(
+        self,
+        target: OperationControlState,
+        reason: str,
+        *,
+        source: str = "",
+        line: int = 0,
+        event_id: str = "",
+    ) -> bool:
+        previous = self.control_state
+        if previous is target:
+            return True
+        if target not in _CONTROL_TRANSITIONS[previous]:
+            self.control_state = OperationControlState.UNKNOWN
+            self.uncertainty_causes.add(
+                f"invalid_control_transition:{previous.value}->{target.value}"
+            )
+            self.control_history.append(
+                ControlTransition(
+                    previous,
+                    OperationControlState.UNKNOWN,
+                    f"invalid transition to {target.value}: {reason}",
+                    source,
+                    line,
+                    event_id,
+                )
+            )
+            return False
+        self.control_state = target
+        self.control_history.append(
+            ControlTransition(
+                previous,
+                target,
+                reason,
+                source,
+                line,
+                event_id,
+            )
+        )
+        return True
+
     def start_attempt(self, role_id: str, event: MetadataEvent) -> str:
         number = self.current_attempts.get(role_id, 0) + 1
+        if number > 1:
+            self.transition_control(
+                OperationControlState.RETRYING,
+                f"retry {role_id}",
+                source=event.source_location.file,
+                line=event.source_location.start_line,
+                event_id=event.event_id,
+            )
+        elif self.control_state is OperationControlState.INIT:
+            self.transition_control(
+                OperationControlState.ACTIVE,
+                f"start {role_id}",
+                source=event.source_location.file,
+                line=event.source_location.start_line,
+                event_id=event.event_id,
+            )
         self.current_attempts[role_id] = number
         attempt_id = f"{role_id}@{number}"
         self.principal_objects.setdefault(event.object_ref.role, event.object_ref)
@@ -166,6 +286,13 @@ class MetadataOperationInstance:
     def record_failure(
         self, event: MetadataEvent, attempt_id: str, error_class: str, origin: str
     ) -> FailureToken:
+        self.transition_control(
+            OperationControlState.HANDLING_FAILURE,
+            f"{attempt_id} failed: {error_class}",
+            source=event.source_location.file,
+            line=event.source_location.start_line,
+            event_id=event.event_id,
+        )
         failure_id = _stable_id("failure", event.event_id, attempt_id, error_class)
         token = FailureToken(
             failure_id=failure_id,
@@ -208,9 +335,18 @@ class MetadataOperationInstance:
                 )
 
     def add_effect(self, effect: EffectRecord) -> None:
+        if self.control_state is OperationControlState.INIT:
+            self.transition_control(
+                OperationControlState.ACTIVE,
+                f"create effect {effect.spec_effect_id or effect.effect_id}",
+                event_id=effect.source_event,
+            )
         self.effect_ledger[effect.effect_id] = effect
 
     def compensate(self, effect_id: str, object_ref: ResolvedObjectRef) -> bool:
+        if object_ref.identity is ObjectIdentity.UNKNOWN:
+            self.uncertainty_causes.add("unknown_compensation_object")
+            return False
         matches = [
             (instance_id, effect)
             for instance_id, effect in self.effect_ledger.items()
@@ -218,10 +354,31 @@ class MetadataOperationInstance:
             and _same_exact_object(effect.object_ref, object_ref)
         ]
         if not matches:
-            self.uncertainty_causes.add("unmatched_compensation_object")
             return False
         for instance_id, effect in matches:
             self.effect_ledger[instance_id] = replace(effect, status=EffectStatus.COMPENSATED)
+        return True
+
+    def commit_effect(self, effect_id: str, object_ref: ResolvedObjectRef) -> bool:
+        if object_ref.identity is ObjectIdentity.UNKNOWN:
+            self.uncertainty_causes.add("unknown_commit_object")
+            return False
+        matches = [
+            (instance_id, effect)
+            for instance_id, effect in self.effect_ledger.items()
+            if (instance_id == effect_id or effect.spec_effect_id == effect_id)
+            and _same_exact_object(effect.object_ref, object_ref)
+        ]
+        if not matches:
+            return False
+        self.transition_control(
+            OperationControlState.COMMITTING,
+            f"commit effect {effect_id}",
+        )
+        for instance_id, effect in matches:
+            self.effect_ledger[instance_id] = replace(
+                effect, status=EffectStatus.COMMITTED
+            )
         return True
 
     def transfer(
@@ -232,6 +389,11 @@ class MetadataOperationInstance:
         owner: str,
         guard: str,
     ) -> None:
+        if not self.transition_control(
+            OperationControlState.HANDLING_FAILURE,
+            f"transfer effects to {owner or 'unknown owner'}",
+        ):
+            return
         if not owner or not guard or object_ref.identity is ObjectIdentity.UNKNOWN:
             self.uncertainty_causes.add("unproven_handler_transfer")
             return
@@ -254,6 +416,11 @@ class MetadataOperationInstance:
         self.completion_mode = mode
 
     def abort_transaction(self, owner: str, guard: str) -> None:
+        if not self.transition_control(
+            OperationControlState.HANDLING_FAILURE,
+            f"abort transaction via {owner or 'unknown owner'}",
+        ):
+            return
         for effect_id, effect in list(self.effect_ledger.items()):
             if effect.scope is EffectScope.TRANSACTION_SCOPED:
                 self.effect_ledger[effect_id] = replace(
@@ -267,10 +434,52 @@ class MetadataOperationInstance:
                         token, resolution=FailureResolution.ABORTED
                     )
 
+    def complete(
+        self,
+        mode: CompletionMode,
+        reason: str,
+        *,
+        source: str = "",
+        line: int = 0,
+        event_id: str = "",
+    ) -> bool:
+        target = (
+            OperationControlState.COMMITTING
+            if mode is CompletionMode.COMMITTED
+            else OperationControlState.HANDLING_FAILURE
+        )
+        if not self.transition_control(
+            target,
+            reason,
+            source=source,
+            line=line,
+            event_id=event_id,
+        ):
+            self.completion_mode = CompletionMode.ANALYSIS_UNKNOWN
+            return False
+        self.completion_mode = mode
+        return True
+
+    def exit_operation(
+        self,
+        reason: str,
+        *,
+        source: str = "",
+        line: int = 0,
+    ) -> bool:
+        return self.transition_control(
+            OperationControlState.EXITED,
+            reason,
+            source=source,
+            line=line,
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "operation_id": self.operation_id,
             "protocol_id": self.protocol_id,
+            "control_state": self.control_state.value,
+            "control_history": [item.to_dict() for item in self.control_history],
             "principal_objects": {
                 key: value.to_dict() for key, value in sorted(self.principal_objects.items())
             },
@@ -298,6 +507,15 @@ def join_operation_states(
     if (left.protocol_id, left.operation_id) != (right.protocol_id, right.operation_id):
         raise ValueError("cannot join operation states from different protocols")
     joined = MetadataOperationInstance(left.operation_id, left.protocol_id)
+    if left.control_state is right.control_state:
+        joined.control_state = left.control_state
+        control_state_join = False
+    else:
+        joined.control_state = OperationControlState.UNKNOWN
+        control_state_join = True
+    joined.control_history = _common_control_prefix(
+        left.control_history, right.control_history
+    )
     joined.principal_objects = {}
     for key in sorted(set(left.principal_objects) | set(right.principal_objects)):
         value = left.principal_objects.get(key) or right.principal_objects.get(key)
@@ -309,6 +527,8 @@ def join_operation_states(
         for key in set(left.current_attempts) | set(right.current_attempts)
     }
     joined.uncertainty_causes = left.uncertainty_causes | right.uncertainty_causes
+    if control_state_join:
+        joined.uncertainty_causes.add("control_state_join")
     for effect_id in sorted(set(left.effect_ledger) | set(right.effect_ledger)):
         l_effect = left.effect_ledger.get(effect_id)
         r_effect = right.effect_ledger.get(effect_id)
@@ -365,6 +585,7 @@ def widen_operation_states(states: Iterable[MetadataOperationInstance]) -> Metad
         widened = join_operation_states(widened, state)
     widened.uncertainty_causes.add("widening_precision_loss")
     widened.completion_mode = CompletionMode.ANALYSIS_UNKNOWN
+    widened.control_state = OperationControlState.UNKNOWN
     return widened
 
 
@@ -379,6 +600,17 @@ def _same_exact_object(left: ResolvedObjectRef, right: ResolvedObjectRef) -> boo
 
 def _common_prefix(left: list[WitnessStep], right: list[WitnessStep]) -> list[WitnessStep]:
     result: list[WitnessStep] = []
+    for l_item, r_item in zip(left, right):
+        if l_item != r_item:
+            break
+        result.append(l_item)
+    return result
+
+
+def _common_control_prefix(
+    left: list[ControlTransition], right: list[ControlTransition]
+) -> list[ControlTransition]:
+    result: list[ControlTransition] = []
     for l_item, r_item in zip(left, right):
         if l_item != r_item:
             break

@@ -22,6 +22,12 @@ mocc-finding-review-v1/
 - `confirmed_bugs.md` records manually/history/dynamically supported findings
   and their distinct submitted/reviewed/accepted states.
 
+The directory name `mocc-discovery-v2` is an experiment-generation label, not
+the JSON schema version. Retained reports may use discovery schema v2. Newly
+generated reports use schema v3, which adds a separate operation
+`control_trace` to candidates and analysis-unknown records; historical reports
+are not rewritten in place.
+
 These artifacts are development and review evidence, not a frozen independent
 benchmark. `DISCOVERY_REVIEW` is not equivalent to `PROTOCOL_CANDIDATE` or a
 confirmed bug.

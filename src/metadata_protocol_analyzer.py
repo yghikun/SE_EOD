@@ -16,6 +16,7 @@ from .metadata_event import MetadataEvent, EventStrength, extract_metadata_event
 from .metadata_protocol import (
     CompletionMode,
     EffectStatus,
+    EffectTransition,
     LegalExitKind,
     MetadataProtocol,
     ReturnContract,
@@ -143,7 +144,6 @@ def analyze_function(
                 )
                 for observation in observations:
                     state = MetadataOperationInstance(operation.operation_id, protocol.protocol_id)
-                    state.completion_mode = CompletionMode.COMMITTED
                     attempt_id = state.start_attempt(event.callee_role_id, event)
                     state.return_outcome = contract.outcome.value
                     state.return_value = observation.text.strip()
@@ -160,6 +160,13 @@ def analyze_function(
                     )
                     _apply_path_events(state, protocol, events, observation, cfg)
                     _evaluate_accounting_constraints(state, protocol, operation.operation_id)
+                    state.complete(
+                        CompletionMode.COMMITTED,
+                        f"return contract {contract.contract_id} commits the operation",
+                        source=function.file.as_posix(),
+                        line=observation.line,
+                        event_id=event.event_id,
+                    )
                     state.witness.append(
                         WitnessStep(
                             "exit",
@@ -167,6 +174,11 @@ def analyze_function(
                             observation.text.strip(),
                             observation.line,
                         )
+                    )
+                    state.exit_operation(
+                        observation.text.strip(),
+                        source=function.file.as_posix(),
+                        line=observation.line,
                     )
                     generated, unresolved = generate_candidates(
                         state,
@@ -219,7 +231,6 @@ def analyze_function(
                 continue
             for observation in observations:
                 state = MetadataOperationInstance(operation.operation_id, protocol.protocol_id)
-                state.completion_mode = CompletionMode.COMMITTED
                 _apply_path_events(
                     state,
                     protocol,
@@ -278,7 +289,6 @@ def analyze_function(
                             source=function.file.as_posix(),
                             line=observation.line,
                         )
-                    state.completion_mode = handler.completion_mode
                     if not any(
                         effect.required
                         and effect.status in {EffectStatus.OPEN, EffectStatus.UNKNOWN}
@@ -298,7 +308,13 @@ def analyze_function(
                             retry.event_id,
                         )
                     )
-                    state.completion_mode = CompletionMode.COMMITTED
+                    state.complete(
+                        CompletionMode.COMMITTED,
+                        f"retry {retry_attempt} completed",
+                        source=retry.source_location.file,
+                        line=retry.source_location.start_line,
+                        event_id=retry.event_id,
+                    )
                     continue
                 if _effect_after_failure_on_path(state, event, events, observation, cfg):
                     state.phase_facts.add("stale_result_provenance")
@@ -326,8 +342,18 @@ def analyze_function(
                         )
                     if state.return_provenance != "stale_result_provenance":
                         state.return_provenance = "propagated_failure"
-                    if state.completion_mode is CompletionMode.COMMITTED:
-                        state.completion_mode = CompletionMode.ROLLED_BACK
+                    if state.completion_mode is None:
+                        state.complete(
+                            CompletionMode.ROLLED_BACK,
+                            "failure propagated to the caller",
+                            source=function.file.as_posix(),
+                            line=observation.line,
+                        )
+                    state.exit_operation(
+                        observation.text.strip(),
+                        source=function.file.as_posix(),
+                        line=observation.line,
+                    )
                     generated, unresolved = generate_candidates(
                         state,
                         protocol,
@@ -348,9 +374,22 @@ def analyze_function(
                             "",
                             ("return_outcome_unknown",),
                             tuple(item.to_dict() for item in state.witness),
+                            tuple(item.to_dict() for item in state.control_history),
                         )
                     )
                     continue
+                if state.completion_mode is None:
+                    state.complete(
+                        CompletionMode.COMMITTED,
+                        "success returned after failure handling",
+                        source=function.file.as_posix(),
+                        line=observation.line,
+                    )
+                state.exit_operation(
+                    observation.text.strip(),
+                    source=function.file.as_posix(),
+                    line=observation.line,
+                )
                 generated, unresolved = generate_candidates(
                     state,
                     protocol,
@@ -360,6 +399,16 @@ def analyze_function(
                 )
                 candidates.extend(generated)
                 unknown.extend(unresolved)
+    lifecycle_candidates, lifecycle_unknown = _analyze_summary_lifecycles(
+        function,
+        cfg,
+        protocol,
+        operation.operation_id,
+        events,
+        max_paths=max_paths_per_event,
+    )
+    candidates.extend(lifecycle_candidates)
+    unknown.extend(lifecycle_unknown)
     return ProtocolAnalysisResult(
         protocol.protocol_id,
         operation.operation_id,
@@ -416,6 +465,196 @@ def _evaluate_accounting_constraints(
                 f"{constraint.constraint_id}: {observed}",
             )
         )
+
+
+def _analyze_summary_lifecycles(
+    function: FunctionIR,
+    cfg: ControlFlowGraphIR,
+    protocol: MetadataProtocol,
+    operation_id: str,
+    events: tuple[MetadataEvent, ...],
+    *,
+    max_paths: int,
+) -> tuple[list[MetadataCandidate], list[AnalysisUnknown]]:
+    candidates: list[MetadataCandidate] = []
+    unknown: list[AnalysisUnknown] = []
+    contracts = [
+        item for item in protocol.return_contracts if item.operation_id == operation_id
+    ]
+    open_events = [
+        item
+        for item in events
+        if item.summary_id and item.effect_transition is EffectTransition.OPEN
+    ]
+    for event in open_events:
+        if event.strength is not EventStrength.MUST:
+            unknown.append(
+                AnalysisUnknown(
+                    protocol.protocol_id,
+                    operation_id,
+                    LegalExitKind.SUCCESS,
+                    "",
+                    tuple(
+                        sorted(
+                            set(event.uncertainty_causes)
+                            | {"open_summary_not_proven_must"}
+                        )
+                    ),
+                    (),
+                )
+            )
+            continue
+        success_contract = next(
+            (
+                item
+                for item in contracts
+                if item.guard == event.guard
+                and item.outcome
+                in {
+                    ReturnOutcome.SUCCESS,
+                    ReturnOutcome.SUCCESS_CHANGED,
+                    ReturnOutcome.SUCCESS_NO_CHANGE,
+                }
+            ),
+            ReturnContract(
+                f"{event.summary_id}.open",
+                operation_id,
+                event.guard,
+                ReturnOutcome.SUCCESS,
+            ),
+        )
+        if not _supported_guard(success_contract.guard):
+            unknown.append(
+                AnalysisUnknown(
+                    protocol.protocol_id,
+                    operation_id,
+                    LegalExitKind.SUCCESS,
+                    "",
+                    ("summary_open_guard_unknown", event.summary_id),
+                    (),
+                )
+            )
+            continue
+        observations = _observations_for_contract(
+            function,
+            cfg,
+            event,
+            success_contract,
+            [success_contract],
+            events,
+            max_paths=max_paths,
+        )
+        for observation in observations:
+            base_state = MetadataOperationInstance(operation_id, protocol.protocol_id)
+            _apply_path_events(base_state, protocol, events, observation, cfg)
+            base_state.return_value = observation.text.strip()
+            base_state.return_provenance = f"summary:{event.summary_id}"
+            base_state.witness.append(
+                WitnessStep(
+                    "exit",
+                    function.file.as_posix(),
+                    observation.text.strip(),
+                    observation.line,
+                )
+            )
+            possibilities = _lifecycle_return_outcomes(observation.text)
+            branch_results: list[
+                tuple[
+                    tuple[MetadataCandidate, ...],
+                    tuple[AnalysisUnknown, ...],
+                    MetadataOperationInstance,
+                ]
+            ] = []
+            for exit_kind, outcome in possibilities:
+                state = base_state.clone()
+                state.return_outcome = outcome.value
+                state.complete(
+                    _lifecycle_completion_mode(state, exit_kind),
+                    f"bounded summary lifecycle reaches {exit_kind.value} exit",
+                    source=function.file.as_posix(),
+                    line=observation.line,
+                    event_id=event.event_id,
+                )
+                state.exit_operation(
+                    observation.text.strip(),
+                    source=function.file.as_posix(),
+                    line=observation.line,
+                )
+                generated, unresolved = generate_candidates(
+                    state,
+                    protocol,
+                    phase="SUCCESS" if exit_kind is LegalExitKind.SUCCESS else "FAILURE",
+                    outcome=outcome,
+                    exit_kind=exit_kind,
+                )
+                branch_results.append((generated, unresolved, state))
+            if len(branch_results) == 1:
+                candidates.extend(branch_results[0][0])
+                unknown.extend(branch_results[0][1])
+                continue
+            if all(
+                not generated and not unresolved
+                for generated, unresolved, _ in branch_results
+            ):
+                continue
+            if all(
+                generated and not unresolved
+                for generated, unresolved, _ in branch_results
+            ):
+                candidates.extend(branch_results[0][0])
+                continue
+            representative = branch_results[0][2]
+            unknown.append(
+                AnalysisUnknown(
+                    protocol.protocol_id,
+                    operation_id,
+                    LegalExitKind.SUCCESS,
+                    "",
+                    tuple(
+                        sorted(
+                            set(representative.uncertainty_causes)
+                            | {"lifecycle_exit_outcome_ambiguous"}
+                        )
+                    ),
+                    tuple(item.to_dict() for item in representative.witness),
+                    tuple(item.to_dict() for item in representative.control_history),
+                )
+            )
+    return candidates, unknown
+
+
+def _lifecycle_return_outcomes(
+    return_text: str,
+) -> tuple[tuple[LegalExitKind, ReturnOutcome], ...]:
+    compact = " ".join(return_text.strip().split())
+    if re.fullmatch(r"return\s+(?:\(\s*)?0(?:\s*\))?\s*;", compact):
+        return ((LegalExitKind.SUCCESS, ReturnOutcome.SUCCESS),)
+    if re.fullmatch(
+        r"return\s+(?:\(\s*)?-(?:[1-9]\d*|E[A-Z0-9_]+)(?:\s*\))?\s*;",
+        compact,
+    ):
+        return ((LegalExitKind.FAILURE, ReturnOutcome.FAILURE),)
+    return (
+        (LegalExitKind.SUCCESS, ReturnOutcome.SUCCESS),
+        (LegalExitKind.FAILURE, ReturnOutcome.FAILURE),
+    )
+
+
+def _lifecycle_completion_mode(
+    state: MetadataOperationInstance, exit_kind: LegalExitKind
+) -> CompletionMode:
+    statuses = {item.status for item in state.effect_ledger.values() if item.required}
+    if EffectStatus.TRANSFERRED in statuses and state.completion_mode is not None:
+        return state.completion_mode
+    if EffectStatus.COMMITTED in statuses:
+        return CompletionMode.COMMITTED
+    if statuses and statuses <= {EffectStatus.COMPENSATED}:
+        return CompletionMode.ROLLED_BACK
+    return (
+        CompletionMode.COMMITTED
+        if exit_kind is LegalExitKind.SUCCESS
+        else CompletionMode.ROLLED_BACK
+    )
 
 
 def _effect_after_failure_on_path(
@@ -568,14 +807,14 @@ def _observations_for_contract(
         prefixed = tuple(observations)
     else:
         prefixed = tuple(
-        ReturnObservation(
-            item.block_id,
-            item.text,
-            item.line,
-            prefix[:-1] + item.path,
+            ReturnObservation(
+                item.block_id,
+                item.text,
+                item.line,
+                prefix[:-1] + item.path,
+            )
+            for item in observations
         )
-        for item in observations
-    )
     stale_observations = _stale_effect_observations(
         function,
         cfg,
@@ -805,6 +1044,7 @@ def _apply_path_events(
     effects = {item.effect_id: item for item in protocol.effects}
     compensations = {item.compensation_id: item for item in protocol.compensations}
     handlers = {item.handler_id: item for item in protocol.handlers}
+    summaries = {item.summary_id: item for item in protocol.callee_summaries}
     for event in events:
         if min_start_byte is not None and event.source_location.start_byte < min_start_byte:
             continue
@@ -813,7 +1053,57 @@ def _apply_path_events(
         block_id = _block_for_byte(cfg, event.source_location.start_byte)
         if block_id not in path:
             continue
-        if event.effect_spec_id:
+        if (
+            event.effect_transition is EffectTransition.COMMIT
+            and event.summary_id
+        ):
+            if event.strength is not EventStrength.MUST:
+                state.uncertainty_causes.update(event.uncertainty_causes)
+                state.uncertainty_causes.add("commit_summary_not_proven_must")
+                continue
+            if state.commit_effect(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_committed",
+                        event.source_location.file,
+                        event.target_effect_id,
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+        elif (
+            event.effect_transition is EffectTransition.COMPENSATE
+            and event.summary_id
+        ):
+            if event.strength is not EventStrength.MUST:
+                state.uncertainty_causes.update(event.uncertainty_causes)
+                state.uncertainty_causes.add("compensation_summary_not_proven_must")
+                continue
+            if state.compensate(event.target_effect_id, event.object_ref):
+                state.witness.append(
+                    WitnessStep(
+                        "effect_compensated",
+                        event.source_location.file,
+                        event.target_effect_id,
+                        event.source_location.start_line,
+                        event.event_id,
+                    )
+                )
+        elif event.effect_transition is EffectTransition.TRANSFER and event.summary_id:
+            summary = summaries[event.summary_id]
+            if event.strength is not EventStrength.MUST:
+                state.uncertainty_causes.update(event.uncertainty_causes)
+                state.uncertainty_causes.add("transfer_summary_not_proven_must")
+                continue
+            assert summary.completion_mode is not None
+            state.transfer(
+                (summary.target_effect_id,),
+                event.object_ref,
+                summary.completion_mode,
+                summary.owner,
+                summary.guard,
+            )
+        elif event.effect_spec_id:
             spec = effects[event.effect_spec_id]
             if not _event_guard_holds_on_path(event, spec.guard, observation.path, cfg, events):
                 continue
@@ -984,7 +1274,14 @@ def _branch_possible(
     if edge_kind not in {"true", "false"}:
         return True
     labels = [
-        "negative", "enoent", "enospc", "zero", "positive", "err_ptr", "normal_ptr"
+        "negative",
+        "enoent",
+        "enospc",
+        "zero",
+        "positive",
+        "null_ptr",
+        "err_ptr",
+        "normal_ptr",
     ]
     return any(
         _contract_applies(contract, contracts, label)
@@ -1011,12 +1308,24 @@ def _guard_holds(guard: str, label: str) -> bool:
     guard = _strip_parens(guard)
     if "&&" in guard:
         return all(_guard_holds(part, label) for part in guard.split("&&"))
-    if re.search(r"IS_ERR(?:_OR_NULL)?\s*\(", guard):
-        return label == "err_ptr"
+    pointer_predicate = re.search(r"(IS_ERR(?:_OR_NULL)?)\s*\(", guard)
+    if pointer_predicate:
+        result = label == "err_ptr" or (
+            pointer_predicate.group(1) == "IS_ERR_OR_NULL" and label == "null_ptr"
+        )
+        compact = guard.replace(" ", "")
+        return not result if "!IS_ERR" in compact else result
     match = re.search(r"(?:ret|return)\s*(==|!=|<=|>=|<|>)\s*(-?\d+|-?[A-Z][A-Z0-9_]*)", guard, re.IGNORECASE)
     if not match:
         return True
     operator, raw = match.groups()
+    if raw.upper() == "NULL":
+        if label not in {"null_ptr", "err_ptr", "normal_ptr"}:
+            return False
+        actual = 0 if label == "null_ptr" else 1
+        return _compare(actual, operator, 0)
+    if label in {"null_ptr", "err_ptr", "normal_ptr"}:
+        return False
     expected = _guard_value(raw)
     actual = _label_value(label)
     return _compare(actual, operator, expected)
@@ -1039,17 +1348,27 @@ def _condition_holds(condition: str, symbol: str, label: str) -> bool:
     value = _strip_parens(condition).replace(symbol, "ret")
     if "&&" in value:
         return all(_condition_holds(part, "ret", label) for part in value.split("&&"))
-    if re.search(r"IS_ERR(?:_OR_NULL)?\s*\(", value):
-        result = label == "err_ptr"
+    pointer_predicate = re.search(r"(IS_ERR(?:_OR_NULL)?)\s*\(", value)
+    if pointer_predicate:
+        result = label == "err_ptr" or (
+            pointer_predicate.group(1) == "IS_ERR_OR_NULL" and label == "null_ptr"
+        )
         return not result if "!IS_ERR" in value.replace(" ", "") else result
     match = re.search(r"(?:ret|return)\s*(==|!=|<=|>=|<|>)\s*(-?\d+|-?[A-Z][A-Z0-9_]*)", value, re.IGNORECASE)
     if match:
         operator, raw = match.groups()
+        if raw.upper() == "NULL":
+            if label not in {"null_ptr", "err_ptr", "normal_ptr"}:
+                return False
+            actual = 0 if label == "null_ptr" else 1
+            return _compare(actual, operator, 0)
+        if label in {"null_ptr", "err_ptr", "normal_ptr"}:
+            return False
         expected = _guard_value(raw)
         actual = _label_value(label)
         return _compare(actual, operator, expected)
     if re.fullmatch(r"!?ret", value.strip()):
-        result = label not in {"zero", "normal_ptr"}
+        result = label not in {"zero", "null_ptr"}
         return not result if value.strip().startswith("!") else result
     return True
 
@@ -1066,6 +1385,8 @@ def _compare(actual: int, operator: str, expected: int) -> bool:
 
 
 def _guard_value(raw: str) -> int:
+    if raw.upper() == "NULL":
+        return 0
     errno_values = {"-ENOENT": -2, "-EIO": -5, "-ENOMEM": -12, "-ENOSPC": -28}
     return errno_values.get(raw.upper(), -4095) if raw.startswith("-") and not raw[1:].isdigit() else int(raw)
 

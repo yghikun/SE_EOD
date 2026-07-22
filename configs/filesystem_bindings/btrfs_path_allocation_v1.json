@@ -1,0 +1,36 @@
+{
+  "binding_schema_version": 1,
+  "binding_id": "btrfs.path_allocation",
+  "family_id": "allocation_lifecycle",
+  "filesystem": "btrfs",
+  "linux_versions": ["6.8", "6.14", "7.1"],
+  "role_bindings": {"resource": "search_path"},
+  "actions": [
+    {
+      "action_id": "acquire",
+      "callees": ["btrfs_alloc_path"],
+      "object_binding": {
+        "abstract_role": "resource",
+        "source": "result",
+        "normalization": "identity"
+      },
+      "guard": "ret != NULL",
+      "strength": "must",
+      "max_call_depth": 1
+    },
+    {
+      "action_id": "release",
+      "callees": ["btrfs_free_path"],
+      "object_binding": {
+        "abstract_role": "resource",
+        "source": "argument",
+        "argument_index": 0,
+        "normalization": "identity"
+      },
+      "guard": "always",
+      "strength": "must",
+      "max_call_depth": 1
+    }
+  ],
+  "description": "Binds explicit Btrfs path allocation and release APIs to the allocation lifecycle family."
+}

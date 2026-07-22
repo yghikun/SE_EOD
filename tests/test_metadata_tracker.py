@@ -5,6 +5,7 @@ from src.metadata_tracker import (
     EffectRecord,
     FailureResolution,
     MetadataOperationInstance,
+    OperationControlState,
     join_operation_states,
     widen_operation_states,
 )
@@ -43,6 +44,7 @@ def test_retry_starts_new_attempt_and_resolves_only_prior_epoch():
     assert first == "load@1"
     assert second == "load@2"
     assert state.failure_tokens[token.failure_id].resolution is FailureResolution.RETRY_SUCCEEDED
+    assert state.control_state is OperationControlState.RETRYING
 
 
 def test_abort_closes_only_transaction_scoped_effects():
@@ -100,3 +102,50 @@ def test_widening_preserves_obligations_and_records_precision_loss():
     assert widened.effect_ledger["effect"].status is EffectStatus.UNKNOWN
     assert widened.completion_mode is CompletionMode.ANALYSIS_UNKNOWN
     assert "widening_precision_loss" in widened.uncertainty_causes
+    assert widened.control_state is OperationControlState.UNKNOWN
+
+
+def test_operation_control_state_reaches_exit_through_failure_retry_and_commit():
+    state = MetadataOperationInstance("operation", "protocol")
+    event = _event()
+
+    first = state.start_attempt("load", event)
+    state.record_failure(event, first, "-EIO", "contract")
+    second = state.start_attempt("load", event)
+    state.resolve_prior_attempts("load", second)
+    state.complete(CompletionMode.COMMITTED, "retry succeeded")
+    state.exit_operation("return 0", source="fixture.c", line=3)
+
+    assert state.control_state is OperationControlState.EXITED
+    assert [item.to_state for item in state.control_history] == [
+        OperationControlState.ACTIVE,
+        OperationControlState.HANDLING_FAILURE,
+        OperationControlState.RETRYING,
+        OperationControlState.COMMITTING,
+        OperationControlState.EXITED,
+    ]
+
+
+def test_illegal_transition_after_exit_becomes_unknown():
+    state = MetadataOperationInstance("operation", "protocol")
+    state.start_attempt("load", _event())
+    state.complete(CompletionMode.COMMITTED, "done")
+    state.exit_operation("return 0")
+
+    assert not state.transition_control(OperationControlState.ACTIVE, "restart")
+    assert state.control_state is OperationControlState.UNKNOWN
+    assert "invalid_control_transition:EXITED->ACTIVE" in state.uncertainty_causes
+
+
+def test_join_of_different_control_states_is_unknown():
+    left = MetadataOperationInstance("operation", "protocol")
+    right = MetadataOperationInstance("operation", "protocol")
+    event = _event()
+    left.start_attempt("load", event)
+    attempt = right.start_attempt("load", event)
+    right.record_failure(event, attempt, "-EIO", "contract")
+
+    joined = join_operation_states(left, right)
+
+    assert joined.control_state is OperationControlState.UNKNOWN
+    assert "control_state_join" in joined.uncertainty_causes

@@ -1,0 +1,921 @@
+{
+  "schema_version": 2,
+  "registry_version": "2.2.0",
+  "registry_id": "mocc.metadata_rules",
+  "active_protocol_ids": [
+    "mocc.protocol_a.replay_recovery",
+    "mocc.protocol_b.device_topology_rollback",
+    "mocc.protocol_c.activation_accounting",
+    "mocc.protocol_d.transaction_lifecycle",
+    "mocc.protocol_e.allocation_lifecycle"
+  ],
+  "supported_fragment": [
+    "Linux filesystem C functions represented by the versioned frontend-neutral IR and function-local CFG",
+    "Explicit protocol operations with configured object roles, return contracts, effects, compensations, handlers, accounting obligations, and legal exits",
+    "Exact, normalized, or unknown object identity with uncertainty propagated to ANALYSIS_UNKNOWN",
+    "Boolean or relational accounting obligations; arbitrary metadata arithmetic is unsupported",
+    "Configured callee roles, local call-result provenance, and bounded one-call effect summaries with argument or captured-result substitution; general interprocedural expansion is unsupported"
+  ],
+  "families": [
+    {
+      "family_id": "replay_recovery",
+      "title": "Replay and recovery completion",
+      "description": "Required replay steps, expected sentinels, recovery ownership, and exit outcome consistency."
+    },
+    {
+      "family_id": "topology_membership",
+      "title": "Topology and membership rollback",
+      "description": "Pointer, list-membership, and multi-object topology effects that require compensation or a valid owner on failure."
+    },
+    {
+      "family_id": "return_retry",
+      "title": "Retry and return provenance",
+      "description": "Return values must describe the current attempt rather than an earlier failed attempt."
+    },
+    {
+      "family_id": "accounting_reservation",
+      "title": "Accounting and reservation consistency",
+      "description": "Boolean or relational obligations between pending metadata work and matching reservations or counters."
+    },
+    {
+      "family_id": "transaction_lifecycle",
+      "title": "Transaction lifecycle",
+      "description": "Begin, commit, abort, and ownership-transfer rules for transaction-scoped and non-transaction effects."
+    },
+    {
+      "family_id": "allocation_lifecycle",
+      "title": "Allocation and deallocation lifecycle",
+      "description": "Allocation, reservation, publication, rollback, and release obligations for metadata objects."
+    },
+    {
+      "family_id": "namespace_orphan",
+      "title": "Namespace and orphan lifecycle",
+      "description": "Directory membership, link count, orphan tracking, and failure-completion relationships."
+    },
+    {
+      "family_id": "quota_refcount",
+      "title": "Quota and reference accounting",
+      "description": "Quota, reference count, and paired accounting updates associated with metadata mutations."
+    },
+    {
+      "family_id": "deferred_ownership",
+      "title": "Deferred work ownership",
+      "description": "Explicit transfer of incomplete work to recovery, background, or deferred handlers."
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "mocc.rule.replay.ext4.required_step_outcome",
+      "family_id": "replay_recovery",
+      "title": "Ext4 required replay failure must match the operation exit",
+      "summary": "A failed necessary ext4 replay step cannot reach a success exit unless the protocol identifies a legal retry or recovery transfer.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["ext4"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "configured necessary callee roles",
+        "integer return guards",
+        "function-local return provenance",
+        "legal success and failure exits"
+      ],
+      "unsupported_semantics": [
+        "persistent write ordering and crash consistency",
+        "unconfigured helper-body effects"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.ext4.fast_commit.replay.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/ext4/fast_commit.c#ext4_fc_replay_inode,ext4_fc_replay_add_range,ext4_fc_replay_del_range",
+          "claim": "The replay helpers expose operation-specific return values that control replay completion.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.ext4.fast_commit.replay.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/ext4/fast_commit.c#ext4_fc_replay_inode,ext4_fc_replay_add_range,ext4_fc_replay_del_range",
+          "claim": "The same replay completion contract remains present in the v6.14 implementation.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.ext4.fast_commit.replay.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/ext4/fast_commit.c#ext4_fc_replay_inode,ext4_fc_replay_add_range,ext4_fc_replay_del_range",
+          "claim": "The same replay completion contract remains present in the v7.1 implementation.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "upstream.ext4.fast_commit.replay_error_fix.ec0a7500d8ea",
+          "kind": "upstream_commit",
+          "evidence_class": "historical_fix",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id=ec0a7500d8eace5b4f305fa0c594dd148f0e8d29",
+          "claim": "An independently reviewed mainline fix changed ext4_fc_replay_inode() from unconditional success to returning the current replay error; this directly corroborates required-step outcome propagation for the ext4 replay family.",
+          "content_sha256": "a223430d62887e82589b410e1ad8da33f4e462c702bdf7c59bce724dadd8b44a",
+          "quoted_text": "Additionally, make ext4_fc_replay_inode() propagate errors properly instead of always returning 0.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8", "6.14", "7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_a.replay_recovery",
+          "operation_ids": [
+            "ext4_replay_add_range",
+            "ext4_replay_del_range",
+            "ext4_replay_inode"
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.replay.xfs.summary_outcome",
+      "family_id": "replay_recovery",
+      "title": "XFS realtime summary-copy failure must match the exit",
+      "summary": "Realtime summary-copy completion is governed by the current helper return outcome and cannot silently convert failure to success.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["xfs"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "configured necessary callee roles",
+        "integer return guards",
+        "function-local return provenance"
+      ],
+      "unsupported_semantics": [
+        "persistent write ordering and crash consistency",
+        "unconfigured helper-body effects"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.xfs.rtalloc.summary.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/xfs/xfs_rtalloc.c#xfs_rtcopy_summary",
+          "claim": "Summary-copy completion is represented by the helper return outcome.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.xfs.rtalloc.summary.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/xfs/xfs_rtalloc.c#xfs_rtcopy_summary",
+          "claim": "The summary-copy return contract remains present in v6.14.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.xfs.rtalloc.summary.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/xfs/xfs_rtalloc.c#xfs_rtcopy_summary",
+          "claim": "The summary-copy return contract remains present in v7.1.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "upstream.xfs.rtcopy_summary.return_fix.6b2d15536658",
+          "kind": "upstream_commit",
+          "evidence_class": "historical_fix",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id=6b2d155366581705a848833a9b626bfea41d5a8d",
+          "claim": "The reviewed mainline fix states that xfs_rtcopy_summary() must return its error rather than unconditional success, exactly matching the registered outcome obligation.",
+          "content_sha256": "60655a5a921b69846c83b06dac57bc80cc1fb570f73d5d3a82457548d905f6ae",
+          "quoted_text": "xfs_rtcopy_summary() should return the appropriate error code instead of always returning 0. The caller of this function which is xfs_growfs_rt_bmblock() is already handling the error.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.8", "6.14", "7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_a.replay_recovery",
+          "operation_ids": ["xfs_copy_summary"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.replay.xfs.ensure_sentinel",
+      "family_id": "replay_recovery",
+      "title": "XFS rtgroup inode ensure must preserve expected sentinel semantics",
+      "summary": "The ensure operation must distinguish expected absence from fatal failure and successful completion.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["xfs"],
+      "linux_versions": ["6.14", "7.1"],
+      "supported_semantics": [
+        "expected negative sentinel",
+        "overlapping return guards with explicit priority",
+        "legal success and failure exits"
+      ],
+      "unsupported_semantics": [
+        "sentinel meaning inferred without a configured contract",
+        "arbitrary caller-specific reinterpretation"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.xfs.rtginode.ensure.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/xfs/xfs_rtalloc.c#xfs_rtginode_ensure",
+          "claim": "The ensure helper distinguishes expected absence from fatal failure and successful completion.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.xfs.rtginode.ensure.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/xfs/xfs_rtalloc.c#xfs_rtginode_ensure",
+          "claim": "The expected-sentinel contract remains present in v7.1.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "maintainer.xfs.rtginode.error_propagation.for_next",
+          "kind": "maintainer_discussion",
+          "evidence_class": "maintainer_evidence",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://lore.kernel.org/linux-xfs/178463067879.324722.682575488251430638.b4-ty@b4/raw",
+          "claim": "The XFS maintainer applied the exact sentinel/error-propagation fix to xfs-linux for-next as commit b7e53968cb88; this is accepted maintainer evidence but is not represented as a Linus-mainline merge.",
+          "content_sha256": "f5843f49c1a23ce9a0e509aee6ff4dfb88fc44a711e9e1012756b1d6d9c9bdb4",
+          "quoted_text": "Applied to for-next, thanks! [1/1] xfs: propagate errors from xfs_rtginode_load commit: b7e53968cb8882c2d276429ea8550848a4940874",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.14", "7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_a.replay_recovery",
+          "operation_ids": ["xfs_rtginode_ensure"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.topology.relocation_root_rollback",
+      "family_id": "topology_membership",
+      "title": "Relocation-root attachment must be completed or rolled back",
+      "summary": "A relocation root attached to global filesystem state must not remain without a legal owner after recovery failure.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["btrfs"],
+      "linux_versions": ["6.8", "6.14"],
+      "supported_semantics": [
+        "field-sensitive relocation-root pointer effect",
+        "explicit pointer compensation",
+        "in-memory global effect ownership"
+      ],
+      "unsupported_semantics": [
+        "general pointer alias analysis",
+        "concurrent relocation behavior"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.btrfs.relocation.recovery.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/btrfs/relocation.c#btrfs_recover_relocation",
+          "claim": "Relocation recovery attaches and conditionally clears relocation-root state around failure paths.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.btrfs.relocation.recovery.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/btrfs/relocation.c#btrfs_recover_relocation",
+          "claim": "The relocation-root completion relationship remains present in v6.14.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "maintainer.btrfs.relocation_root_rollback.for_next",
+          "kind": "maintainer_discussion",
+          "evidence_class": "maintainer_evidence",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://lore.kernel.org/linux-btrfs/20260720111913.GE10684@twin.jikos.cz/raw",
+          "claim": "Btrfs maintainer David Sterba accepted the exact relocation-root failure cleanup patch into for-next; this confirms the obligation without claiming a Linus-mainline merge.",
+          "content_sha256": "7fa8259119796d856229c1f4377f8a85e9f4198e382275ac8a6158bccdd434fe",
+          "quoted_text": "Added to for-next, thanks.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8", "6.14"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_b.device_topology_rollback",
+          "operation_ids": ["btrfs_relocation_recovery"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.topology.sprout_multi_effect_rollback",
+      "family_id": "topology_membership",
+      "title": "Sprout device failure must resolve every topology effect",
+      "summary": "A failed device-add operation must compensate or transfer all topology, active-pointer, and list-membership effects for the matching objects.",
+      "maturity": "development",
+      "rule_authority": "heuristic",
+      "filesystems": ["btrfs"],
+      "linux_versions": ["6.8", "6.14"],
+      "supported_semantics": [
+        "multiple object-bound pointer and membership effects",
+        "per-effect compensation",
+        "must and may effect strength"
+      ],
+      "unsupported_semantics": [
+        "complete callee summaries for all device helpers",
+        "concurrent device-list mutation"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.btrfs.sprout.device_add.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/btrfs/volumes.c#btrfs_init_new_device",
+          "claim": "Device addition mutates seed/sprout topology, active device pointers, and device memberships with distinct failure cleanup paths.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.btrfs.sprout.device_add.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/btrfs/volumes.c#btrfs_init_new_device",
+          "claim": "The multi-effect device-add lifecycle remains present in v6.14.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "upstream.btrfs.sprout_readonly_state_fix.70958a949d85",
+          "kind": "upstream_commit",
+          "evidence_class": "historical_fix",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id=70958a949d852cbecc3d46127bf0b24786df0130",
+          "claim": "A reviewed historical fix in the same btrfs_init_new_device() sprout path confirms that device-add can incorrectly mutate global mount state; it does not cover the registry's list, active-pointer, and fs_devices rollback effects, so the rule remains heuristic.",
+          "content_sha256": "be16b49b53e9d420791d36a8f6bb41a92a9b0cc70e5e568c260517574612b339",
+          "quoted_text": "The device add somewhat surprisingly clears the readonly bit on the sb",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8", "6.14"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_b.device_topology_rollback",
+          "operation_ids": ["btrfs_sprout_device_add"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.return.retry_current_attempt",
+      "family_id": "return_retry",
+      "title": "Retry exit must report the current attempt",
+      "summary": "After a fallback or retry, the function exit must derive from the current attempt rather than preserve a stale earlier failure.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["ext4"],
+      "linux_versions": ["6.8", "6.14"],
+      "supported_semantics": [
+        "local retry attempt epochs",
+        "call-result assignment and return provenance",
+        "zero and nonzero outcomes"
+      ],
+      "unsupported_semantics": [
+        "retry state propagated through arbitrary helper layers",
+        "path feasibility requiring general symbolic execution"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.ext4.extra_isize.retry.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/ext4/xattr.c#ext4_expand_extra_isize_ea",
+          "claim": "The extra-isize operation performs fallback attempts whose final return must represent the active attempt.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.ext4.extra_isize.retry.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/ext4/xattr.c#ext4_expand_extra_isize_ea",
+          "claim": "The fallback attempt and return-provenance relationship remains present in v6.14.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "maintainer.ext4.extra_isize.retry_review",
+          "kind": "maintainer_discussion",
+          "evidence_class": "maintainer_evidence",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://lore.kernel.org/linux-ext4/l4lnibhsedvsb45zo3aqrmggnrcpt5axvtkqs3vbbybw3qcth7@4saumozc7nrx/raw",
+          "claim": "Ext4 maintainer Jan Kara independently confirmed the stale-error retry diagnosis and supplied Reviewed-by for the exact one-line repair.",
+          "content_sha256": "18afb2011e279da67623177ffc8ead7e8331fdef0d964d0c3bede1319e3e16b1",
+          "quoted_text": "Indeed. Feel free to add: Reviewed-by: Jan Kara <jack@suse.cz>",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8", "6.14"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_c.activation_accounting",
+          "operation_ids": ["ext4_extra_isize_fallback"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.accounting.pending_requires_reservation",
+      "family_id": "accounting_reservation",
+      "title": "Pending chunk metadata requires a matching reservation",
+      "summary": "When activation reports pending chunk metadata work, the operation must establish the configured matching reservation before a successful exit.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["btrfs"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "negative, zero, and positive return outcomes",
+        "boolean trigger-to-satisfying-effect obligation",
+        "transaction-scoped ownership"
+      ],
+      "unsupported_semantics": [
+        "arbitrary reservation arithmetic",
+        "cross-transaction aggregation"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.btrfs.chunk_reservation.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/btrfs/block-group.c#reserve_chunk_space",
+          "claim": "Positive activation creates pending chunk metadata work that is paired with chunk metadata reservation.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.btrfs.chunk_reservation.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/btrfs/block-group.c#reserve_chunk_space",
+          "claim": "The activation-to-reservation relationship remains present in v6.14.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.btrfs.chunk_reservation.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/btrfs/block-group.c#reserve_chunk_space",
+          "claim": "The activation-to-reservation relationship remains present in v7.1.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "maintainer.btrfs.chunk_reservation.review",
+          "kind": "maintainer_discussion",
+          "evidence_class": "maintainer_evidence",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://lore.kernel.org/linux-btrfs/0c928b70-3b72-48b6-ad10-53c23882130f@wdc.com/raw",
+          "claim": "Btrfs reviewer Johannes Thumshirn independently agreed with the missing reservation diagnosis and supplied Reviewed-by, while requesting cleanup and zoned fstests follow-up.",
+          "content_sha256": "4d1e552d4f75c5e577c8fe8a940f9c426060d1a59620d3e0545ca23a5b292dd6",
+          "quoted_text": "Otherwise, Reviewed-by: Johannes Thumshirn <johannes.thumshirn@wdc.com>",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8", "6.14", "7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_c.activation_accounting",
+          "operation_ids": ["btrfs_chunk_activation_reservation"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.transaction.xfs.lifecycle",
+      "family_id": "transaction_lifecycle",
+      "title": "XFS transactions must be committed, cancelled, or transferred",
+      "summary": "After successful transaction allocation, every reachable operation exit must close the same transaction object through commit, cancellation, or an explicit ownership transfer.",
+      "maturity": "development",
+      "rule_authority": "heuristic",
+      "filesystems": ["xfs"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "bounded one-call callee effect summaries",
+        "call-site argument substitution for transaction identity",
+        "transaction OPEN, COMMITTED, and COMPENSATED states",
+        "success, failure, and ambiguous function exits"
+      ],
+      "unsupported_semantics": [
+        "recursive or unbounded interprocedural expansion",
+        "general alias analysis across stored transaction pointers",
+        "nested transaction ownership beyond one configured call boundary"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.xfs.acl.transaction.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/xfs/xfs_acl.c#xfs_acl_set_mode",
+          "claim": "The ACL mode update allocates a transaction through an output argument and closes the same transaction with xfs_trans_commit.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.xfs.acl.transaction.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/xfs/xfs_acl.c#xfs_acl_set_mode",
+          "claim": "The same allocation-to-commit transaction lifecycle remains present in v6.14.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.xfs.acl.transaction.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/xfs/xfs_acl.c#xfs_acl_set_mode",
+          "claim": "The same allocation-to-commit transaction lifecycle remains present in v7.1.",
+          "filesystems": ["xfs"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "kernel.xfs.transaction_pattern.v6_8",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/6.8/_sources/filesystems/xfs/xfs-delayed-logging-design.rst.txt#xfs-transactions",
+          "claim": "The official XFS design document defines the normal one-shot allocation-to-commit pattern and says commit releases joined resources; it does not specify all failure cancellation or ownership-transfer exits.",
+          "content_sha256": "f79a0a54a0ee00a744eb627617d714f355f2be75e5ff093ba9e55a27ee49485e",
+          "quoted_text": "In the code, a one-shot transaction pattern looks somewhat like this:: tp = xfs_trans_alloc(<reservation>) <lock items> <join item to transaction> <do modification> xfs_trans_commit(tp); As items are modified in the transaction, the dirty regions in those items are tracked via the transaction handle. Once the transaction is committed, all resources joined to it are released",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "kernel.xfs.transaction_pattern.v6_14",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/6.14/_sources/filesystems/xfs/xfs-delayed-logging-design.rst.txt#xfs-transactions",
+          "claim": "The versioned XFS design document preserves the normal allocation-to-commit and resource-release contract, but not the complete failure-exit rule.",
+          "content_sha256": "f79a0a54a0ee00a744eb627617d714f355f2be75e5ff093ba9e55a27ee49485e",
+          "quoted_text": "In the code, a one-shot transaction pattern looks somewhat like this:: tp = xfs_trans_alloc(<reservation>) <lock items> <join item to transaction> <do modification> xfs_trans_commit(tp); As items are modified in the transaction, the dirty regions in those items are tracked via the transaction handle. Once the transaction is committed, all resources joined to it are released",
+          "filesystems": ["xfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "kernel.xfs.transaction_pattern.v7_1",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/7.1/_sources/filesystems/xfs/xfs-delayed-logging-design.rst.txt#xfs-transactions",
+          "claim": "The versioned XFS design document preserves the normal allocation-to-commit and resource-release contract, but not the complete failure-exit rule.",
+          "content_sha256": "44fe31e828765b6f1a7e7a8e4c42171d7da1921823c96c93da70500ac4d19008",
+          "quoted_text": "In the code, a one-shot transaction pattern looks somewhat like this:: tp = xfs_trans_alloc(<reservation>) <lock items> <join item to transaction> <do modification> xfs_trans_commit(tp); As items are modified in the transaction, the dirty regions in those items are tracked via the transaction handle. Once the transaction is committed, all resources joined to it are released",
+          "filesystems": ["xfs"],
+          "linux_versions": ["7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+          "operation_ids": ["xfs_acl_mode_transaction"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.transaction.ext4.journal_handle_lifecycle",
+      "family_id": "transaction_lifecycle",
+      "title": "Ext4 journal handles must be stopped on every completed path",
+      "summary": "After ext4_journal_start returns a non-error handle, every reachable operation exit must stop that same handle or explicitly transfer its ownership.",
+      "maturity": "development",
+      "rule_authority": "normative",
+      "filesystems": ["ext4"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "bounded one-call callee effect summaries",
+        "call-result substitution for journal-handle identity",
+        "error-pointer and normal-pointer start outcomes",
+        "same-object OPEN and COMMITTED lifecycle states"
+      ],
+      "unsupported_semantics": [
+        "recursive or unbounded interprocedural expansion",
+        "general alias analysis across stored journal handles",
+        "nested journal ownership beyond one configured call boundary"
+      ],
+      "sources": [
+        {
+          "source_id": "kernel.jbd2.handle_lifecycle.v6_8",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "construction",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/6.8/_sources/filesystems/journalling.rst.txt#journal-handles",
+          "claim": "JBD2 requires every transaction start to have a matching stop before the transaction leaves the update phase.",
+          "content_sha256": "196225a3185d75b1eaf0947dc0f92958184f775ffb7db78925483e29461f3b82",
+          "quoted_text": "jbd2_journal_stop() the same number of times as jbd2_journal_start() before the transaction is completed",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "kernel.jbd2.handle_lifecycle.v6_14",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "construction",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/6.14/_sources/filesystems/journalling.rst.txt#journal-handles",
+          "claim": "The versioned JBD2 documentation preserves the matching start/stop contract.",
+          "content_sha256": "0ff0157efee681ca0189ed93d5651bf40e3377144b32892f6944cebb2c1027e8",
+          "quoted_text": "jbd2_journal_stop() the same number of times as jbd2_journal_start() before the transaction is completed",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "kernel.jbd2.handle_lifecycle.v7_1",
+          "kind": "kernel_documentation",
+          "evidence_class": "contract",
+          "usage": "construction",
+          "dataset_split": "external",
+          "locator": "https://docs.kernel.org/7.1/_sources/filesystems/journalling.rst.txt#journal-handles",
+          "claim": "The versioned JBD2 documentation preserves the matching start/stop contract.",
+          "content_sha256": "389af5500fe1033619082b8343c86cde4cf36df5ff1c402fc9d013c3825bca8a",
+          "quoted_text": "jbd2_journal_stop() the same number of times as jbd2_journal_start() before the transaction is completed",
+          "filesystems": ["ext4"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "linux.ext4.verity.transaction.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/ext4/verity.c#ext4_begin_enable_verity",
+          "claim": "Verity enablement captures the handle returned by ext4_journal_start and closes the same handle with ext4_journal_stop.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.ext4.verity.transaction.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/ext4/verity.c#ext4_begin_enable_verity",
+          "claim": "The same journal-handle lifecycle remains present in v6.14.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.ext4.verity.transaction.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/ext4/verity.c#ext4_begin_enable_verity",
+          "claim": "The same journal-handle lifecycle remains present in v7.1.",
+          "filesystems": ["ext4"],
+          "linux_versions": ["7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+          "operation_ids": ["ext4_verity_journal_transaction"]
+        }
+      ]
+    },
+    {
+      "rule_id": "mocc.rule.allocation.btrfs.search_path_release",
+      "family_id": "allocation_lifecycle",
+      "title": "Allocated Btrfs search paths must be released",
+      "summary": "After btrfs_alloc_path returns a non-null path, every reachable parent-lookup exit must release that same path with btrfs_free_path.",
+      "maturity": "development",
+      "rule_authority": "confirmed",
+      "filesystems": ["btrfs"],
+      "linux_versions": ["6.8", "6.14", "7.1"],
+      "supported_semantics": [
+        "bounded one-call allocation and release summaries",
+        "call-result substitution for allocated path identity",
+        "null allocation failure exclusion",
+        "same-object release on success and failure paths"
+      ],
+      "unsupported_semantics": [
+        "automatic cleanup attributes and cleanup macros",
+        "general pointer alias analysis across stored paths",
+        "allocation publication or ownership transfer beyond one configured call boundary"
+      ],
+      "sources": [
+        {
+          "source_id": "linux.btrfs.parent.path_allocation.v6_8",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.8:fs/btrfs/export.c#btrfs_get_parent",
+          "claim": "Parent lookup allocates a Btrfs search path and releases the same object on normal and failure exits.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8"]
+        },
+        {
+          "source_id": "linux.btrfs.parent.path_allocation.v6_14",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v6.14:fs/btrfs/export.c#btrfs_get_parent",
+          "claim": "The explicit allocation-to-release lifecycle remains present in v6.14.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.14"]
+        },
+        {
+          "source_id": "linux.btrfs.parent.path_allocation.v7_1",
+          "kind": "linux_source",
+          "evidence_class": "implementation_evidence",
+          "usage": "construction",
+          "dataset_split": "development",
+          "locator": "linux:v7.1:fs/btrfs/export.c#btrfs_get_parent",
+          "claim": "The explicit allocation-to-release lifecycle remains present in v7.1.",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["7.1"]
+        },
+        {
+          "source_id": "upstream.btrfs.get_parent.path_lifetime_fix.d54a83901055",
+          "kind": "upstream_commit",
+          "evidence_class": "historical_fix",
+          "usage": "corroboration",
+          "dataset_split": "external",
+          "locator": "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id=d54a83901055bb0bffca64fa09fce4d897274870",
+          "claim": "A historical mainline fix in the exact btrfs_get_parent() operation restructures all post-search exits so the allocated path is freed exactly once, independently corroborating the same-object path lifecycle obligation.",
+          "content_sha256": "9ceebc59dd7b51c51b9b8af0c76e90411e6b74642de7802592252e4dd1a8d709",
+          "quoted_text": "Clean up btrfs_get_parent() a little more, fix a free-after-free bug",
+          "filesystems": ["btrfs"],
+          "linux_versions": ["6.8", "6.14", "7.1"]
+        }
+      ],
+      "bindings": [
+        {
+          "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+          "operation_ids": ["btrfs_parent_lookup_path_allocation"]
+        }
+      ]
+    }
+  ],
+  "coverage_targets": [
+    {
+      "target_id": "mocc.target.replay_cross_filesystem_frozen_validation",
+      "family_id": "replay_recovery",
+      "priority": "P0",
+      "filesystems": ["ext4", "xfs"],
+      "rule_goal": "Freeze unseen replay/recovery operations and versions after the current development rules are locked.",
+      "required_capabilities": [
+        "development, validation, and test separation",
+        "versioned protocol drift report",
+        "independent review labels"
+      ],
+      "exit_criteria": [
+        "at least one unseen operation or version per applicable filesystem",
+        "positive, legal-negative, and unknown cases are independently adjudicated",
+        "protocol revisions after test-label access are prohibited"
+      ]
+    },
+    {
+      "target_id": "mocc.target.transaction_lifecycle",
+      "family_id": "transaction_lifecycle",
+      "priority": "P0",
+      "filesystems": ["ext4", "xfs", "btrfs"],
+      "rule_goal": "Model begin, commit, abort, and handler ownership without allowing transaction abort to close unrelated global effects.",
+      "required_capabilities": [
+        "bounded callee effect summaries",
+        "transaction owner and scope binding",
+        "nested operation diagnostics"
+      ],
+      "exit_criteria": [
+        "one evidence-backed protocol instance in at least two filesystems",
+        "abort/global-effect counterexample remains a violation or unknown",
+        "unseen legal and violating paths pass independent review"
+      ]
+    },
+    {
+      "target_id": "mocc.target.allocation_lifecycle",
+      "family_id": "allocation_lifecycle",
+      "priority": "P0",
+      "filesystems": ["ext4", "xfs", "btrfs"],
+      "rule_goal": "Relate allocation or reservation to publication, rollback, and release of the same metadata object.",
+      "required_capabilities": [
+        "access-path object identity",
+        "bounded wrapper summaries",
+        "allocation-to-publication phase relation"
+      ],
+      "exit_criteria": [
+        "object mismatch cannot close an effect",
+        "legal publication and rollback fixtures do not report candidates",
+        "unresolved aliasing is reported as ANALYSIS_UNKNOWN"
+      ]
+    },
+    {
+      "target_id": "mocc.target.namespace_orphan",
+      "family_id": "namespace_orphan",
+      "priority": "P1",
+      "filesystems": ["ext4", "xfs"],
+      "rule_goal": "Model directory membership, link count, and orphan ownership as related but independently auditable effects.",
+      "required_capabilities": [
+        "multi-object relationship binding",
+        "ordered phase prerequisites",
+        "deferred orphan-handler transfer"
+      ],
+      "exit_criteria": [
+        "namespace and orphan effects cannot compensate each other implicitly",
+        "legal deferred cleanup has an explicit matching owner",
+        "cross-version drift is recorded"
+      ]
+    },
+    {
+      "target_id": "mocc.target.quota_refcount",
+      "family_id": "quota_refcount",
+      "priority": "P1",
+      "filesystems": ["xfs", "btrfs"],
+      "rule_goal": "Check boolean and bounded relational quota or reference obligations without claiming general arithmetic proof.",
+      "required_capabilities": [
+        "paired accounting effects",
+        "explicit arithmetic-unsupported diagnostics",
+        "same-object and same-attempt binding"
+      ],
+      "exit_criteria": [
+        "boolean obligations have positive, negative, and unknown fixtures",
+        "arithmetic-dependent cases remain unsupported",
+        "protocol cost and unknown coverage are reported"
+      ]
+    },
+    {
+      "target_id": "mocc.target.deferred_ownership",
+      "family_id": "deferred_ownership",
+      "priority": "P1",
+      "filesystems": ["ext4", "xfs", "btrfs"],
+      "rule_goal": "Require explicit object-, scope-, and guard-matched ownership when work is delegated to recovery or background processing.",
+      "required_capabilities": [
+        "bounded handler summaries",
+        "owner and object substitution at call sites",
+        "recovery and deferred completion modes"
+      ],
+      "exit_criteria": [
+        "wrong-object and wrong-scope handlers do not close effects",
+        "legal ownership transfer is represented in the witness",
+        "missing summaries produce ANALYSIS_UNKNOWN"
+      ]
+    }
+  ]
+}

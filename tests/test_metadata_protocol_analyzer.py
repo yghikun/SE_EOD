@@ -69,6 +69,12 @@ def test_failure_then_success_exit_generates_explainable_candidate(tmp_path):
     assert len(result.candidates) == 1
     witness = result.candidates[0].representative_witness
     assert [item["kind"] for item in witness] == ["necessary_step", "branch", "failure", "exit"]
+    assert [item["to"] for item in result.candidates[0].control_trace] == [
+        "ACTIVE",
+        "HANDLING_FAILURE",
+        "COMMITTING",
+        "EXITED",
+    ]
 
 
 def test_cleanup_label_returning_original_error_is_not_reported(tmp_path):

@@ -2,7 +2,13 @@ from src.frontend.model import SourceRange
 from src.metadata_candidate_rules import generate_candidates
 from src.metadata_event import EventStrength, MetadataEvent, MetadataEventKind, ObjectIdentity, ResolvedObjectRef
 from src.metadata_protocol import CompletionMode, EffectKind, EffectScope, EffectStatus, LegalExitKind, MetadataProtocol, ReturnOutcome, ViolationType
-from src.metadata_tracker import AccountingObligation, EffectRecord, FailureResolution, MetadataOperationInstance
+from src.metadata_tracker import (
+    AccountingObligation,
+    EffectRecord,
+    FailureResolution,
+    MetadataOperationInstance,
+    OperationControlState,
+)
 
 
 def _protocol() -> MetadataProtocol:
@@ -35,8 +41,14 @@ def _object():
 def _state() -> MetadataOperationInstance:
     state = MetadataOperationInstance("op", "test.candidates")
     state.principal_objects["inode"] = _object()
-    state.completion_mode = CompletionMode.COMMITTED
     return state
+
+
+def _finish(state: MetadataOperationInstance, mode: CompletionMode) -> None:
+    if state.control_state is OperationControlState.INIT:
+        state.transition_control(OperationControlState.ACTIVE, "fixture operation")
+    state.complete(mode, "fixture completion")
+    state.exit_operation("fixture return")
 
 
 def _event():
@@ -47,6 +59,7 @@ def test_unresolved_failure_at_success_is_failure_reported_as_success():
     state = _state()
     attempt = state.start_attempt("step", _event())
     state.record_failure(_event(), attempt, "ret < 0", "contract")
+    _finish(state, CompletionMode.COMMITTED)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="SUCCESS", outcome=ReturnOutcome.SUCCESS, exit_kind=LegalExitKind.SUCCESS)
 
@@ -60,6 +73,7 @@ def test_resolved_failure_is_not_a_candidate():
     attempt = state.start_attempt("step", _event())
     token = state.record_failure(_event(), attempt, "ret < 0", "contract")
     state.resolve_failure(token.failure_id, FailureResolution.PROPAGATED, "returned error")
+    _finish(state, CompletionMode.COMMITTED)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="SUCCESS", outcome=ReturnOutcome.SUCCESS, exit_kind=LegalExitKind.SUCCESS)
 
@@ -69,8 +83,8 @@ def test_resolved_failure_is_not_a_candidate():
 
 def test_open_effect_at_failure_is_incomplete_completion():
     state = _state()
-    state.completion_mode = CompletionMode.ROLLED_BACK
     state.add_effect(EffectRecord("effect", EffectKind.METADATA_UPDATE, _object(), EffectScope.PERSISTENT, "op", EffectStatus.OPEN, "event"))
+    _finish(state, CompletionMode.ROLLED_BACK)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="FAILURE", outcome=ReturnOutcome.FAILURE, exit_kind=LegalExitKind.FAILURE)
 
@@ -80,8 +94,8 @@ def test_open_effect_at_failure_is_incomplete_completion():
 
 def test_unknown_effect_is_quarantined_not_reported():
     state = _state()
-    state.completion_mode = CompletionMode.ROLLED_BACK
     state.add_effect(EffectRecord("effect", EffectKind.METADATA_UPDATE, _object(), EffectScope.PERSISTENT, "op", EffectStatus.UNKNOWN, "event"))
+    _finish(state, CompletionMode.ROLLED_BACK)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="FAILURE", outcome=ReturnOutcome.FAILURE, exit_kind=LegalExitKind.FAILURE)
 
@@ -91,6 +105,7 @@ def test_unknown_effect_is_quarantined_not_reported():
 
 def test_illegal_phase_return_combination_is_metadata_divergence():
     state = _state()
+    _finish(state, CompletionMode.COMMITTED)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="FAILURE", outcome=ReturnOutcome.SUCCESS, exit_kind=LegalExitKind.SUCCESS)
 
@@ -101,6 +116,7 @@ def test_illegal_phase_return_combination_is_metadata_divergence():
 def test_unknown_accounting_obligation_is_quarantined():
     state = _state()
     state.accounting_obligations["reservation"] = AccountingObligation("reservation", _object(), "pending => reserved")
+    _finish(state, CompletionMode.COMMITTED)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="SUCCESS", outcome=ReturnOutcome.SUCCESS, exit_kind=LegalExitKind.SUCCESS)
 
@@ -112,8 +128,31 @@ def test_completed_effect_and_satisfied_accounting_allow_exit():
     state = _state()
     state.add_effect(EffectRecord("effect", EffectKind.METADATA_UPDATE, _object(), EffectScope.PERSISTENT, "op", EffectStatus.COMMITTED, "event"))
     state.accounting_obligations["reservation"] = AccountingObligation("reservation", _object(), "pending => reserved", "reserved", True)
+    _finish(state, CompletionMode.COMMITTED)
 
     candidates, unknown = generate_candidates(state, _protocol(), phase="SUCCESS", outcome=ReturnOutcome.SUCCESS, exit_kind=LegalExitKind.SUCCESS)
 
     assert not candidates
     assert not unknown
+
+
+def test_completion_without_control_exit_is_analysis_unknown():
+    state = _state()
+    state.transition_control(OperationControlState.ACTIVE, "fixture operation")
+    state.complete(CompletionMode.COMMITTED, "fixture completion")
+
+    candidates, unknown = generate_candidates(
+        state,
+        _protocol(),
+        phase="SUCCESS",
+        outcome=ReturnOutcome.SUCCESS,
+        exit_kind=LegalExitKind.SUCCESS,
+    )
+
+    assert not candidates
+    assert unknown
+    assert "operation control state has not exited: COMMITTING" in unknown[0].reasons
+    assert [item["to"] for item in unknown[0].control_trace] == [
+        "ACTIVE",
+        "COMMITTING",
+    ]

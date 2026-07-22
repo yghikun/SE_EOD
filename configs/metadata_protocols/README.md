@@ -1,8 +1,15 @@
 # MOCC-SE Metadata Protocols
 
 This directory contains versioned semantic protocols consumed by
-`src.metadata_protocol`. M0 supports strict UTF-8 JSON files. YAML is not
+`src.metadata_protocol`. M0 supports strict UTF-8 JSON files. Schema v1 remains
+readable; schema v2 adds bounded one-call effect summaries. YAML is not
 accepted until a versioned YAML loader is implemented.
+
+Evidence provenance and rule maturity are not encoded in these runtime files.
+They are recorded separately in `../metadata_rules/rule_registry_v2.json` and
+validated with `python -m src.metadata_rule_registry`. Every active operation
+must have an evidence-backed registry binding; coverage targets are not active
+protocol semantics.
 
 Every protocol declares:
 
@@ -23,6 +30,14 @@ owner, and the effects it owns. `ABORTED` handlers may only own
 Return guards that overlap, or whose mutual exclusion cannot be proven by the
 M0 comparison checker, require distinct integer priorities. Higher values take
 precedence. Unknown fields and enum values are rejected rather than ignored.
+
+Schema-v2 `callee_summaries` map a configured direct callee to one of
+`OPEN`, `COMMIT`, `COMPENSATE`, or `TRANSFER`. The object is substituted either
+from a fixed call argument using `identity` or `address_of_output`
+normalization, or from a captured call result using `identity` normalization.
+Only `max_call_depth == 1` is accepted. A missing or unresolvable argument is a
+`may` event and reaches `ANALYSIS_UNKNOWN`; it cannot close an exact effect.
+Schema-v1 files must not contain `callee_summaries`.
 
 `operation.discovery` is a conservative discovery-only context. It can require
 additional callees or fields, forbid known out-of-scope callees, and raise the
@@ -84,3 +99,31 @@ recorded in `outputs/mocc-protocol-c-v1/README.md`.
 The Btrfs operation also declares discovery-only context requiring both
 activation and reservation calls before a renamed non-entry function is treated
 as the same operation for review.
+
+`protocol_d_transaction_lifecycle_v2.json` is the active Protocol D MVP. It
+is a package manifest that composes the transaction family, XFS/ext4 bindings,
+and two operation instances. It
+models `xfs_trans_alloc(..., &tp)` as an OPEN transaction effect and closes only
+the same call-site object through `xfs_trans_commit(tp)` or
+`xfs_trans_cancel(tp)`. It also models a non-error result from
+`handle = ext4_journal_start(...)` as an OPEN journal-handle effect and closes
+only that handle through `ext4_journal_stop(handle)`. Synthetic legal,
+violating, wrong-object, unknown, and schema cases are tested together with
+`xfs_acl_set_mode` and `ext4_begin_enable_verity` in Linux v6.8, v6.14, and
+v7.1. These are two development instances, not frozen cross-filesystem
+validation.
+
+`protocol_e_allocation_lifecycle_v2.json` is the first Protocol E development
+instance and is also a package manifest. It composes the allocation family,
+the Btrfs path binding, and one operation instance. It opens a local allocation
+effect for a non-null result from
+`path = btrfs_alloc_path()` and compensates only the same exact object through
+`btrfs_free_path(path)`. Legal, leaking, wrong-object, unknown-alias, and
+uncaptured-result cases are tested together with `btrfs_get_parent` in Linux
+v6.8, v6.14, and v7.1. Automatic cleanup macros, allocation publication, and
+ownership transfer remain outside this instance.
+
+Protocol A-C remain flat runtime configurations for compatibility. The current
+package schema is deliberately limited to a single effect lifecycle per
+operation, so those more complex protocols have not been migrated merely for
+layout consistency.

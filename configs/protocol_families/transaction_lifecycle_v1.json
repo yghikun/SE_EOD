@@ -1,0 +1,42 @@
+{
+  "family_schema_version": 1,
+  "family_id": "transaction_lifecycle",
+  "title": "Transaction lifecycle",
+  "description": "A successfully acquired transaction resource must be committed, rolled back, or transferred to an explicit owner before operation exit.",
+  "abstract_roles": ["resource"],
+  "actions": [
+    {
+      "action_id": "acquire",
+      "transition": "OPEN",
+      "description": "Acquire responsibility for a transaction-scoped resource."
+    },
+    {
+      "action_id": "commit",
+      "transition": "COMMIT",
+      "description": "Complete the transaction resource successfully."
+    },
+    {
+      "action_id": "rollback",
+      "transition": "COMPENSATE",
+      "description": "Cancel or roll back the transaction resource."
+    },
+    {
+      "action_id": "transfer",
+      "transition": "TRANSFER",
+      "description": "Transfer responsibility to a declared transaction or recovery owner."
+    }
+  ],
+  "obligations": [
+    {
+      "obligation_id": "transaction_resource_must_close",
+      "abstract_role": "resource",
+      "trigger_action": "acquire",
+      "terminal_actions": ["commit", "rollback", "transfer"],
+      "statement": "Every successfully acquired resource must reach a terminal action on every applicable exit.",
+      "applicability": [
+        "the acquire action returned success",
+        "the resource has not been transferred before the operation boundary"
+      ]
+    }
+  ]
+}
