@@ -29,7 +29,7 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Sparse-checkout Linux filesystem sources for se_eod."
+        description="Sparse-checkout Linux filesystem sources for MOCC-SE."
     )
     parser.add_argument("--repo", default=DEFAULT_REPO, help="Linux git repository URL.")
     parser.add_argument("--ref", default=DEFAULT_REF, help="Git tag/branch/commit.")

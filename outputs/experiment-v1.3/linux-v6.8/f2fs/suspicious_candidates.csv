@@ -1,1 +1,0 @@
-linux_git_commit,linux_git_tag,file,function,path_id,error_line,candidate_type,severity,condition,exit_type,target_label,error_source_expr,held_resources,cleanup_calls,missing_cleanup_candidates,final_return_expr,evidence,reason

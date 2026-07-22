@@ -503,6 +503,291 @@ out:
     }
 
 
+def test_broad_semantics_uses_first_result_guard(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["failure_return_mismatch"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/positive_result.c",
+        """
+int positive_result(void)
+{
+    int ret = opaque_metadata_step();
+    if (ret < 0)
+        return ret;
+    if (ret != 0)
+        return 0;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_broad_semantics_excludes_nonfallible_kernel_helpers(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    helpers = {
+        "container_helper": "container_of(ptr, struct item, member)",
+        "list_helper": "list_first_entry(head, struct item, member)",
+        "inode_helper": "BTRFS_I(inode)",
+        "atomic_helper": "atomic_read(counter)",
+    }
+    for name, call in helpers.items():
+        _write_source(
+            tmp_path,
+            f"fs/fixture/{name}.c",
+            f"""
+int {name}(struct state *state, void *ptr)
+{{
+    state->changed = 1;
+    void *value = {call};
+    if (!value)
+        return -1;
+    return 0;
+}}
+""",
+        )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_broad_semantics_excludes_boolean_stop_helpers(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/readdir.c",
+        """
+int readdir_cursor(struct ctx *ctx)
+{
+    ctx->pos = 7;
+    int over = !dir_emit(ctx, "name", 4, 1, 0);
+    if (over)
+        return 1;
+    ctx->pos++;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_mutation_cleanup_ignores_restored_temporary_state(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/restored_temp.c",
+        """
+int restored_temp(struct trans *trans, struct state *state)
+{
+    void *old = trans->block_rsv;
+    trans->block_rsv = state->block_rsv;
+    int ret = fallible_metadata_step();
+    trans->block_rsv = old;
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_mutation_cleanup_ignores_cleanup_before_failure_guard(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/cleanup_before_guard.c",
+        """
+int cleanup_before_guard(struct state *state)
+{
+    state->flags |= LOGGING;
+    int ret = fallible_metadata_step();
+    clear_state_logging(state);
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_mutation_cleanup_requires_mutation_to_reach_fallible_call(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/unreachable_mutation.c",
+        """
+int unreachable_mutation(struct state *state, int already_done)
+{
+    if (already_done) {
+        state->changed = 1;
+        return 0;
+    }
+    int ret = fallible_metadata_step();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert report["summary"]["discovery_review_occurrences"] == 0
+
+
+def test_mutation_cleanup_requires_mutation_before_fallible_call(tmp_path):
+    payload = _mini_discovery_protocol().to_dict()
+    operation = payload["operations"][0]
+    operation["entry_functions"] = []
+    operation["callee_roles"] = []
+    operation["discovery"] = {
+        "semantic_patterns": ["mutation_failure_cleanup"]
+    }
+    protocol = MetadataProtocol.from_dict(payload)
+    _write_source(
+        tmp_path,
+        "fs/fixture/mutation_after.c",
+        """
+int mutation_after(struct state *state)
+{
+    int ret = fallible_metadata_step();
+    if (ret)
+        return ret;
+    state->changed = 1;
+    return 0;
+}
+""",
+    )
+    _write_source(
+        tmp_path,
+        "fs/fixture/mutation_before.c",
+        """
+int mutation_before(struct state *state)
+{
+    state->changed = 1;
+    int ret = fallible_metadata_step();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+    _write_source(
+        tmp_path,
+        "fs/fixture/field_read_before.c",
+        """
+int field_read_before(struct state *state)
+{
+    int previous = state->changed;
+    int ret = fallible_metadata_step(previous);
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    report = discover_source_tree(tmp_path, [protocol]).to_dict()
+
+    assert [
+        item["function"] for item in report["broad_discovery_review"]
+    ] == ["mutation_before"]
+
+
+def test_real_known_function_leave_one_out_enters_broad_review():
+    payload = MetadataProtocol.read_json(
+        ROOT
+        / "configs"
+        / "metadata_protocols"
+        / "protocol_a_replay_recovery_v1.json"
+    ).to_dict()
+    for operation in payload["operations"]:
+        if operation["operation_id"] == "ext4_replay_inode":
+            operation["entry_functions"] = []
+            operation["callee_roles"] = []
+            operation["discovery"] = {
+                "semantic_patterns": ["failure_return_mismatch"]
+            }
+        else:
+            operation["discovery"] = {}
+    protocol = MetadataProtocol.from_dict(payload)
+
+    report = discover_source_tree(
+        ROOT / "linux-sources" / "linux-v6.8-fs" / "fs" / "ext4" / "fast_commit.c",
+        [protocol],
+        source_version="linux-v6.8",
+    ).to_dict()
+
+    reviews = {
+        item["function"]: item for item in report["broad_discovery_review"]
+    }
+    assert reviews["ext4_fc_replay_inode"]["classification"] == "DISCOVERY_REVIEW"
+    assert (
+        reviews["ext4_fc_replay_inode"]["applicability_match_kind"]
+        == "broad_semantic"
+    )
+    assert reviews["ext4_fc_replay_inode"]["semantic_pattern"] == (
+        "failure_return_mismatch"
+    )
+
+
 def test_fresh_queue_excludes_confirmed_and_seed_functions(tmp_path):
     payload = _mini_discovery_protocol().to_dict()
     operation = payload["operations"][0]

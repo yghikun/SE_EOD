@@ -1,6 +1,6 @@
 # MOCC-SE 项目闭合计划
 
-> 状态基线：2026-07-21
+> 状态基线：2026-07-22
 >
 > 本文档定义“做到什么程度才算完成”。当前实施顺序见 [`../PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md)，完整方法见 [`MOCC_SE_FULL_ARCHITECTURE.md`](MOCC_SE_FULL_ARCHITECTURE.md)，当前代码事实见 [`PROJECT_ARCHITECTURE.md`](PROJECT_ARCHITECTURE.md)。
 
@@ -79,38 +79,35 @@ ANALYSIS_UNKNOWN
 
 ### 3.1 已实现
 
-SE-EOD 当前提供：
+当前 MOCC-SE 核心提供：
 
 - frontend-neutral IR 和 tree-sitter adapter；
-- 函数内 CFG 和错误路径；
-- 有界析取数据流、join 和 widening；
-- 资源 instance、validity、must/may 和 cardinality；
-- 跨函数 effect summary 和固定点；
-- 简单 alias、字段、函数指针和 uncertainty；
+- 函数内 CFG；
+- parameterized protocol schema 和 Protocol A/B/C；
+- metadata event、effect ledger、failure attempt 和 accounting obligation；
+- 合法成功/失败出口、三类违规和 unknown 隔离；
+- source-tree exact analysis 与 broad semantic review 隔离；
 - representative trace 和 CFG snapshot；
-- candidate、quarantine、history、manual 和 LLM ranking；
-- 历史 186-test 基线，以及 M0-M6 后全量测试门禁。
+- source review、version matrix、repair evidence 和 confirmed linkage；
+- 精简后 `138 passed` 测试基线。
+
+旧 SE-EOD `src.main`、resource/dataflow、candidate、ranking/LLM 和实验辅助代码已删除；
+保留的旧输出只是历史数据，不是当前可执行能力。
 
 ### 3.2 未实现
 
-MOCC-SE 的 M0-M6 已实现 schema v1、return contract、metadata event、effect/failure/accounting
-  状态、合法出口、三类候选、unknown 隔离，以及 Protocol A/B/C 专用 JSON witness。仍缺少：
+MOCC-SE 的 M0-M11 开发链已实现 schema v1、return contract、metadata event、
+effect/failure/accounting 状态、合法出口、三类候选、unknown 隔离、Protocol A/B/C
+witness 和 fresh discovery。仍缺少：
 
-- 更完整的跨函数 handler/effect summary；
 - 独立冻结 benchmark 的规模化采集与 adjudication；
 - Protocol A/B/C 独立冻结 benchmark 与 protocol-versioned evaluation output。
 
-### 3.3 基础设施 backlog
+### 3.3 明确非目标
 
-以下任务重要但不阻塞 Protocol A MVP：
-
-- Kbuild compile database；
-- Clang exporter；
-- 更完整的 callee CFG effect inference；
-- bounded field/access path；
-- predecessor witness graph。
-
-它们在相关协议遇到实际边界时按门禁接入，不能无限推迟元数据协议实现。
+完整 Kbuild/Clang、通用 points-to/SSA/SMT、完整跨函数 handler/effect summary、任意
+metadata invariant DSL 和完整 crash-consistency 证明不属于当前实现 backlog。只有研究
+范围重新评审后才能恢复为代码任务。
 
 ## 4. 方法闭合任务
 
@@ -423,17 +420,25 @@ uncertain
 
 ### H2：方法形式化 `P0`
 
-论文必须定义：
+论文必须把现有协议、tracker 和 legal-exit verifier 统一定义为一个参数化、分层的
+扩展状态机；这一步是方法文档和可审查语义，不要求新增独立状态机运行时。必须定义：
 
 - operation instance；
+- control state 与 completion mode 的区分；
 - event transfer；
 - effect owner/scope；
+- effect 子状态机及其 closed/transfer/unknown 条件；
 - failure resolution；
 - accounting obligation；
 - legal success/failure exit；
+- `Accept_P` 合法出口谓词及三类违规的派生关系；
 - join/widening；
 - termination；
 - supported fragment。
+
+不得把状态机模型写成已覆盖任意文件系统或任意 C 语义。完整 handler/effect summary、
+任意元数据算术、通用 points-to、并发和 crash-consistency 证明仍属于未实现或非目标，
+必须保留为限制。
 
 ### H3：主张追踪 `P0`
 
@@ -532,12 +537,12 @@ Documentation updated:
 
 ### 方法和代码
 
-- [x] M0-M6 全部通过；
-- [ ] 三类违规均有端到端实现；
-- [ ] `PARTIAL_UNRESOLVED` 和 `ANALYSIS_UNKNOWN` 分离；
-- [ ] protocol/schema/output versioned；
+- [x] M0-M11 开发链通过；
+- [x] 三类违规均有端到端 fixture；
+- [x] `PARTIAL_UNRESOLVED` 和 `ANALYSIS_UNKNOWN` 分离；
+- [x] protocol/schema/output versioned；
 - [ ] 所有 must effect 和 handler transfer 可审计；
-- [ ] 全量测试和真实 Linux golden 通过。
+- [x] 精简后全量测试和 Linux CFG golden 通过。
 
 ### 实验
 

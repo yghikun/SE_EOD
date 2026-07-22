@@ -1,6 +1,6 @@
 # MOCC-SE 研究与论文路线图
 
-> 更新时间：2026-07-21
+> 更新时间：2026-07-22
 >
 > 本文档安排研究问题、实验和论文工作。具体编码顺序以 [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md) 为准，方法定义以 [`docs/MOCC_SE_FULL_ARCHITECTURE.md`](docs/MOCC_SE_FULL_ARCHITECTURE.md) 为准，完成门禁以 [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md) 为准。
 
@@ -8,9 +8,11 @@
 
 目标主张冻结为：
 
-> MOCC-SE 是一种面向 Linux 文件系统元数据错误路径的协议感知静态分析方法。它将元数据修改表示为带责任域和补偿关系的 effect，统一建模提交、回滚、事务中止、恢复接管和延迟完成，并检查返回状态、元数据状态与记账状态是否满足合法完成后置条件。
+> MOCC-SE 是一种面向 Linux 文件系统元数据错误路径的协议感知静态分析方法。它提出一个由文件系统协议实例化的参数化、分层扩展状态机：操作控制状态、effect 生命周期和责任转移共同描述提交、回滚、事务中止、恢复接管和延迟完成，并检查返回状态、元数据状态与记账状态是否满足合法完成后置条件。
 
-SE-EOD 是实现和实验基线。资源泄漏、缺失 cleanup 和错误吞掉是具体表现或基线候选，不是最终研究问题。
+SE-EOD 只保留为历史数据和动机基线；其 resource/ranking 运行时代码已经删除。当前
+实现基线是保留的 frontend/CFG 与 MOCC-SE protocol/EFSM 链。资源泄漏、缺失 cleanup
+和错误吞掉是具体表现，不是最终研究问题。
 
 论文不声称：
 
@@ -112,9 +114,22 @@ path sensitivity and witness
 
 ## 4. 方法实现路线
 
+### 4.0 形式化模型（文档层，不新增运行时）
+
+论文中的核心抽象是参数化扩展状态机，而不是一个为所有文件系统硬编码的扁平状态
+图。通用分析器传播操作控制状态、effect ledger、failure token、accounting
+obligation 和 return provenance；每个文件系统协议实例化对象角色、阶段、返回契约、
+补偿/handler 关系和元数据不变量。当前可执行片段只支持 phase、effect closure、
+return contract、accounting constraint 和 legal exit 可表达的约束。
+
+现有 `MetadataOperationInstance`、`metadata_tracker.py` 和合法出口验证器已经提供
+该模型的可执行片段。本阶段只统一形式化定义和文档术语，不实现独立的状态机运行时，
+也不把尚未支持的通用 handler summary、任意元数据算术或完整 crash-consistency
+证明写成已实现能力。
+
 ### Phase M0：协议核心模型
 
-实现：
+实现/形式化：
 
 ```text
 MetadataProtocol
@@ -123,9 +138,10 @@ EffectScope/Status
 CompletionMode
 ViolationType
 schema validation/versioning
+parameterized EFSM configuration and legal-exit predicate
 ```
 
-验收：模型可序列化，非法协议被拒绝，不改变 SE-EOD 默认输出。
+验收：模型可序列化，非法协议被拒绝，并通过独立 MOCC-SE CLI 运行。
 
 ### Phase M1：元数据事件
 
@@ -223,26 +239,18 @@ LLM 不能作为 reviewer 或 gold label。
 
 ## 6. Baseline 和消融
 
-内部 baseline：
+当前仓库不再包含旧 SE-EOD baseline/ablation 运行时代码，也没有活动 benchmark
+评估脚本。历史输出只能用于动机，不能据此重算当前模型指标。
 
-| ID | 能力 |
-|---|---|
-| B0 | 名称级错误/cleanup pattern |
-| B1 | SE-EOD 线性错误路径 |
-| B2 | CFG resource obligation |
-| B3 | metadata events，不检查 completion |
-| B4 | 加 return contract 和 failure epoch |
-| B5 | 加 effect scope、compensation 和 handlers |
-| B6 | 加 accounting obligations |
-| Full | 加跨函数 summary、有限对象身份和 witness |
-
-外部 baseline 至少尝试：
+如果论文阶段重新启动冻结评估，应在单独、版本化的 evaluation 工具中比较：
 
 - Coccinelle semantic patch；
 - Smatch、CodeQL 或 Clang Static Analyzer 中可运行的相关检查；
-- 一个错误处理路径差异或 typestate/protocol baseline。
+- 一个错误处理路径差异或 typestate/protocol baseline；
+- 当前 EFSM 的 metadata event、return/failure、effect owner 和 accounting 组件消融。
 
-若外部工具无法在相同内核输入上运行，必须保存环境和失败原因，不能只比较报告数量。
+这些是论文评估门禁，不是当前默认代码任务。若重新实施，必须使用冻结数据和相同内核
+输入，并保存运行环境和失败原因，不能只比较报告数量。
 
 ## 7. 证据和 finding 状态
 
@@ -283,7 +291,7 @@ uncertain
 3. Motivation：三类开发 finding；
 4. Metadata Operation Completion Model；
 5. Static Analysis：事件、ledger、failure epoch、handler 和 accounting；
-6. Implementation：现有 SE-EOD 基础和 MOCC-SE 模块；
+6. Implementation：保留的 frontend/CFG 和 MOCC-SE protocol/EFSM 模块；
 7. Evaluation；
 8. Findings；
 9. Related Work；

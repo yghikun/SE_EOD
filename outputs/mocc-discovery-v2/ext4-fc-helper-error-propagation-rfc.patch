@@ -1,0 +1,147 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MOCC-SE validation <mocc-se@example.invalid>
+Date: Tue, 21 Jul 2026 00:00:00 +0800
+Subject: [RFC] ext4: propagate fast-commit replay helper errors
+
+This is an RFC validation patch, not a submitted fix.
+
+MOCC-SE fresh discovery found that ext4 fast-commit replay helpers can
+observe lookup/map failures but still let inode replay continue as success.
+In particular, ext4_ext_replay_set_iblocks() and ext4_ext_clear_bb() both
+return int, but ext4_fc_replay_inode() ignores their return values.
+
+The control-flow model in
+outputs/mocc-discovery-v2/ext4-fc-helper-fault-validation.md shows that the
+original caller returns success for all modeled helper-failure injections.
+
+---
+ fs/ext4/extents.c     | 31 +++++++++++++++++++++++--------
+ fs/ext4/fast_commit.c | 10 ++++++++--
+ 2 files changed, 31 insertions(+), 10 deletions(-)
+
+diff --git a/fs/ext4/extents.c b/fs/ext4/extents.c
+index 000000000000..000000000000 100644
+--- a/fs/ext4/extents.c
++++ b/fs/ext4/extents.c
+@@ -6013,8 +6013,10 @@ int ext4_ext_replay_set_iblocks(struct inode *inode)
+ 		map.m_lblk = cur;
+ 		map.m_len = end - cur;
+ 		ret = ext4_map_blocks(NULL, inode, &map, 0);
+-		if (ret < 0)
+-			break;
++		if (ret < 0) {
++			path = NULL;
++			goto cleanup;
++		}
+ 		if (ret > 0)
+ 			numblks += ret;
+ 		cur = cur + map.m_len;
+@@ -6032,8 +6034,10 @@ int ext4_ext_replay_set_iblocks(struct inode *inode)
+ 	if (ret < 0)
+ 		goto out;
+ 	path = ext4_find_extent(inode, cur, NULL, 0);
+-	if (IS_ERR(path))
+-		goto out;
++	if (IS_ERR(path)) {
++		ret = PTR_ERR(path);
++		goto cleanup;
++	}
+ 	numblks += path->p_depth;
+ 	ext4_free_ext_path(path);
+ 	while (cur < end) {
+@@ -6041,8 +6045,10 @@ int ext4_ext_replay_set_iblocks(struct inode *inode)
+ 		if (IS_ERR(path))
+-			break;
++			ret = PTR_ERR(path);
++			goto cleanup;
+ 		ex = path[path->p_depth].p_ext;
+ 		if (!ex) {
+ 			ext4_free_ext_path(path);
+@@ -6050,13 +6056,18 @@ int ext4_ext_replay_set_iblocks(struct inode *inode)
+ 		cur = max(cur + 1, le32_to_cpu(ex->ee_block) +
+ 					ext4_ext_get_actual_len(ex));
+ 		ret = skip_hole(inode, &cur);
+ 		if (ret < 0) {
+ 			ext4_free_ext_path(path);
+-			break;
++			path = NULL;
++			goto cleanup;
+ 		}
+ 		path2 = ext4_find_extent(inode, cur, NULL, 0);
+ 		if (IS_ERR(path2)) {
++			ret = PTR_ERR(path2);
+ 			ext4_free_ext_path(path);
+-			break;
++			path = NULL;
++			path2 = NULL;
++			goto cleanup;
+ 		}
+@@ -6075,9 +6086,11 @@ int ext4_ext_replay_set_iblocks(struct inode *inode)
+ 
+ out:
+ 	inode->i_blocks = numblks << (inode->i_sb->s_blocksize_bits - 9);
+ 	ext4_mark_inode_dirty(NULL, inode);
+-	return 0;
++	return ret;
++cleanup:
++	ext4_free_ext_path(path);
++	ext4_free_ext_path(path2);
++	return ret;
+ }
+ 
+ int ext4_ext_clear_bb(struct inode *inode)
+@@ -6107,8 +6120,10 @@ int ext4_ext_clear_bb(struct inode *inode)
+ 		map.m_lblk = cur;
+ 		map.m_len = end - cur;
+ 		ret = ext4_map_blocks(NULL, inode, &map, 0);
+-		if (ret < 0)
+-			break;
++		if (ret < 0) {
++			path = NULL;
++			goto out;
++		}
+ 		if (ret > 0) {
+ 			path = ext4_find_extent(inode, map.m_lblk, NULL, 0);
+-			if (!IS_ERR_OR_NULL(path)) {
++			if (!IS_ERR_OR_NULL(path)) {
+ 				for (j = 0; j < path->p_depth; j++) {
+@@ -6120,6 +6135,8 @@ int ext4_ext_clear_bb(struct inode *inode)
+ 				}
+ 				ext4_free_ext_path(path);
++			} else if (IS_ERR(path)) {
++				return PTR_ERR(path);
+ 			}
+@@ -6129,5 +6146,5 @@ int ext4_ext_clear_bb(struct inode *inode)
+ 	}
+ 
+-	return 0;
++out:
++	return ret;
+ }
+diff --git a/fs/ext4/fast_commit.c b/fs/ext4/fast_commit.c
+index 000000000000..000000000000 100644
+--- a/fs/ext4/fast_commit.c
++++ b/fs/ext4/fast_commit.c
+@@ -1533,8 +1533,11 @@ static int ext4_fc_replay_inode(struct super_block *sb,
+ 
+ 	inode = ext4_iget(sb, ino, EXT4_IGET_NORMAL);
+ 	if (!IS_ERR(inode)) {
+-		ext4_ext_clear_bb(inode);
++		ret = ext4_ext_clear_bb(inode);
+ 		iput(inode);
++		if (ret)
++			return ret;
+ 	}
+ 	inode = NULL;
+@@ -1593,8 +1596,11 @@ static int ext4_fc_replay_inode(struct super_block *sb,
+ 	 * the number of blocks the inode.
+ 	 */
+-	if (!ext4_test_inode_flag(inode, EXT4_INODE_INLINE_DATA))
+-		ext4_ext_replay_set_iblocks(inode);
++	if (!ext4_test_inode_flag(inode, EXT4_INODE_INLINE_DATA)) {
++		ret = ext4_ext_replay_set_iblocks(inode);
++		if (ret)
++			goto out;
++	}
+ 
+ 	inode->i_generation = le32_to_cpu(ext4_raw_inode(&iloc)->i_generation);

@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "scope": "ext4 fast-commit replay helper fault model",
+  "results": [
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "initial_ext4_find_extent",
+      "original_return": -5,
+      "original_writes_metadata": false,
+      "original_error_swallowed": false,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "data_ext4_map_blocks",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "first_skip_hole",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "first_ext4_find_extent",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "loop_ext4_find_extent",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "loop_skip_hole",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "injection_site": "second_ext4_find_extent",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6015-6017 breaks on ext4_map_blocks() error",
+        "extents.c:6031-6036 sends skip_hole()/find_extent errors to out",
+        "extents.c:6075-6078 writes inode->i_blocks and returns 0",
+        "fast_commit.c:1595-1596 ignores ext4_ext_replay_set_iblocks() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_clear_bb",
+      "injection_site": "initial_ext4_find_extent",
+      "original_return": -5,
+      "original_writes_metadata": false,
+      "original_error_swallowed": false,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6109-6111 breaks on ext4_map_blocks() error",
+        "extents.c:6113-6123 ignores inner ext4_find_extent() failure",
+        "extents.c:6131 returns 0",
+        "fast_commit.c:1535-1536 ignores ext4_ext_clear_bb() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_clear_bb",
+      "injection_site": "loop_ext4_map_blocks",
+      "original_return": 0,
+      "original_writes_metadata": true,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6109-6111 breaks on ext4_map_blocks() error",
+        "extents.c:6113-6123 ignores inner ext4_find_extent() failure",
+        "extents.c:6131 returns 0",
+        "fast_commit.c:1535-1536 ignores ext4_ext_clear_bb() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    },
+    {
+      "function": "ext4_ext_clear_bb",
+      "injection_site": "inner_ext4_find_extent",
+      "original_return": 0,
+      "original_writes_metadata": false,
+      "original_error_swallowed": true,
+      "fixed_return": -5,
+      "fixed_writes_metadata": false,
+      "fixed_error_swallowed": false,
+      "caller_original_return": 0,
+      "caller_fixed_return": -5,
+      "caller_original_error_swallowed": true,
+      "caller_fixed_error_swallowed": false,
+      "evidence": [
+        "extents.c:6109-6111 breaks on ext4_map_blocks() error",
+        "extents.c:6113-6123 ignores inner ext4_find_extent() failure",
+        "extents.c:6131 returns 0",
+        "fast_commit.c:1535-1536 ignores ext4_ext_clear_bb() return",
+        "fast_commit.c:1605-1610 returns 0 from out"
+      ]
+    }
+  ],
+  "summary": {
+    "modeled_injection_scenarios": 10,
+    "original_helper_swallowed_errors": 8,
+    "original_caller_swallowed_errors": 10,
+    "original_metadata_write_after_failure": 7,
+    "fixed_caller_swallowed_errors": 0
+  }
+}

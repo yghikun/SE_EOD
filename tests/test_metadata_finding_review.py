@@ -149,6 +149,50 @@ def test_cli_writes_json_and_markdown_review_queue(tmp_path):
     assert "This is a development review queue" in markdown
 
 
+def test_build_review_queue_includes_m11_fresh_review_queue(tmp_path):
+    _write_source(tmp_path)
+    discovery = _discovery_report(tmp_path)
+    discovery["schema_version"] = 2
+    discovery["fresh_review_queue"] = [
+        {
+            "classification": "DISCOVERY_REVIEW",
+            "protocol_id": "test.protocol",
+            "operation_id": "",
+            "semantic_pattern": "failure_return_mismatch",
+            "source_file": "fixture/work.c",
+            "source_version": "fixture-v1",
+            "function": "work",
+            "family_fingerprint": "family-fresh",
+            "occurrence_fingerprint": "occurrence-fresh",
+            "representative_witness": [
+                {
+                    "kind": "fallible_call",
+                    "detail": "step() assigned to ret",
+                    "line": 3,
+                }
+            ],
+        }
+    ]
+
+    report = build_review_queue(
+        discovery,
+        source_root=tmp_path / "fs",
+        source_report="discovery-v2.json",
+        context_lines=1,
+        include_discovery_review=True,
+    ).to_dict()
+
+    fresh = [
+        item for item in report["items"]
+        if item["occurrence_fingerprint"] == "occurrence-fresh"
+    ][0]
+    assert report["summary"]["discovery_reviews"] == 1
+    assert fresh["classification"] == "DISCOVERY_REVIEW"
+    assert fresh["violation_type"] == "failure_return_mismatch"
+    assert fresh["static_certainty"] == "review"
+    assert "int ret = step();" in fresh["source_context"][0]["snippet"]
+
+
 def test_source_review_annotations_attach_to_matching_items(tmp_path):
     _write_source(tmp_path)
     report = build_review_queue(

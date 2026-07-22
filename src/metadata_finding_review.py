@@ -120,6 +120,16 @@ def build_review_queue(
 ) -> ReviewQueueReport:
     root = Path(source_root or discovery_report.get("source_root", "")).resolve()
     items: list[ReviewQueueItem] = []
+    if include_discovery_review:
+        items.extend(
+            _review_item(
+                {},
+                record,
+                root,
+                context_lines=max(0, context_lines),
+            )
+            for record in discovery_report.get("fresh_review_queue", [])
+        )
     for analysis in discovery_report.get("analyses", []):
         records = list(analysis.get("candidates", []))
         if include_discovery_review:
@@ -375,6 +385,9 @@ def _review_item(
 ) -> ReviewQueueItem:
     witness = tuple(record.get("representative_witness", ()))
     source_file = str(record.get("source_file") or analysis.get("source_file", ""))
+    violation_type = str(
+        record.get("violation_type") or record.get("semantic_pattern", "")
+    )
     return ReviewQueueItem(
         review_id=f"mocc_review_{record.get('occurrence_fingerprint', '')}",
         classification=str(record.get("classification", "PROTOCOL_CANDIDATE")),
@@ -387,10 +400,17 @@ def _review_item(
         source_version=str(
             record.get("source_version") or analysis.get("source_version", "")
         ),
-        violation_type=str(record.get("violation_type", "")),
+        violation_type=violation_type,
         exit_kind=str(record.get("exit_kind", "")),
         exit_id=str(record.get("exit_id", "")),
-        static_certainty=str(record.get("static_certainty", "")),
+        static_certainty=str(
+            record.get("static_certainty")
+            or (
+                "review"
+                if record.get("classification") == "DISCOVERY_REVIEW"
+                else ""
+            )
+        ),
         family_fingerprint=str(record.get("family_fingerprint", "")),
         occurrence_fingerprint=str(record.get("occurrence_fingerprint", "")),
         review_focus=_review_focus(record),

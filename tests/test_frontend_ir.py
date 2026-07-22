@@ -1,11 +1,9 @@
-from dataclasses import asdict
 import json
 from pathlib import Path
 
 import pytest
 
 from src.cfg import build_cfg
-from src.error_path_extractor import ErrorPathExtractor
 from src.frontend.model import (
     FRONTEND_IR_SCHEMA_VERSION,
     ControlFlowGraphIR,
@@ -13,11 +11,7 @@ from src.frontend.model import (
     TranslationUnitIR,
 )
 from src.frontend.tree_sitter_frontend import TreeSitterFrontend
-from src.function_extractor import extract_functions
-from src.function_summary import infer_function_summaries
-from src.parser import parse_c_file
 from src.parser import ParsedFile
-from src.resource_tracker import ResourceTracker
 
 
 SOURCE = """
@@ -34,17 +28,6 @@ static int work(struct obj *obj, void (*callback)(void *), int err)
     return 0;
 }
 """
-
-
-RESOURCE_MAP = {
-    "acquire_functions": {
-        "kmalloc": {
-            "resource_type": "memory",
-            "release": ["kfree"],
-            "validity_guard": "{var} != NULL",
-        }
-    }
-}
 
 
 def _write_source(root: Path) -> Path:
@@ -178,26 +161,6 @@ def test_frontend_ir_semantic_golden(tmp_path: Path):
     )
     expected = json.loads(golden_path.read_text(encoding="utf-8"))
     assert actual == expected
-
-
-def test_tree_sitter_adapter_preserves_candidate_and_summary_semantics(tmp_path: Path):
-    path = _write_source(tmp_path)
-    legacy_function = extract_functions(parse_c_file(path))[0]
-    ir_function = TreeSitterFrontend(tmp_path).parse(path).functions[0]
-
-    legacy_rows = ErrorPathExtractor(ResourceTracker(RESOURCE_MAP)).extract(
-        legacy_function
-    )
-    ir_rows = ErrorPathExtractor(ResourceTracker(RESOURCE_MAP)).extract(ir_function)
-    assert [asdict(row) for row in ir_rows] == [asdict(row) for row in legacy_rows]
-
-    legacy_summary = infer_function_summaries(
-        [legacy_function], RESOURCE_MAP
-    ).summaries["work"].to_dict()
-    ir_summary = infer_function_summaries(
-        [ir_function], RESOURCE_MAP
-    ).summaries["work"].to_dict()
-    assert ir_summary == legacy_summary
 
 
 def test_frontend_records_error_nodes_with_precise_ranges(tmp_path: Path):

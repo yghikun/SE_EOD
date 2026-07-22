@@ -25,6 +25,42 @@ DEFAULT_CONFIRMED_BUGS = (
     Path(__file__).resolve().parents[1] / "outputs" / "confirmed_bugs.md"
 )
 
+_BROAD_NON_FALLIBLE_CALLEES = frozenset(
+    {
+        "BTRFS_I",
+        "READ_ONCE",
+        "WRITE_ONCE",
+        "btrfs_csum_root",
+        "btrfs_sb",
+        "clamp",
+        "container_of",
+        "dir_emit",
+        "find_next_block_group",
+        "list_to_workspace",
+        "max",
+        "min",
+        "num_online_cpus",
+        "time_after",
+        "time_after_eq",
+        "time_before",
+        "time_before_eq",
+    }
+)
+_BROAD_NON_FALLIBLE_PREFIXES = (
+    "atomic_",
+    "btrfs_fs_",
+    "btrfs_is_",
+    "btrfs_num_",
+    "btrfs_stack_",
+    "btrfs_test_",
+    "ext4_test_",
+    "hlist_",
+    "list_",
+    "rb_",
+    "refcount_",
+    "xfs_has_",
+)
+
 
 @dataclass(frozen=True)
 class ApplicabilityEvidence:
@@ -750,79 +786,146 @@ def _broad_semantic_reviews(
     filesystem: str,
     source_version: str,
 ) -> tuple[BroadDiscoveryReview, ...]:
-    patterns = sorted(
-        {
-            pattern
-            for operation in protocol.operations
-            for pattern in operation.discovery.semantic_patterns
-        }
-    )
-    if not patterns or function.body_node is None:
+    if function.body_node is None:
         return ()
 
     evidence = _broad_semantic_evidence(function)
     records: list[BroadDiscoveryReview] = []
-    for pattern in patterns:
-        required = {
-            "failure_return_mismatch": {
-                "fallible_call",
-                "failure_guard",
-                "failure_to_success_exit",
-                "success_exit",
-            },
-            "mutation_failure_cleanup": {
-                "fallible_call",
-                "failure_guard",
-                "state_mutation",
-                "failure_control",
-            },
-            "retry_return_provenance": {
-                "fallible_call",
-                "failure_guard",
-                "retry_control",
-                "state_mutation",
-            },
-            "conditional_accounting": {
-                "fallible_call",
-                "failure_guard",
-                "accounting_operation",
-                "multi_outcome_guard",
-                "state_mutation",
-            },
-        }[pattern]
-        if not required.issubset(evidence):
+    seen_patterns: set[str] = set()
+    for operation in protocol.operations:
+        if not _operation_discovery_context_matches(function, operation):
             continue
-        signal_names = tuple(sorted(required | ({"compensation"} & evidence.keys())))
-        witness = tuple(evidence[name] for name in signal_names)
-        records.append(
-            BroadDiscoveryReview(
-                protocol.protocol_id,
-                _relative_source(function.file.as_posix(), root),
-                source_version,
-                filesystem,
-                function.name,
-                pattern,
-                signal_names,
-                witness,
+        context_terms = _operation_semantic_terms(operation, protocol)
+        for pattern in operation.discovery.semantic_patterns:
+            if pattern in seen_patterns:
+                continue
+            required = {
+                "failure_return_mismatch": {
+                    "fallible_call",
+                    "failure_guard",
+                    "failure_to_success_exit",
+                    "success_exit",
+                },
+                "mutation_failure_cleanup": {
+                    "fallible_call",
+                    "failure_guard",
+                    "state_mutation",
+                    "failure_control",
+                },
+                "retry_return_provenance": {
+                    "fallible_call",
+                    "failure_guard",
+                    "retry_control",
+                    "state_mutation",
+                },
+                "conditional_accounting": {
+                    "fallible_call",
+                    "failure_guard",
+                    "accounting_operation",
+                    "multi_outcome_guard",
+                    "state_mutation",
+                },
+            }[pattern]
+            if not required.issubset(evidence):
+                continue
+            signal_names = tuple(
+                sorted(required | ({"compensation"} & evidence.keys()))
             )
-        )
+            witness = tuple(evidence[name] for name in signal_names)
+            if context_terms and not _witness_mentions_any(witness, context_terms):
+                continue
+            seen_patterns.add(pattern)
+            records.append(
+                BroadDiscoveryReview(
+                    protocol.protocol_id,
+                    _relative_source(function.file.as_posix(), root),
+                    source_version,
+                    filesystem,
+                    function.name,
+                    pattern,
+                    signal_names,
+                    witness,
+                )
+            )
     return tuple(records)
+
+
+def _operation_discovery_context_matches(
+    function: FunctionIR,
+    operation: Any,
+) -> bool:
+    anchors = _function_anchor_ids(function)
+    discovery = operation.discovery
+    return (
+        all(f"callee:{callee}" in anchors for callee in discovery.required_callees)
+        and all(f"field:{field}" in anchors for field in discovery.required_fields)
+        and not any(
+            f"callee:{callee}" in anchors for callee in discovery.forbidden_callees
+        )
+    )
+
+
+def _operation_semantic_terms(
+    operation: Any,
+    protocol: MetadataProtocol,
+) -> tuple[str, ...]:
+    terms: set[str] = set()
+    for role in operation.callee_roles:
+        terms.update(role.callees)
+    for field in operation.discovery.required_fields:
+        terms.add(field)
+    for callee in operation.discovery.required_callees:
+        terms.add(callee)
+    specs = (
+        list(protocol.effects)
+        + list(protocol.compensations)
+        + list(protocol.handlers)
+    )
+    specs += [
+        spec
+        for spec in protocol.accounting_constraints
+        if spec.operation_id == operation.operation_id
+    ]
+    for spec in specs:
+        if getattr(spec, "operation_id", operation.operation_id) != operation.operation_id:
+            continue
+        for attr in (
+            "match_callees",
+            "match_fields",
+            "match_arguments",
+            "match_rhs",
+            "match_results",
+        ):
+            terms.update(str(item) for item in getattr(spec, attr, ()))
+    return tuple(sorted(_semantic_term(term) for term in terms if _semantic_term(term)))
+
+
+def _semantic_term(term: str) -> str:
+    normalized = term.strip().lower()
+    if len(normalized) < 4:
+        return ""
+    if normalized in {"true", "false", "null", "none", "zero", "ret"}:
+        return ""
+    return normalized
+
+
+def _witness_mentions_any(
+    witness: Iterable[dict[str, Any]],
+    terms: Iterable[str],
+) -> bool:
+    haystack = "\n".join(str(item.get("detail", "")).lower() for item in witness)
+    return any(term in haystack for term in terms)
 
 
 def _broad_semantic_evidence(
     function: FunctionIR,
 ) -> dict[str, dict[str, Any]]:
     nodes = tuple(function.body_node.walk()) if function.body_node else ()
-    assignments = _call_assignments(nodes)
-    cfg = build_cfg(function)
-    guarded = [
-        (symbol, call_node, guard)
-        for symbol, call_node in assignments
-        for guard in cfg.blocks.values()
-        if guard.kind in {"condition", "loop_condition", "switch_condition"}
-        and _mentions_identifier(guard.text, symbol)
-        and guard.start_byte >= call_node.start_byte
+    assignments = [
+        item for item in _call_assignments(nodes) if _is_broad_fallible_call(item[1])
     ]
+    cfg = build_cfg(function)
+    guarded = _guarded_call_assignments(assignments, cfg)
     success_returns = [
         node
         for node in nodes
@@ -846,7 +949,7 @@ def _broad_semantic_evidence(
         node
         for node in nodes
         if node.type in {"assignment_expression", "update_expression"}
-        and any(token in node.text for token in ("->", ".", "["))
+        and _is_state_mutation(node)
     ]
     calls = [node for node in nodes if node.type == "call_expression"]
     compensation_calls = [
@@ -883,24 +986,32 @@ def _broad_semantic_evidence(
         >= 2
     ]
     swallowed_paths = [
-        (symbol, guard, success)
-        for symbol, _, guard in guarded
+        (symbol, call_node, guard, success)
+        for symbol, call_node, guard in guarded
         for success in success_returns
         if _failure_branch_reaches(cfg, guard.id, success.start_byte, symbol)
     ]
 
     evidence: dict[str, dict[str, Any]] = {}
-    if assignments:
-        symbol, node = assignments[0]
+    selected_guard = None
+    selected_call = None
+    if swallowed_paths:
+        symbol, selected_call, selected_guard, _ = swallowed_paths[0]
+    elif guarded:
+        symbol, selected_call, selected_guard = guarded[0]
+    else:
+        symbol = ""
+    if selected_call is not None:
         evidence["fallible_call"] = _signal_witness(
-            "fallible_call", node, f"call result assigned to {symbol}"
+            "fallible_call",
+            selected_call,
+            f"{selected_call.text.strip()} assigned to {symbol}",
         )
-    if guarded:
-        symbol, _, guard = guarded[0]
+    if selected_guard is not None:
         evidence["failure_guard"] = {
             "kind": "failure_guard",
-            "line": guard.start_line,
-            "detail": guard.text.strip(),
+            "line": selected_guard.start_line,
+            "detail": selected_guard.text.strip(),
             "result_symbol": symbol,
         }
     if success_returns:
@@ -909,19 +1020,35 @@ def _broad_semantic_evidence(
             "success_exit", node, node.text.strip()
         )
     if swallowed_paths:
-        symbol, guard, success = swallowed_paths[0]
+        symbol, _, guard, success = swallowed_paths[0]
         evidence["failure_to_success_exit"] = {
             "kind": "failure_to_success_exit",
             "line": guard.start_line,
             "detail": f"failure branch for {symbol} reaches {success.text.strip()}",
         }
-    if failure_controls:
-        node = failure_controls[0]
+    relevant_failure_controls = [
+        item
+        for item in failure_controls
+        if selected_guard is not None and item.start_byte >= selected_guard.start_byte
+    ]
+    if relevant_failure_controls:
+        node = relevant_failure_controls[0]
         evidence["failure_control"] = _signal_witness(
             "failure_control", node, node.text.strip()
         )
-    if mutations:
-        node = mutations[0]
+    prior_mutations = [
+        item
+        for item in mutations
+        if selected_call is not None and item.start_byte < selected_call.start_byte
+        and _node_reaches(cfg, item.start_byte, selected_call.start_byte)
+        and selected_guard is not None
+        and not _mutation_restored_before_guard(item, nodes, selected_guard)
+        and not _cleanup_occurs_between(
+            compensation_calls, selected_call.start_byte, selected_guard.start_byte
+        )
+    ]
+    if prior_mutations:
+        node = prior_mutations[-1]
         evidence["state_mutation"] = _signal_witness(
             "state_mutation", node, node.text.strip()
         )
@@ -973,6 +1100,97 @@ def _call_assignments(nodes: Iterable[Any]) -> list[tuple[str, Any]]:
         if calls and identifiers:
             assignments.append((identifiers[-1], calls[0]))
     return assignments
+
+
+def _guarded_call_assignments(
+    assignments: Iterable[tuple[str, Any]],
+    cfg: Any,
+) -> list[tuple[str, Any, Any]]:
+    ordered = sorted(assignments, key=lambda item: item[1].start_byte)
+    guards = sorted(
+        (
+            block
+            for block in cfg.blocks.values()
+            if block.kind in {"condition", "loop_condition", "switch_condition"}
+        ),
+        key=lambda item: item.start_byte,
+    )
+    guarded: list[tuple[str, Any, Any]] = []
+    for index, (symbol, call_node) in enumerate(ordered):
+        next_assignment = min(
+            (
+                later_node.start_byte
+                for later_symbol, later_node in ordered[index + 1 :]
+                if later_symbol == symbol
+            ),
+            default=None,
+        )
+        matching = [
+            guard
+            for guard in guards
+            if guard.start_byte >= call_node.start_byte
+            and (next_assignment is None or guard.start_byte < next_assignment)
+            and _mentions_identifier(guard.text, symbol)
+            and _failure_edge_kind(guard.text, symbol) is not None
+        ]
+        if matching:
+            guarded.append((symbol, call_node, matching[0]))
+    return guarded
+
+
+def _is_broad_fallible_call(node: Any) -> bool:
+    callee = node.child_by_field_name("function")
+    if callee is None:
+        return False
+    spelling = callee.text.strip()
+    if spelling in _BROAD_NON_FALLIBLE_CALLEES:
+        return False
+    lowered = spelling.lower()
+    return not lowered.startswith(_BROAD_NON_FALLIBLE_PREFIXES)
+
+
+def _is_state_mutation(node: Any) -> bool:
+    target_text = _mutation_target_text(node)
+    return bool(target_text and any(token in target_text for token in ("->", ".", "[")))
+
+
+def _mutation_target_text(node: Any) -> str:
+    if node.type == "update_expression":
+        target = node.child_by_field_name("argument")
+        return (target.text if target is not None else node.text).strip()
+    else:
+        target = node.child_by_field_name("left")
+        if target is None:
+            return ""
+        return target.text.strip()
+
+
+def _mutation_restored_before_guard(
+    mutation: Any,
+    nodes: Iterable[Any],
+    guard: Any,
+) -> bool:
+    target_text = _mutation_target_text(mutation)
+    if not target_text:
+        return False
+    for node in nodes:
+        if node is mutation:
+            continue
+        if node.type != "assignment_expression":
+            continue
+        if node.start_byte <= mutation.start_byte or node.start_byte >= guard.start_byte:
+            continue
+        if _mutation_target_text(node) == target_text:
+            return True
+    return False
+
+
+def _cleanup_occurs_between(
+    compensation_calls: Iterable[Any],
+    start_byte: int,
+    end_byte: int,
+) -> bool:
+    return any(start_byte < node.start_byte < end_byte for node in compensation_calls)
 
 
 def _mentions_identifier(text: str, identifier: str) -> bool:
@@ -1030,6 +1248,40 @@ def _failure_branch_reaches(
     return False
 
 
+def _node_reaches(cfg: Any, source_start_byte: int, target_start_byte: int) -> bool:
+    source_blocks = _blocks_containing_byte(cfg, source_start_byte)
+    target_blocks = _blocks_containing_byte(cfg, target_start_byte)
+    if not source_blocks or not target_blocks:
+        return True
+    target_set = set(target_blocks)
+    pending = list(source_blocks)
+    seen: set[int] = set()
+    while pending:
+        block_id = pending.pop()
+        if block_id in seen:
+            continue
+        if block_id in target_set:
+            return True
+        seen.add(block_id)
+        pending.extend(edge.target for edge in cfg.successors(block_id))
+    return False
+
+
+def _blocks_containing_byte(cfg: Any, start_byte: int) -> list[int]:
+    matches = []
+    for block in cfg.blocks.values():
+        if block.end_byte <= block.start_byte:
+            continue
+        if block.start_byte <= start_byte < block.end_byte:
+            matches.append((block.end_byte - block.start_byte, block.id))
+        elif block.condition_start_byte <= start_byte < block.condition_end_byte:
+            matches.append((block.condition_end_byte - block.condition_start_byte, block.id))
+    if not matches:
+        return []
+    smallest = min(width for width, _ in matches)
+    return [block_id for width, block_id in matches if width == smallest]
+
+
 def _failure_edge_kind(condition: str, symbol: str) -> str | None:
     compact = re.sub(r"\s+", "", condition)
     escaped = re.escape(symbol)
@@ -1038,8 +1290,9 @@ def _failure_edge_kind(condition: str, symbol: str) -> str | None:
     ):
         return "false"
     failure_forms = (
-        rf"\b{escaped}\b",
+        rf"^\(*{escaped}\)*$",
         rf"\b{escaped}!=0\b",
+        rf"\b{escaped}<=?-\d+\b",
         rf"\b{escaped}<0\b",
         rf"IS_ERR(?:_OR_NULL)?\({escaped}\)",
     )

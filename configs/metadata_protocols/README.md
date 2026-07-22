@@ -27,12 +27,24 @@ precedence. Unknown fields and enum values are rejected rather than ignored.
 `operation.discovery` is a conservative discovery-only context. It can require
 additional callees or fields, forbid known out-of-scope callees, and raise the
 minimum role coverage needed before a non-entry function is sent to semantic
-review. These anchors do not change protocol state propagation, legal exits, or
-exact-entry analysis.
+review. It can also declare broad semantic patterns:
+`failure_return_mismatch`, `mutation_failure_cleanup`,
+`retry_return_provenance`, and `conditional_accounting`. These anchors and
+patterns do not change protocol state propagation, legal exits, or exact-entry
+analysis.
 
 `example_replay_recovery_v1.json` is a schema fixture, not an active analysis
-configuration. M0 does not load metadata protocols from `src.main` and does not
-change existing SE-EOD candidate output.
+configuration. The legacy `src.main` pipeline has been removed; active metadata
+protocols are consumed only by the dedicated MOCC-SE analyzer and discovery
+entry points.
+
+Protocol files are filesystem-specific instances of the parameterized MOCC-SE
+extended state machine. They define object roles, phases, return contracts,
+effect scope/owner, compensation or handler transfer, accounting constraints,
+and legal exits. Generic propagation and legal-exit verification remain shared;
+configuration describes legal behavior instead of encoding a known function as
+a bug. This is a method-level formalization, not a claim that an independent
+state-machine runtime has been implemented.
 
 `protocol_a_replay_recovery_v1.json` is the active Protocol A MVP. Run it with
 the dedicated entry point so the historical SE-EOD CSV/JSONL schemas remain
@@ -47,9 +59,11 @@ python -m src.metadata_protocol_analyzer `
   --out outputs/mocc/protocol-a-ext4-v6.8.json
 ```
 
-The development function names occur only in `operation.entry_functions` to
-select relevant functions. Candidate semantics come from callee roles, return
-contracts, CFG branches, handler ownership, and legal exits.
+The development function names in `operation.entry_functions` are regression
+seeds. Candidate semantics come from callee roles, return contracts, CFG
+branches, handler ownership, and legal exits. M11 broad discovery may use
+operation semantic patterns to send non-entry functions to `DISCOVERY_REVIEW`,
+but those review items are not protocol-proven candidates.
 
 `protocol_b_device_topology_v1.json` is the active Protocol B MVP. It models
 relocation-root attachment, seed/sprout topology, active device pointers,
