@@ -1,0 +1,1343 @@
+{
+  "schema_version": 1,
+  "result_semantics": "candidate_queue_not_bug_claims",
+  "workspace": "E:/yanjiusheng/\u9605\u8bfb\u8bba\u6587/file_system/SE_EOD",
+  "source_root": "E:/yanjiusheng/\u9605\u8bfb\u8bba\u6587/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs",
+  "source_version": "7.1",
+  "freeze_id": "mocc.freeze.protocols_rules.2026_07_22",
+  "manifest_id": "mocc.validation.unseen_batch_1",
+  "validation_gate": {
+    "manifest_validated": true,
+    "labels_supplied": 0,
+    "adjudication_supplied": false,
+    "require_complete_labels": false,
+    "rule_maturity": "development",
+    "bug_claims_allowed": false
+  },
+  "summary": {
+    "scanned_files": 334,
+    "scanned_functions": 10302,
+    "applicable_functions": 0,
+    "protocol_candidate_occurrences": 0,
+    "discovery_review_queue_entries": 8,
+    "analysis_unknown": 0,
+    "discovery_unknown": 0,
+    "excluded_functions": 19,
+    "skip_reasons": {
+      "excluded_function": 19,
+      "filesystem_not_applicable": 21555,
+      "function_not_applicable": 10275,
+      "no_semantic_operation_match": 19569
+    }
+  },
+  "protocol_candidates": [],
+  "review_queue": [
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+      "operation_id": "",
+      "source_file": "btrfs/inode-item.c",
+      "source_version": "7.1",
+      "filesystem": "btrfs",
+      "function": "btrfs_del_inode_ref",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 212,
+          "detail": "btrfs_del_item(trans, root, path)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 188,
+          "detail": "return -ENOMEM;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 187,
+          "detail": "(!path)",
+          "result_symbol": "path"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 186,
+          "detail": "btrfs_alloc_path() assigned to path"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 184,
+          "detail": "key.offset = ref_objectid"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+      "family_fingerprint": "mocc_family_8d01c5f6cc8fc796e0a9",
+      "occurrence_fingerprint": "mocc_occurrence_7f06a68cd83c27414a68"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+      "operation_id": "",
+      "source_file": "btrfs/file.c",
+      "source_version": "7.1",
+      "filesystem": "btrfs",
+      "function": "btrfs_drop_extents",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 179,
+          "detail": "btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 174,
+          "detail": "goto out;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 172,
+          "detail": "(!path)",
+          "result_symbol": "path"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 171,
+          "detail": "btrfs_alloc_path() assigned to path"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 165,
+          "detail": "args->extent_inserted = false"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+      "family_fingerprint": "mocc_family_63fcb2ce1fd540a15781",
+      "occurrence_fingerprint": "mocc_occurrence_cd6d01f9acaf54e0da10"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+      "operation_id": "",
+      "source_file": "btrfs/inode-item.c",
+      "source_version": "7.1",
+      "filesystem": "btrfs",
+      "function": "btrfs_insert_inode_ref",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 353,
+          "detail": "btrfs_free_path(path)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 313,
+          "detail": "return -ENOMEM;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 312,
+          "detail": "(!path)",
+          "result_symbol": "path"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 311,
+          "detail": "btrfs_alloc_path() assigned to path"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 309,
+          "detail": "key.offset = ref_objectid"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+      "family_fingerprint": "mocc_family_111b23f8da66ec944bf8",
+      "occurrence_fingerprint": "mocc_occurrence_1784fbdf1cc5f3068ff3"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+      "operation_id": "",
+      "source_file": "btrfs/block-group.c",
+      "source_version": "7.1",
+      "filesystem": "btrfs",
+      "function": "btrfs_read_block_groups",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 2694,
+          "detail": "btrfs_release_path(path)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 2658,
+          "detail": "return -ENOMEM;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 2657,
+          "detail": "(!path)",
+          "result_symbol": "path"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 2656,
+          "detail": "btrfs_alloc_path() assigned to path"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 2655,
+          "detail": "key.offset = 0"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+      "family_fingerprint": "mocc_family_0a5e6aeff46fc81780a0",
+      "occurrence_fingerprint": "mocc_occurrence_512afd994a02a6e4daff"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "",
+      "source_file": "ext4/extents.c",
+      "source_version": "7.1",
+      "filesystem": "ext4",
+      "function": "ext4_ext_clear_bb",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "failure_return_mismatch",
+      "semantic_signals": [
+        "compensation",
+        "failure_guard",
+        "failure_to_success_exit",
+        "fallible_call",
+        "success_exit"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 6275,
+          "detail": "ext4_free_ext_path(path)"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 6253,
+          "detail": "(ret < 0)",
+          "result_symbol": "ret"
+        },
+        {
+          "kind": "failure_to_success_exit",
+          "line": 6253,
+          "detail": "failure branch for ret reaches return 0;"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 6252,
+          "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+        },
+        {
+          "kind": "success_exit",
+          "line": 6276,
+          "detail": "return 0;"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+      "family_fingerprint": "mocc_family_878c8140d286e962e139",
+      "occurrence_fingerprint": "mocc_occurrence_685b9ccb333d70dc098b"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_a.replay_recovery",
+      "operation_id": "",
+      "source_file": "ext4/extents.c",
+      "source_version": "7.1",
+      "filesystem": "ext4",
+      "function": "ext4_ext_replay_set_iblocks",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "failure_return_mismatch",
+      "semantic_signals": [
+        "compensation",
+        "failure_guard",
+        "failure_to_success_exit",
+        "fallible_call",
+        "success_exit"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 6222,
+          "detail": "ext4_free_ext_path(path)"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 6165,
+          "detail": "(ret < 0)",
+          "result_symbol": "ret"
+        },
+        {
+          "kind": "failure_to_success_exit",
+          "line": 6165,
+          "detail": "failure branch for ret reaches return 0;"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 6164,
+          "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+        },
+        {
+          "kind": "success_exit",
+          "line": 6224,
+          "detail": "return 0;"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+      "family_fingerprint": "mocc_family_2cd198a6dcf5df9ec459",
+      "occurrence_fingerprint": "mocc_occurrence_9f2246437df4f9b06eb0"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+      "operation_id": "",
+      "source_file": "btrfs/tree-log.c",
+      "source_version": "7.1",
+      "filesystem": "btrfs",
+      "function": "inode_logged",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 3818,
+          "detail": "btrfs_release_path(path)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 3812,
+          "detail": "return -ENOMEM;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 3811,
+          "detail": "(!path)",
+          "result_symbol": "path"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 3810,
+          "detail": "btrfs_alloc_path() assigned to path"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 3807,
+          "detail": "key.offset = 0"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+      "family_fingerprint": "mocc_family_7baf38b340250d6f69ba",
+      "occurrence_fingerprint": "mocc_occurrence_1e170728375d6675b12c"
+    },
+    {
+      "classification": "DISCOVERY_REVIEW",
+      "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+      "operation_id": "",
+      "source_file": "xfs/xfs_log_recover.c",
+      "source_version": "7.1",
+      "filesystem": "xfs",
+      "function": "xlog_finish_defer_ops",
+      "applicability_match_kind": "broad_semantic",
+      "semantic_pattern": "mutation_failure_cleanup",
+      "semantic_signals": [
+        "compensation",
+        "failure_control",
+        "failure_guard",
+        "fallible_call",
+        "state_mutation"
+      ],
+      "review_reason": "broad_semantic_pattern_requires_protocol_review",
+      "representative_witness": [
+        {
+          "kind": "compensation",
+          "line": 2545,
+          "detail": "list_del_init(&dfc->dfc_list)"
+        },
+        {
+          "kind": "failure_control",
+          "line": 2538,
+          "detail": "return error;"
+        },
+        {
+          "kind": "failure_guard",
+          "line": 2536,
+          "detail": "(error)",
+          "result_symbol": "error"
+        },
+        {
+          "kind": "fallible_call",
+          "line": 2534,
+          "detail": "xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,\n\t\t\t\tdfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error"
+        },
+        {
+          "kind": "state_mutation",
+          "line": 2532,
+          "detail": "resv.tr_logflags = XFS_TRANS_PERM_LOG_RES"
+        }
+      ],
+      "root_cause_fingerprint": "mocc_root_cause_099f3f7982bfbf77140f",
+      "family_fingerprint": "mocc_family_6bf22dfccd4f55769536",
+      "occurrence_fingerprint": "mocc_occurrence_ae1860e1f975ce853bcf"
+    }
+  ],
+  "unknown_queue": [],
+  "discovery_report": {
+    "schema_version": 3,
+    "source_root": "E:/yanjiusheng/\u9605\u8bfb\u8bba\u6587/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs",
+    "source_version": "7.1",
+    "protocols": [
+      {
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "protocol_version": "1.0.0"
+      },
+      {
+        "protocol_id": "mocc.protocol_c.activation_accounting",
+        "protocol_version": "1.0.0"
+      },
+      {
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "protocol_version": "1.1.0"
+      },
+      {
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "protocol_version": "1.1.0"
+      }
+    ],
+    "summary": {
+      "scanned_files": 334,
+      "scanned_functions": 10302,
+      "applicable_functions": 0,
+      "protocol_candidate_occurrences": 0,
+      "protocol_candidate_families": 0,
+      "discovery_review_occurrences": 8,
+      "discovery_review_families": 8,
+      "fresh_review_functions": 8,
+      "fresh_review_root_causes": 3,
+      "fresh_review_queue_entries": 8,
+      "excluded_functions": 19,
+      "analysis_unknown": 0,
+      "discovery_unknown": 0,
+      "skip_reasons": {
+        "excluded_function": 19,
+        "filesystem_not_applicable": 21555,
+        "function_not_applicable": 10275,
+        "no_semantic_operation_match": 19569
+      }
+    },
+    "analyses": [],
+    "broad_discovery_review": [
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/block-group.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_read_block_groups",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 2694,
+            "detail": "btrfs_release_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 2658,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 2657,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 2656,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 2655,
+            "detail": "key.offset = 0"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_0a5e6aeff46fc81780a0",
+        "occurrence_fingerprint": "mocc_occurrence_512afd994a02a6e4daff"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/file.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_drop_extents",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 179,
+            "detail": "btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 174,
+            "detail": "goto out;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 172,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 171,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 165,
+            "detail": "args->extent_inserted = false"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_63fcb2ce1fd540a15781",
+        "occurrence_fingerprint": "mocc_occurrence_cd6d01f9acaf54e0da10"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/inode-item.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_del_inode_ref",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 212,
+            "detail": "btrfs_del_item(trans, root, path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 188,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 187,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 186,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 184,
+            "detail": "key.offset = ref_objectid"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_8d01c5f6cc8fc796e0a9",
+        "occurrence_fingerprint": "mocc_occurrence_7f06a68cd83c27414a68"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/inode-item.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_insert_inode_ref",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 353,
+            "detail": "btrfs_free_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 313,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 312,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 311,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 309,
+            "detail": "key.offset = ref_objectid"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_111b23f8da66ec944bf8",
+        "occurrence_fingerprint": "mocc_occurrence_1784fbdf1cc5f3068ff3"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/tree-log.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "inode_logged",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 3818,
+            "detail": "btrfs_release_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 3812,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 3811,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 3810,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 3807,
+            "detail": "key.offset = 0"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_7baf38b340250d6f69ba",
+        "occurrence_fingerprint": "mocc_occurrence_1e170728375d6675b12c"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "",
+        "source_file": "ext4/extents.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_ext_clear_bb",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "failure_return_mismatch",
+        "semantic_signals": [
+          "compensation",
+          "failure_guard",
+          "failure_to_success_exit",
+          "fallible_call",
+          "success_exit"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 6275,
+            "detail": "ext4_free_ext_path(path)"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 6253,
+            "detail": "(ret < 0)",
+            "result_symbol": "ret"
+          },
+          {
+            "kind": "failure_to_success_exit",
+            "line": 6253,
+            "detail": "failure branch for ret reaches return 0;"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 6252,
+            "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+          },
+          {
+            "kind": "success_exit",
+            "line": 6276,
+            "detail": "return 0;"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+        "family_fingerprint": "mocc_family_878c8140d286e962e139",
+        "occurrence_fingerprint": "mocc_occurrence_685b9ccb333d70dc098b"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "",
+        "source_file": "ext4/extents.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_ext_replay_set_iblocks",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "failure_return_mismatch",
+        "semantic_signals": [
+          "compensation",
+          "failure_guard",
+          "failure_to_success_exit",
+          "fallible_call",
+          "success_exit"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 6222,
+            "detail": "ext4_free_ext_path(path)"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 6165,
+            "detail": "(ret < 0)",
+            "result_symbol": "ret"
+          },
+          {
+            "kind": "failure_to_success_exit",
+            "line": 6165,
+            "detail": "failure branch for ret reaches return 0;"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 6164,
+            "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+          },
+          {
+            "kind": "success_exit",
+            "line": 6224,
+            "detail": "return 0;"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+        "family_fingerprint": "mocc_family_2cd198a6dcf5df9ec459",
+        "occurrence_fingerprint": "mocc_occurrence_9f2246437df4f9b06eb0"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "",
+        "source_file": "xfs/xfs_log_recover.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xlog_finish_defer_ops",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 2545,
+            "detail": "list_del_init(&dfc->dfc_list)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 2538,
+            "detail": "return error;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 2536,
+            "detail": "(error)",
+            "result_symbol": "error"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 2534,
+            "detail": "xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,\n\t\t\t\tdfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 2532,
+            "detail": "resv.tr_logflags = XFS_TRANS_PERM_LOG_RES"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_099f3f7982bfbf77140f",
+        "family_fingerprint": "mocc_family_6bf22dfccd4f55769536",
+        "occurrence_fingerprint": "mocc_occurrence_ae1860e1f975ce853bcf"
+      }
+    ],
+    "quarantine": [],
+    "excluded_function_names": [
+      "__add_reloc_root",
+      "btrfs_get_parent",
+      "btrfs_init_new_device",
+      "btrfs_recover_relocation",
+      "ext4_begin_enable_verity",
+      "ext4_dx_add_entry",
+      "ext4_expand_extra_isize_ea",
+      "ext4_ext_shift_extents",
+      "ext4_fc_replay_add_range",
+      "ext4_fc_replay_del_range",
+      "ext4_fc_replay_inode",
+      "ext4_init_orphan_info",
+      "f2fs_rename",
+      "find_in_level",
+      "reserve_chunk_space",
+      "xfs_acl_set_mode",
+      "xfs_qm_quotacheck_dqadjust",
+      "xfs_rtcopy_summary",
+      "xfs_rtginode_ensure"
+    ],
+    "fresh_review_queue": [
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/inode-item.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_del_inode_ref",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 212,
+            "detail": "btrfs_del_item(trans, root, path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 188,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 187,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 186,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 184,
+            "detail": "key.offset = ref_objectid"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_8d01c5f6cc8fc796e0a9",
+        "occurrence_fingerprint": "mocc_occurrence_7f06a68cd83c27414a68"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/file.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_drop_extents",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 179,
+            "detail": "btrfs_drop_extent_map_range(inode, args->start, args->end - 1, false)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 174,
+            "detail": "goto out;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 172,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 171,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 165,
+            "detail": "args->extent_inserted = false"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_63fcb2ce1fd540a15781",
+        "occurrence_fingerprint": "mocc_occurrence_cd6d01f9acaf54e0da10"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/inode-item.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_insert_inode_ref",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 353,
+            "detail": "btrfs_free_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 313,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 312,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 311,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 309,
+            "detail": "key.offset = ref_objectid"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_111b23f8da66ec944bf8",
+        "occurrence_fingerprint": "mocc_occurrence_1784fbdf1cc5f3068ff3"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/block-group.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "btrfs_read_block_groups",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 2694,
+            "detail": "btrfs_release_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 2658,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 2657,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 2656,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 2655,
+            "detail": "key.offset = 0"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_0a5e6aeff46fc81780a0",
+        "occurrence_fingerprint": "mocc_occurrence_512afd994a02a6e4daff"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "",
+        "source_file": "ext4/extents.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_ext_clear_bb",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "failure_return_mismatch",
+        "semantic_signals": [
+          "compensation",
+          "failure_guard",
+          "failure_to_success_exit",
+          "fallible_call",
+          "success_exit"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 6275,
+            "detail": "ext4_free_ext_path(path)"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 6253,
+            "detail": "(ret < 0)",
+            "result_symbol": "ret"
+          },
+          {
+            "kind": "failure_to_success_exit",
+            "line": 6253,
+            "detail": "failure branch for ret reaches return 0;"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 6252,
+            "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+          },
+          {
+            "kind": "success_exit",
+            "line": 6276,
+            "detail": "return 0;"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+        "family_fingerprint": "mocc_family_878c8140d286e962e139",
+        "occurrence_fingerprint": "mocc_occurrence_685b9ccb333d70dc098b"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_a.replay_recovery",
+        "operation_id": "",
+        "source_file": "ext4/extents.c",
+        "source_version": "7.1",
+        "filesystem": "ext4",
+        "function": "ext4_ext_replay_set_iblocks",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "failure_return_mismatch",
+        "semantic_signals": [
+          "compensation",
+          "failure_guard",
+          "failure_to_success_exit",
+          "fallible_call",
+          "success_exit"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 6222,
+            "detail": "ext4_free_ext_path(path)"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 6165,
+            "detail": "(ret < 0)",
+            "result_symbol": "ret"
+          },
+          {
+            "kind": "failure_to_success_exit",
+            "line": 6165,
+            "detail": "failure branch for ret reaches return 0;"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 6164,
+            "detail": "ext4_map_blocks(NULL, inode, &map, 0) assigned to ret"
+          },
+          {
+            "kind": "success_exit",
+            "line": 6224,
+            "detail": "return 0;"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_058755d2e3210c9a6b71",
+        "family_fingerprint": "mocc_family_2cd198a6dcf5df9ec459",
+        "occurrence_fingerprint": "mocc_occurrence_9f2246437df4f9b06eb0"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_e.allocation_lifecycle",
+        "operation_id": "",
+        "source_file": "btrfs/tree-log.c",
+        "source_version": "7.1",
+        "filesystem": "btrfs",
+        "function": "inode_logged",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 3818,
+            "detail": "btrfs_release_path(path)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 3812,
+            "detail": "return -ENOMEM;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 3811,
+            "detail": "(!path)",
+            "result_symbol": "path"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 3810,
+            "detail": "btrfs_alloc_path() assigned to path"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 3807,
+            "detail": "key.offset = 0"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_6d3e1f0e572ff43e14db",
+        "family_fingerprint": "mocc_family_7baf38b340250d6f69ba",
+        "occurrence_fingerprint": "mocc_occurrence_1e170728375d6675b12c"
+      },
+      {
+        "classification": "DISCOVERY_REVIEW",
+        "protocol_id": "mocc.protocol_d.transaction_lifecycle",
+        "operation_id": "",
+        "source_file": "xfs/xfs_log_recover.c",
+        "source_version": "7.1",
+        "filesystem": "xfs",
+        "function": "xlog_finish_defer_ops",
+        "applicability_match_kind": "broad_semantic",
+        "semantic_pattern": "mutation_failure_cleanup",
+        "semantic_signals": [
+          "compensation",
+          "failure_control",
+          "failure_guard",
+          "fallible_call",
+          "state_mutation"
+        ],
+        "review_reason": "broad_semantic_pattern_requires_protocol_review",
+        "representative_witness": [
+          {
+            "kind": "compensation",
+            "line": 2545,
+            "detail": "list_del_init(&dfc->dfc_list)"
+          },
+          {
+            "kind": "failure_control",
+            "line": 2538,
+            "detail": "return error;"
+          },
+          {
+            "kind": "failure_guard",
+            "line": 2536,
+            "detail": "(error)",
+            "result_symbol": "error"
+          },
+          {
+            "kind": "fallible_call",
+            "line": 2534,
+            "detail": "xfs_trans_alloc(mp, &resv, dfc->dfc_blkres,\n\t\t\t\tdfc->dfc_rtxres, XFS_TRANS_RESERVE, &tp) assigned to error"
+          },
+          {
+            "kind": "state_mutation",
+            "line": 2532,
+            "detail": "resv.tr_logflags = XFS_TRANS_PERM_LOG_RES"
+          }
+        ],
+        "root_cause_fingerprint": "mocc_root_cause_099f3f7982bfbf77140f",
+        "family_fingerprint": "mocc_family_6bf22dfccd4f55769536",
+        "occurrence_fingerprint": "mocc_occurrence_ae1860e1f975ce853bcf"
+      }
+    ],
+    "candidate_families": [],
+    "discovery_review_families": [
+      {
+        "family_fingerprint": "mocc_family_0a5e6aeff46fc81780a0",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_111b23f8da66ec944bf8",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_2cd198a6dcf5df9ec459",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_63fcb2ce1fd540a15781",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_6bf22dfccd4f55769536",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_7baf38b340250d6f69ba",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_878c8140d286e962e139",
+        "occurrences": 1
+      },
+      {
+        "family_fingerprint": "mocc_family_8d01c5f6cc8fc796e0a9",
+        "occurrences": 1
+      }
+    ]
+  }
+}

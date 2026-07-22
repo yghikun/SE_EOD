@@ -91,7 +91,7 @@ ANALYSIS_UNKNOWN
 - evidence-backed rule registry、maturity 和 active operation coverage audit；
 - representative trace 和 CFG snapshot；
 - source review、version matrix、repair evidence 和 confirmed linkage；
-- `230 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、reviewer/adjudication 和 batch scan 负例。
+- `238 passed` 测试基线，其中包括 control transition、join/unknown、有界摘要、分层协议组合、rule registry、external evidence verifier、validation freeze/manifest、reviewer/adjudication、batch scan、batch triage 和 ext4 replay bookkeeping source-fact audit 负例。
 
 旧 SE-EOD `src.main`、resource/dataflow、candidate、ranking/LLM 和实验辅助代码已删除；
 保留的旧输出只是历史数据，不是当前可执行能力。
@@ -109,6 +109,7 @@ witness 和 fresh discovery。仍缺少：
 - 独立冻结 benchmark 的双 reviewer 真实标注、adjudication、指标计算和规模化采集；
 - Protocol A/B/C/D/E 已有第一批 blind/unlabeled freeze manifest 与 reviewer/adjudication 模板，但尚无 protocol-versioned evaluation result。
 - freeze-bound batch scanner 已可生成全量 candidate/review/unknown 队列，但输出语义仍是 candidate queue，不是 bug 结论。
+- v7.1 batch triage 已完成初筛：8 条 review 中 6 条 likely false positive、2 条 needs external semantics、0 条 needs protocol instance、0 条 manual bug-review candidate；两个 ext4 replay bookkeeping helper 已生成源码事实审计，但缺少独立 replay bookkeeping 义务前不能升级为协议或 bug。
 
 ### 3.3 明确非目标
 
@@ -591,6 +592,7 @@ Documentation updated:
 - [ ] baseline、消融、指标和统计可重算；
 - [ ] unknown coverage、人工成本和协议成本被报告；
 - [x] freeze-bound batch scanner 能输出 candidate/review/unknown 队列；
+- [x] batch scan review queue 可生成初始源码 triage ledger；
 - [ ] 至少跨两个文件系统和两个 Linux 版本。
 
 ### Finding

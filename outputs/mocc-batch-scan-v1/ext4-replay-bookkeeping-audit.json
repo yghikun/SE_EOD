@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "scope": "ext4 fast-commit replay bookkeeping source-fact audit",
+  "result_semantics": "source_facts_not_bug_claims",
+  "bug_claims_allowed": false,
+  "source_root": "E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v7.1-fs/fs",
+  "source_version": "7.1",
+  "summary": {
+    "audited_helpers": 2,
+    "helpers_with_public_int_return": 2,
+    "helpers_with_ignored_fast_commit_calls": 2,
+    "helpers_swallowing_ext4_map_blocks_errors": 2,
+    "helpers_with_metadata_bookkeeping_after_failure": 1,
+    "helpers_with_partial_metadata_mutation_before_failure": 1,
+    "bug_claims_allowed": 0
+  },
+  "helpers": [
+    {
+      "function": "ext4_ext_replay_set_iblocks",
+      "definition_file": "fs/ext4/extents.c",
+      "definition_line": 6140,
+      "declaration_return_type": "int",
+      "definition_return_type": "int",
+      "leading_comment": "Count number of blocks used by this inode and update i_blocks",
+      "fact_summary": {
+        "public_int_return": true,
+        "definition_int_return": true,
+        "ignored_fast_commit_call": true,
+        "swallowed_ext4_map_blocks_error": true,
+        "metadata_bookkeeping_after_failure": true,
+        "partial_metadata_mutation_before_failure": false
+      },
+      "facts": [
+        {
+          "kind": "definition_return_contract",
+          "file": "fs/ext4/extents.c",
+          "line": 6140,
+          "detail": "definition returns int"
+        },
+        {
+          "kind": "public_declaration_return_contract",
+          "file": "fs/ext4/ext4.h",
+          "line": 3835,
+          "detail": "extern declaration returns int"
+        },
+        {
+          "kind": "ignored_fast_commit_call",
+          "file": "fs/ext4/fast_commit.c",
+          "line": 1600,
+          "detail": "ext4_ext_replay_set_iblocks(inode);"
+        },
+        {
+          "kind": "swallowed_ext4_map_blocks_error",
+          "file": "fs/ext4/extents.c",
+          "line": 6164,
+          "detail": "ret = ext4_map_blocks(NULL, inode, &map, 0); then break; function has final return 0"
+        },
+        {
+          "kind": "metadata_bookkeeping_after_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6219,
+          "detail": "inode->i_blocks = numblks << (inode->i_sb->s_blocksize_bits - 9);"
+        },
+        {
+          "kind": "metadata_bookkeeping_after_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6220,
+          "detail": "ext4_mark_inode_dirty(NULL, inode);"
+        }
+      ],
+      "conclusion": "needs_external_semantics",
+      "recommended_action": "Keep this as an audited source-review item. Promote it only after an independent replay bookkeeping obligation is frozen.",
+      "bug_claim_allowed": false
+    },
+    {
+      "function": "ext4_ext_clear_bb",
+      "definition_file": "fs/ext4/extents.c",
+      "definition_line": 6227,
+      "declaration_return_type": "int",
+      "definition_return_type": "int",
+      "leading_comment": "",
+      "fact_summary": {
+        "public_int_return": true,
+        "definition_int_return": true,
+        "ignored_fast_commit_call": true,
+        "swallowed_ext4_map_blocks_error": true,
+        "metadata_bookkeeping_after_failure": false,
+        "partial_metadata_mutation_before_failure": true
+      },
+      "facts": [
+        {
+          "kind": "definition_return_contract",
+          "file": "fs/ext4/extents.c",
+          "line": 6227,
+          "detail": "definition returns int"
+        },
+        {
+          "kind": "public_declaration_return_contract",
+          "file": "fs/ext4/ext4.h",
+          "line": 3838,
+          "detail": "extern declaration returns int"
+        },
+        {
+          "kind": "ignored_fast_commit_call",
+          "file": "fs/ext4/fast_commit.c",
+          "line": 1538,
+          "detail": "ext4_ext_clear_bb(inode);"
+        },
+        {
+          "kind": "swallowed_ext4_map_blocks_error",
+          "file": "fs/ext4/extents.c",
+          "line": 6252,
+          "detail": "ret = ext4_map_blocks(NULL, inode, &map, 0); then break; function has final return 0"
+        },
+        {
+          "kind": "partial_metadata_mutation_before_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6259,
+          "detail": "ext4_mb_mark_bb(inode->i_sb, path[j].p_block, 1, false);"
+        },
+        {
+          "kind": "partial_metadata_mutation_before_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6261,
+          "detail": "ext4_fc_record_regions(inode->i_sb, inode->i_ino, 0, path[j].p_block, 1, 1);"
+        },
+        {
+          "kind": "partial_metadata_mutation_before_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6267,
+          "detail": "ext4_mb_mark_bb(inode->i_sb, map.m_pblk, map.m_len, false);"
+        },
+        {
+          "kind": "partial_metadata_mutation_before_failure",
+          "file": "fs/ext4/extents.c",
+          "line": 6268,
+          "detail": "ext4_fc_record_regions(inode->i_sb, inode->i_ino, map.m_lblk, map.m_pblk, map.m_len, 1);"
+        }
+      ],
+      "conclusion": "needs_external_semantics",
+      "recommended_action": "Keep this as an audited source-review item. Promote it only after an independent replay bookkeeping obligation is frozen.",
+      "bug_claim_allowed": false
+    }
+  ]
+}

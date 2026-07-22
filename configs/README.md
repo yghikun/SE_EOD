@@ -22,6 +22,10 @@ python -m src.metadata_batch_scan `
   --source-root linux-sources/linux-v7.1-fs/fs `
   --source-version 7.1 `
   --max-files 1
+python -m src.metadata_batch_triage `
+  --batch-report outputs/mocc-batch-scan-v1/linux-v7.1-fs.json `
+  --out-json outputs/mocc-batch-scan-v1/linux-v7.1-fs-triage.json `
+  --out-md outputs/mocc-batch-scan-v1/linux-v7.1-fs-triage.md
 ```
 
 `configs/metadata_protocols/` contains the configuration consumed by the

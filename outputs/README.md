@@ -11,12 +11,18 @@ mocc-protocol-a-v1/
 mocc-protocol-b-v1/
 mocc-protocol-c-v1/
 mocc-discovery-v2/
+mocc-batch-scan-v1/
 mocc-finding-review-v1/
 ```
 
 - `mocc-protocol-*-v1/` contains versioned Protocol A/B/C development witnesses.
 - `mocc-discovery-v2/` contains the M11 fresh review report, source triage and
-  current ext4 helper validation/patch proposal.
+  historical ext4 helper fault-model development evidence.
+- `mocc-batch-scan-v1/` contains freeze-bound full-source candidate queues and
+  initial source triage ledgers. It also contains the ext4 replay bookkeeping
+  source-fact audit for the two v7.1 `needs_external_semantics` hits. These
+  reports explicitly use `candidate_queue_not_bug_claims` or
+  `source_facts_not_bug_claims` semantics.
 - `mocc-finding-review-v1/` contains the M8-M10 development review, version
   matrix, repair evidence, bug-hunt report and confirmed-bug linkage.
 - `confirmed_bugs.md` records manually/history/dynamically supported findings
