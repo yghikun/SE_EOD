@@ -1,116 +1,611 @@
-# MetaWindow Project Handoff
+# Metadata Residual Analysis Handoff
 
 Updated: 2026-07-23
 
-The project has been reset from the previous MOCC-SE protocol/EFSM direction to
-MetaWindow: a lightweight static analysis for unprotected file-system metadata
-failure windows.
-
-## Current Claim
-
-MetaWindow is not a general error-path cleanup checker.  It reports only when a
-file-system metadata effect becomes exposed before a fallible operation and an
-error exit reaches the function boundary without closing, protecting, or
-conservatively marking that effect unknown.
-
-The method deliberately avoids:
+This document is the implementation handoff for the reset project.  The active
+method is:
 
 ```text
-complete filesystem protocol EFSMs
-multi-protocol rule registries
-generic owner/handler modeling
-large accounting-obligation systems
-full crash-consistency proofs
-ordinary memory, buffer, folio, path, or lock cleanup bugs
+Failure-Local Metadata Residual Analysis
 ```
 
-## Main Abstractions
+Working Chinese title in discussion: failure-point-centered metadata residual
+analysis.
+
+MetaWindow is only the motivating intuition.  MDR is only an optional evidence
+layer.  The implementation must center on residual computation around each
+failure point.
+
+## 1. Research Claim
+
+For a failure point `f`, compute:
 
 ```text
-Metadata effect
-  <Root, Key, Plane, Delta, Site>
+E_f = metadata effects reaching f
+C_f = cancellation or compensation effects on the error path
+T_f = effects explicitly protected or transferred to transaction, journal,
+      orphan, recovery, or deferred machinery
 
-Effect state
-  EXPOSED | PROTECTED | CLOSED | UNKNOWN
-
-Failure window
-  an EXPOSED metadata effect plus a later fallible edge that can reach an
-  error exit before the effect is CLOSED or PROTECTED
+R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-`PROTECTED` must be explicit: journal, transaction, orphan, recovery, deferred
-cleanup, or another visible mechanism has taken responsibility for the metadata
-effect.  If the transfer cannot be proven, the state is `UNKNOWN`, not legal.
-
-## Active Pipeline
+Report only when:
 
 ```text
-Linux fs source
-  -> frontend-neutral FunctionIR
-  -> function-local CFG
-  -> metadata scope gate
-  -> metadata mutation/effect extraction
-  -> failure window construction
-  -> protection and closure tracking
-  -> error-exit verification
-  -> optional MDR-style sibling evidence
+R_f is non-empty
+and R_f is STRUCTURAL, ACCOUNTING, or RECOVERY metadata
+and R_f reaches an error exit
+and the result is not UNKNOWN
 ```
 
-MDR is now only an evidence layer.  It may provide a repair hint when another
-nearby path closes a similar effect, but MetaWindow does not depend on finding a
-comparable sibling path.
-
-## Files to Care About
+The novelty target is not a four-state typestate model.  The intended technical
+claims are:
 
 ```text
-README.md
-PAPER_ROADMAP.md
-PROJECT_HANDOFF.md
-docs/METAWINDOW_ARCHITECTURE.md
-configs/metadata_scope/metadata_scope_v1.json
-outputs/confirmed_bugs.md
+automatic metadata effect extraction
+identity-aware metadata effect cancellation
+failure-anchored bidirectional slicing
+explicit protection/transfer recognition
+error-exit residual verification
+```
+
+## 2. Current Repository State
+
+Retained modules:
+
+```text
 src/frontend/
 src/cfg.py
 src/parser.py
 src/function_extractor.py
 src/metadata_scope.py
-src/metawindow.py
+src/metadata_residual.py
+configs/metadata_scope/metadata_scope_v1.json
+outputs/confirmed_bugs.md
+outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md
+docs/METADATA_RESIDUAL_ARCHITECTURE.md
 ```
 
-The Linux source trees under `linux-sources/` are retained as local inputs.
-They are not method code.
-
-## Evidence Boundary
-
-Use `outputs/confirmed_bugs.md` as the curated evidence ledger.  Current mapping:
+Removed direction:
 
 ```text
-MetaWindow core:
-  #7, #16, #17, #18, maybe #12
-
-Outcome-window extension:
-  #1, #2, #5, #8, #13, maybe #4 and #15
-
-Out of scope:
-  #3, #6, #9, #10, #11, #14
+MOCC-SE protocol families
+filesystem bindings
+operation instances
+rule registry
+validation manifests
+batch discovery/review/ranking
+one-off XFS/ext4 audit scripts
+large historical MOCC outputs
 ```
 
-Do not turn historical resource-lifetime bugs into MetaWindow evidence unless an
-explicit metadata effect, protection responsibility, and error-exit consequence
-can be stated.
+Current verification:
 
-## Next Implementation Steps
+```text
+python -m pytest -q -p no:cacheprovider
+27 passed
+```
 
-1. Implement fallible-edge detection over `FunctionIR` and CFG.
-2. Implement raw metadata effect extraction independent of MOCC-SE protocols.
-3. Map effects through the metadata scope gate into
-   `<Root, Key, Plane, Delta, Site>`.
-4. Propagate `EXPOSED/PROTECTED/CLOSED/UNKNOWN` states path-sensitively.
-5. Report `UNCLOSED_METADATA_FAILURE_WINDOW` only at error exits.
-6. Add optional MDR evidence: nearby restoration fragment and patch hint.
+## 3. Scope Contract
 
-## Non-Claims
+The metadata scope gate exists to prevent the project from becoming a general
+cleanup checker.
 
-The current scaffold does not yet prove precision, recall, or broad
-generalization across file systems.  It does not claim soundness or completeness
-for Linux C, and it does not automatically produce confirmed bugs.
+In scope:
+
+```text
+inode and private inode fields
+extent, directory, namespace, orphan metadata
+bitmap, free-space, block group, chunk, device topology
+quota, dquot, reservation, refcount metadata
+journal, transaction, replay, recovery, delayed metadata work
+persistent or recovery-visible counters and flags
+```
+
+Out of scope:
+
+```text
+ordinary kmalloc memory
+temporary buffer_head or folio references
+path/name buffers
+locks
+logging
+pure local variables
+generic helper temporaries
+```
+
+Boundary rule:
+
+> A supporting object is in scope only when its lifetime carries file-system
+> metadata completion semantics.
+
+If object identity, helper semantics, async handoff, or transaction ownership
+cannot be proven, mark `UNKNOWN`.  Do not guess legal and do not guess bug.
+
+## 4. Target Architecture
+
+```text
+Linux FS source
+  -> FunctionIR
+  -> CFG
+  -> failure point discovery
+  -> metadata effect extraction
+  -> callee summary generation/application
+  -> backward slice for E_f
+  -> forward error-path slice for C_f and T_f
+  -> identity-aware cancellation
+  -> residual normalization
+  -> error-exit verification
+  -> optional MDR evidence
+  -> witness report
+```
+
+Proposed new modules:
+
+```text
+src/failure_points.py
+  Detect fallible calls, error checks, and error exits.
+
+src/effect_extractor.py
+  Extract raw metadata effects from assignments, updates, list/tree/bit/counter
+  operations, and known structural idioms.
+
+src/function_summary.py
+  Build and apply lightweight callee summaries.
+
+src/residual_slicer.py
+  Compute E_f, C_f, and T_f with failure-anchored backward/forward slicing.
+
+src/cancellation.py
+  Identity-aware inverse-effect matching and normalization.
+
+src/residual_analyzer.py
+  Orchestrate per-function residual analysis and emit reports.
+
+src/residual_report.py
+  Serialize JSON/Markdown witness reports.
+```
+
+Keep modules small.  Do not recreate protocol packages or rule registries.
+
+## 5. Data Model
+
+The active model is in `src/metadata_residual.py`.
+
+Effect:
+
+```text
+MetadataEffect = <Root, Key, Plane, Delta, Value, Site>
+```
+
+Planes:
+
+```text
+STRUCTURAL
+ACCOUNTING
+RECOVERY
+```
+
+Residual states:
+
+```text
+EXPOSED
+PROTECTED
+CLOSED
+UNKNOWN
+```
+
+Report kinds:
+
+```text
+UNCLOSED_METADATA_RESIDUAL
+METADATA_RESIDUAL_UNKNOWN
+OUT_OF_SCOPE
+```
+
+The state labels are implementation support, not a protocol EFSM.
+
+## 6. Function Summary Strategy
+
+When metadata changes happen inside helper functions, identify helper effects
+through summaries.
+
+Summary sources:
+
+```text
+AUTO_LOCAL
+  Generated by scanning a visible helper body.
+
+AUTO_INTERPROCEDURAL
+  Generated from a shallow, bounded callee analysis.
+
+PINNED_CORE_SUMMARY
+  Small hand-written summaries for core mechanisms such as transaction cancel,
+  journal stop, dquot release, and reservation release.
+
+UNKNOWN
+  Used when helper behavior, object binding, or ownership cannot be proven.
+```
+
+Summary shape:
+
+```text
+FunctionSummary {
+  function_name
+  parameters
+  opens
+  cancels
+  protects
+  may_fail
+  unknown_escape
+  source
+}
+```
+
+Allowed pinned summaries must answer only:
+
+```text
+what metadata effect is opened?
+what metadata effect is cancelled?
+what metadata effect is explicitly protected/transferred?
+can the function fail?
+```
+
+They must not encode full filesystem operation protocols.
+
+## 7. Implementation Phases
+
+### M0: Stabilize Data Model and Scope
+
+Tasks:
+
+```text
+keep metadata_residual.py as the central model
+keep metadata_scope.py loading metadata_scope_v1.json
+add tests for scope decisions and report serialization
+```
+
+Acceptance:
+
+```text
+metadata scope loads
+out-of-scope confirmed bugs are rejected
+UNCLOSED_METADATA_RESIDUAL and UNKNOWN reports serialize deterministically
+```
+
+Status: mostly done.
+
+### M1: Failure Point Discovery
+
+Implement `src/failure_points.py`.
+
+Detect:
+
+```text
+ret = call(); if (ret) goto/return
+ret = call(); if (ret < 0) goto/return
+ptr = call(); if (IS_ERR(ptr)) goto/return
+if (call(...) < 0) goto/return
+return PTR_ERR(ptr)
+return ret / return error on an error edge
+return 0 on an error edge for outcome-extension mode
+```
+
+Output:
+
+```text
+FailurePoint {
+  call_site
+  check_site
+  error_edge
+  result_symbol
+  callee
+}
+```
+
+Acceptance tests:
+
+```text
+simple ret/if/goto fixture
+IS_ERR fixture
+direct return error fixture
+shared out label fixture
+non-error branch ignored
+```
+
+Status: done.
+
+### M2: Raw Metadata Effect Extraction
+
+Implement `src/effect_extractor.py`.
+
+Extract from visible code:
+
+```text
+field assignment and update expression
++= / -= / ++ / --
+set_bit / clear_bit
+list_add / list_del / list_del_init
+tree/rbtree/xarray insert/remove idioms
+reservation acquire/release naming patterns
+quota/dquot reference operations
+transaction/recovery attach/cancel patterns
+```
+
+Map to:
+
+```text
+MetadataEffect(root, key, plane, delta, value, site)
+```
+
+Acceptance tests:
+
+```text
+inode->i_blocks += nr -> ACCOUNTING INC
+inode->i_blocks -= nr -> ACCOUNTING DEC
+list_add(&dev->post_commit_list, &trans->dev_update_list) -> RECOVERY ADD
+list_del_init(&dev->post_commit_list) -> RECOVERY REMOVE
+fs_root->reloc_root = reloc_root -> RECOVERY SET
+fs_root->reloc_root = NULL -> RECOVERY CLEAR
+ordinary kfree(ptr) -> out of scope
+```
+
+### M3: Function Summary Generation
+
+Implement `src/function_summary.py`.
+
+First version:
+
+```text
+generate summaries only for visible static helpers in the same source file
+parameterize effects as arg0, arg1, ...
+record may_fail from return error patterns
+mark unknown_escape for indirect calls, function pointers, async queue handoff
+```
+
+Call-site instantiation:
+
+```text
+summary effect arg0.field, arg1 -> actual0.field, actual1
+```
+
+Acceptance tests:
+
+```text
+charge_inode(arg0,arg1) summary opens INC(arg0.i_blocks,arg1)
+uncharge_inode(arg0,arg1) summary cancels DEC(arg0.i_blocks,arg1)
+call charge_inode(inode,nr) instantiates INC(inode.i_blocks,nr)
+unresolved argument identity becomes UNKNOWN
+```
+
+### M4: Identity-Aware Cancellation
+
+Implement `src/cancellation.py`.
+
+Inverse pairs:
+
+```text
+INC <-> DEC
+SET <-> CLEAR
+ADD <-> REMOVE
+RESERVE <-> RELEASE
+PROTECT removes from residual only when ownership binding is explicit
+```
+
+Match only when:
+
+```text
+same or normalized Root
+same or compatible Key
+same Plane
+inverse Delta
+same or equivalent Value source
+```
+
+Acceptance tests:
+
+```text
+INC(inode.i_blocks,nr) cancels DEC(inode.i_blocks,nr)
+INC(inode.i_blocks,nr) does not cancel DEC(other.i_blocks,nr)
+INC(inode.i_blocks,nr) does not cancel DEC(inode.i_blocks,old_nr)
+ADD(list,device) cancels REMOVE(list,device)
+ADD(list,device) does not cancel REMOVE(other_list,device)
+```
+
+### M5: Failure-Anchored Slicing
+
+Implement `src/residual_slicer.py`.
+
+For each failure point:
+
+```text
+backward slice to collect E_f
+forward error-path slice to collect C_f and T_f
+stop or mark UNKNOWN at indirect calls, async handoff, unresolved helper, or
+unbounded recursion
+```
+
+First version can be intraprocedural plus same-file helper summaries.
+
+Acceptance tests:
+
+```text
+mutation -> failure -> return error leaves residual
+mutation -> failure -> compensation -> return error clears residual
+mutation -> failure -> transaction cancel with explicit binding protects residual
+unknown helper on error path yields METADATA_RESIDUAL_UNKNOWN
+```
+
+### M6: Residual Analyzer and Reports
+
+Implement `src/residual_analyzer.py` and `src/residual_report.py`.
+
+Output JSON and Markdown:
+
+```text
+function
+source version
+failure point
+error exit
+E_f
+C_f
+T_f
+R_f
+scope rationale
+unknown causes
+optional MDR evidence
+confidence
+```
+
+Report kinds:
+
+```text
+UNCLOSED_METADATA_RESIDUAL
+METADATA_RESIDUAL_UNKNOWN
+OUT_OF_SCOPE
+```
+
+Acceptance tests:
+
+```text
+deterministic JSON
+readable Markdown witness
+candidate only when R_f is non-empty and in scope
+UNKNOWN not counted as bug candidate
+```
+
+### M7: Optional MDR Evidence
+
+Add a supporting pass after residual detection.
+
+Look for:
+
+```text
+nearby path cancels same Root/Key/Plane effect
+cleanup label contains missing inverse action
+historical fix inserted matching restoration fragment
+```
+
+Use only as:
+
+```text
+supporting evidence
+patch hint
+review prioritization
+```
+
+Never require MDR evidence for detection.
+
+### M8: Evaluation Harness
+
+Implement a small driver after M1-M6 are stable.
+
+Inputs:
+
+```text
+single source file
+source root
+confirmed bug mapping
+```
+
+Outputs:
+
+```text
+reports/*.json
+reports/*.md
+summary counts
+```
+
+Evaluation metrics:
+
+```text
+curated in-scope findings expressible as residuals
+out-of-scope filtering accuracy
+EXPOSED / PROTECTED / CLOSED / UNKNOWN distribution
+candidate precision after manual review
+configuration size compared with MOCC-SE
+manual review time with and without MDR evidence
+```
+
+## 8. Confirmed Bug Mapping
+
+Core residual examples:
+
+```text
+#7   btrfs_recover_relocation
+#16  btrfs_init_new_device
+#17  btrfs_init_new_device
+#18  btrfs_init_new_device
+#12  xfs_qm_quotacheck_dqadjust, if framed as quota metadata ownership
+```
+
+Outcome-residual extension:
+
+```text
+#1, #2, #5, #8, #13
+#4 and #15 as return/outcome-value variants
+```
+
+Out of scope:
+
+```text
+#3, #6, #9, #10, #11, #14
+```
+
+Do not use out-of-scope resource leaks as residual-analysis recall.
+
+## 9. Engineering Rules
+
+```text
+Prefer source-derived summaries over hand-written summaries.
+Keep pinned summaries small and auditable.
+Do not add a rule registry.
+Do not add protocol families or operation instances.
+Do not claim confirmed bugs from static reports alone.
+Do not classify UNKNOWN as safe or as bug.
+Keep tests synthetic and minimal before running large source scans.
+```
+
+## 10. Suggested Build Order
+
+Recommended next coding order:
+
+```text
+1. failure_points.py
+2. effect_extractor.py
+3. cancellation.py
+4. function_summary.py
+5. residual_slicer.py
+6. residual_analyzer.py
+7. residual_report.py
+8. evaluation driver
+```
+
+After each module:
+
+```text
+add synthetic C fixture
+add unit tests
+run pytest
+update PROJECT_HANDOFF.md if the implemented behavior differs from this plan
+```
+
+## 11. Paper Boundary
+
+Do not claim:
+
+```text
+complete Linux C soundness
+complete crash consistency
+automatic bug confirmation
+coverage of ordinary resource leaks
+first-ever error-path checker
+full filesystem semantic validation
+```
+
+The target claim is:
+
+> A failure-local residual analysis can detect Linux file-system error exits
+> where source-visible metadata effects remain neither cancelled nor explicitly
+> protected, while avoiding the heavy protocol modeling of MOCC-SE and the
+> sibling-path dependency of MDR.

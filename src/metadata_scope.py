@@ -1,4 +1,4 @@
-"""Versioned scope contract for MetaWindow metadata analysis."""
+"""Versioned scope contract for metadata residual analysis."""
 
 from __future__ import annotations
 

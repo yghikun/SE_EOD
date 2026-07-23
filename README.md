@@ -1,125 +1,136 @@
-# MetaWindow
+# Failure-Local Metadata Residual Analysis
 
-MetaWindow is a lightweight static-analysis prototype for Linux file-system
-error paths.  The project now focuses on one research question:
-
-> Does an error exit leave an unprotected file-system metadata effect exposed?
-
-The method is intentionally narrower than the previous MOCC-SE direction.  It
-does not verify complete file-system protocol state machines, infer full
-metadata invariants, or check ordinary cleanup bugs.  It tracks metadata effects
-that become exposed before a fallible operation, then verifies whether the
-error path closes the effect, protects it through transaction/recovery
-machinery, or must conservatively report an unknown.
-
-## Core Idea
-
-MetaWindow detects unprotected metadata failure windows:
+This project is a lightweight static-analysis scaffold for Linux file-system
+error paths.  The active research method is:
 
 ```text
-metadata effect opens
-  -> later operation may fail
-  -> error path exits
-  -> effect is not closed, protected, or marked unknown
+Failure-Local Metadata Residual Analysis
 ```
 
-Each tracked effect has a lightweight state:
+Chinese name:
 
 ```text
-EXPOSED    metadata was changed and is not yet protected
-PROTECTED  transaction, journal, orphan, recovery, or deferred machinery owns it
-CLOSED     rollback, compensation, or normal completion closed it
-UNKNOWN    aliasing, async handoff, indirect calls, or helper semantics are unclear
+面向失败点的元数据残余分析
 ```
 
-MDR-style differential restoration is retained only as supporting evidence:
-when MetaWindow finds an exposed effect, the tool may look for a nearby path
-that closes a similar effect and use it as a patch hint.  MDR is not the main
-detection entry.
+MetaWindow remains the intuition: metadata mutations open a risk window before
+later software failures.  The paper method is stronger and more precise: for
+each failure point, compute which metadata effects were created, which were
+cancelled, which were explicitly transferred to transaction/recovery machinery,
+and which residual effects still reach an error exit.
 
-## Metadata Scope
+## Core Claim
 
-MetaWindow only analyzes file-system metadata effects:
+For a failure point `f`, define:
 
 ```text
-inode and filesystem-private inode fields
-directory entries, extents, B-tree items
-block/inode bitmap and free-space state
-quota, reservation, and refcount metadata
-root, device, chunk, and topology state
-journal, transaction, orphan, replay, and recovery state
-persistent or recovery-visible counters and flags
+E_f = metadata effects that can reach f
+C_f = cancellation or compensation effects on the error path
+T_f = effects explicitly protected by transaction, journal, orphan, recovery,
+      or deferred mechanisms
+
+R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-It excludes ordinary resources:
+If `R_f` is non-empty at an error exit, and the residual is structural,
+accounting, or recovery-visible file-system metadata, the analyzer reports a
+candidate:
 
 ```text
-kmalloc memory
-temporary buffer_head or folio references
-path/name buffers
-locks
-logging
-pure local variables
-generic helper temporaries
+UNCLOSED_METADATA_RESIDUAL
 ```
 
-A normally temporary-looking object can be in scope only when it carries
-metadata completion semantics, such as `xfs_trans`, `btrfs_block_rsv`, `dquot`,
-`delayed_ref`, `reloc_root`, a journal handle, or a reservation ticket.
+The innovation target is not a four-state typestate model.  The four states are
+only an implementation lattice.  The method contribution is the failure-local
+residual computation:
+
+```text
+metadata effect extraction
+identity-aware cancellation
+failure-anchored bidirectional slicing
+explicit protection/transfer recognition
+error-exit residual verification
+```
+
+## What This Is Not
+
+The project intentionally does not attempt:
+
+```text
+complete file-system protocol EFSMs
+full crash-consistency verification
+fixed API-pair postcondition checking
+ordinary memory, buffer, folio, path, or lock cleanup analysis
+generic typestate verification
+large MOCC-SE rule registries
+```
+
+MDR-style differential restoration is retained only as supporting evidence.  It
+may explain that another nearby path cancels a similar residual and can provide
+a patch hint, but the primary detector does not depend on sibling paths.
+
+## Active Architecture
+
+```text
+Linux FS source
+  -> frontend-neutral FunctionIR
+  -> function-local CFG
+  -> metadata scope gate
+  -> failure-point discovery
+  -> backward slice for E_f
+  -> forward error-path slice for C_f and T_f
+  -> residual normalization
+  -> error-exit verification
+  -> optional MDR evidence
+```
 
 ## Retained Project Shape
 
 ```text
-src/frontend/              frontend-neutral C IR and tree-sitter adapter
-src/cfg.py                 function-local CFG utilities
-src/parser.py              C parser fallback helpers
-src/function_extractor.py  function extraction helpers
-src/metadata_scope.py      versioned metadata scope contract
-src/metawindow.py          lightweight MetaWindow data model
-configs/metadata_scope/    metadata boundary and confirmed-bug scope labels
-outputs/confirmed_bugs.md  curated evidence ledger used for motivation
-docs/                      current architecture and paper notes
-linux-sources/             local Linux source inputs, not project logic
+src/frontend/                 frontend-neutral C IR and tree-sitter adapter
+src/cfg.py                    function-local CFG utilities
+src/parser.py                 C parser fallback helpers
+src/function_extractor.py     function extraction helpers
+src/metadata_scope.py         versioned metadata scope contract
+src/metadata_residual.py      residual-analysis data model
+configs/metadata_scope/       metadata boundary and confirmed-bug labels
+outputs/confirmed_bugs.md     curated evidence ledger
+docs/                         current architecture and paper notes
+linux-sources/                local Linux source inputs
 ```
 
-## Current Evidence Mapping
+## Evidence Boundary
 
-Primary MetaWindow examples:
+Primary residual-analysis examples:
 
 ```text
-#7   btrfs_recover_relocation: relocation-root recovery state left exposed
-#16  btrfs_init_new_device: transaction update list membership left exposed
-#17  btrfs_init_new_device: active device pointers not restored
-#18  btrfs_init_new_device: fs_devices sprout topology not rolled back
-#12  xfs_qm_quotacheck_dqadjust: dquot metadata ownership/reference case
+#7   btrfs_recover_relocation: relocation-root recovery state remains residual
+#16  btrfs_init_new_device: transaction update-list membership remains residual
+#17  btrfs_init_new_device: active device pointers remain residual
+#18  btrfs_init_new_device: fs_devices sprout topology remains residual
+#12  xfs_qm_quotacheck_dqadjust: dquot metadata ownership/reference residual
 ```
 
-Outcome-window extensions:
+Outcome residual extensions:
 
 ```text
-#1, #2, #5, #8, #13  metadata failure reported as success
+#1, #2, #5, #8, #13  metadata failure residual hidden by success outcome
 #4                   stale error after successful metadata retry
 #15                  positive success skips chunk metadata reservation
 ```
 
-Out of scope for the main method:
+Out of scope:
 
 ```text
 #3, #6, #9, #10, #11, #14
 ```
 
-These are useful historical resource-cleanup findings, but they are not
-MetaWindow metadata-window evidence.
+These are useful historical resource-cleanup findings, but they do not define
+the main method.
 
-## Install and Check
+## Check
 
 ```powershell
 python -m pip install -r requirements.txt
 python -m pytest -q
 ```
-
-The current codebase is a trimmed research scaffold.  It preserves the parser,
-frontend, CFG, metadata scope, and evidence inputs needed to implement the
-MetaWindow prototype.  Removed MOCC-SE protocol, rule-registry, validation, and
-batch-review artifacts should be treated as historical design material, not as
-active project state.

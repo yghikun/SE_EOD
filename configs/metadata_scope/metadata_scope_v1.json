@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "scope_version": "1.0.0",
-  "scope_id": "metawindow.metadata_scope",
+  "scope_id": "metadata_residual.metadata_scope",
   "target_filesystems": ["ext4", "xfs", "btrfs", "f2fs"],
   "metadata_domains": [
     {

@@ -12,7 +12,7 @@ def _scope() -> MetadataScope:
 def test_scope_loads_metawindow_boundary():
     scope = _scope()
 
-    assert scope.scope_id == "metawindow.metadata_scope"
+    assert scope.scope_id == "metadata_residual.metadata_scope"
     assert scope.target_filesystems == ("ext4", "xfs", "btrfs", "f2fs")
     assert scope.decision_for(3).status == "out_of_scope"
     assert scope.decision_for(12).domain_ids == ("quota_refcount",)

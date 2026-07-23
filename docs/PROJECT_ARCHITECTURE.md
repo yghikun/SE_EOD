@@ -1,7 +1,7 @@
 # Project Architecture
 
-The repository now keeps only the components needed for the MetaWindow
-prototype.
+The repository now keeps only the components needed for failure-local metadata
+residual analysis.
 
 ## Retained Modules
 
@@ -21,8 +21,8 @@ src/function_extractor.py
 src/metadata_scope.py
   Versioned metadata scope contract and confirmed-bug scope labels.
 
-src/metawindow.py
-  Lightweight MetaWindow data model.
+src/metadata_residual.py
+  Lightweight residual-analysis data model.
 ```
 
 ## Retained Inputs
@@ -54,8 +54,8 @@ XFS/ext4 one-off audit scripts
 large MOCC output artifacts
 ```
 
-The removed material belonged to the protocol-EFSM direction.  MetaWindow uses
-metadata-window dataflow instead.
+The removed material belonged to the protocol-EFSM direction.  The active method
+uses failure-local residual analysis instead.
 
 ## Intended Prototype Flow
 
@@ -64,8 +64,9 @@ source file
   -> FunctionIR
   -> CFG
   -> metadata scope gate
-  -> metadata effect extraction
-  -> fallible edge detection
-  -> EXPOSED/PROTECTED/CLOSED/UNKNOWN propagation
+  -> failure point discovery
+  -> backward slice for E_f
+  -> forward error-path slice for C_f and T_f
+  -> residual normalization
   -> error-exit candidate report
 ```

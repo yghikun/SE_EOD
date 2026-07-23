@@ -1,170 +1,134 @@
-# MetaWindow Paper Roadmap
+# Paper Roadmap: Failure-Local Metadata Residual Analysis
 
 Updated: 2026-07-23
 
 ## Thesis
 
-Linux file-system error paths can leave metadata in an intermediate state when
-a metadata effect is exposed before a later operation fails.  MetaWindow
-statically detects these unprotected metadata failure windows without building a
-complete file-system protocol state machine.
+Linux file-system error paths can leave residual metadata effects when a
+software failure occurs after partial metadata mutation.  We propose a
+failure-local residual analysis that computes the metadata effects reaching a
+failure point, the effects cancelled or protected on the error path, and the
+residual effects that still reach an error exit.
 
-Concise claim:
+## Main Contribution
 
-> We statically detect unprotected metadata failure windows in Linux
-> file-system error paths: metadata effects that become exposed before a
-> fallible operation and remain neither closed nor explicitly protected at an
-> error exit.
-
-## Research Question
-
-Can a lightweight, metadata-scoped dataflow analysis find real Linux
-file-system error paths where exposed metadata effects survive failure exits?
-
-Secondary questions:
+The core contribution is not a four-state window model.  It is:
 
 ```text
-RQ1: How many curated metadata findings are expressible as failure windows?
-RQ2: How much does metadata scope filtering reduce ordinary cleanup noise?
-RQ3: How often do reports end in EXPOSED, PROTECTED, CLOSED, or UNKNOWN?
-RQ4: Does optional MDR-style restoration evidence improve manual review?
-RQ5: What are the remaining false-positive causes?
+Failure-Local Metadata Residual Analysis
 ```
 
-## Method Outline
+with three technical pieces:
 
 ```text
-1. Metadata scope gate
-2. Metadata effect extraction
-3. Failure window construction
-4. Protection and closure tracking
-5. Error-exit verification
-6. Optional differential restoration evidence
+1. automatic metadata effect extraction
+2. identity-aware metadata effect cancellation
+3. failure-anchored bidirectional slicing
 ```
 
-The main contribution is MetaWindow.  MDR is used only for supporting evidence
-and patch hints.
-
-## Core Definitions
+The lightweight state labels are implementation support:
 
 ```text
-Metadata effect:
-  <Root, Key, Plane, Delta, Site>
-
-Plane:
-  STRUCTURAL | ACCOUNTING | RECOVERY
-
-State:
-  EXPOSED | PROTECTED | CLOSED | UNKNOWN
-
-Unprotected metadata failure window:
-  an EXPOSED effect that reaches an error exit after a fallible edge without
-  becoming CLOSED or PROTECTED
+EXPOSED | PROTECTED | CLOSED | UNKNOWN
 ```
 
-## Expected Contributions
+They are not presented as a complete typestate or protocol EFSM.
 
-1. A metadata-scoped failure-window abstraction for Linux file-system error
-   paths.
-2. A lightweight state model that distinguishes exposed, protected, closed, and
-   unknown metadata effects without protocol EFSMs.
-3. An implementation strategy over frontend-neutral C IR and function-local CFG.
-4. An evaluation using curated Linux ext4, XFS, Btrfs, and F2FS findings, with
-   ordinary resource-cleanup bugs explicitly excluded from the main claim.
-5. Optional MDR-style restoration evidence for more actionable witness reports.
+## Formal Core
 
-## Development Evidence
-
-Primary MetaWindow examples:
+For each failure point `f`:
 
 ```text
-#7   btrfs_recover_relocation
-#16  btrfs_init_new_device
-#17  btrfs_init_new_device
-#18  btrfs_init_new_device
-#12  xfs_qm_quotacheck_dqadjust, if framed as quota metadata ownership
+E_f = metadata effects reaching f
+C_f = cancellation or compensation effects on the error path
+T_f = transaction, journal, orphan, recovery, or deferred protection effects
+
+R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-Outcome-window extension:
+Report a candidate only when:
 
 ```text
-#1, #2, #5, #8, #13
-#4 and #15 as return/outcome-value variants
+R_f != empty
+and R_f affects STRUCTURAL, ACCOUNTING, or RECOVERY metadata
+and the path reaches an error exit
+and the residual is not UNKNOWN
 ```
 
-Out-of-scope resource cleanup:
+## Research Questions
+
+```text
+RQ1: How many curated metadata findings are expressible as residuals?
+RQ2: How much ordinary cleanup noise does the metadata scope gate remove?
+RQ3: How accurately can identity-aware cancellation compute C_f?
+RQ4: How often are residuals resolved as protected rather than exposed?
+RQ5: Does optional MDR evidence improve review quality or patch hints?
+RQ6: How much configuration is avoided compared with MOCC-SE?
+```
+
+## Method Pipeline
+
+```text
+source
+  -> FunctionIR and CFG
+  -> metadata scope gate
+  -> failure point discovery
+  -> backward slice for E_f
+  -> forward error-path slice for C_f and T_f
+  -> identity-aware cancellation
+  -> residual normalization
+  -> error-exit verification
+  -> optional MDR evidence
+```
+
+## Relationship to Prior Internal Designs
+
+```text
+MOCC-SE:
+  Too heavy.  It modeled protocol EFSMs, owner/handler transfer, accounting
+  obligations, and rule registries.
+
+MDR:
+  Useful as evidence, but too dependent on comparable sibling paths.
+
+MetaWindow:
+  Good intuition, but the four-state model alone looks like domain-specific
+  typestate.
+
+Residual analysis:
+  Keeps the metadata scope, removes full protocols, and centers the algorithm
+  on failure-local residual computation.
+```
+
+## Expected Evaluation
+
+Development examples:
+
+```text
+#7, #16, #17, #18, maybe #12
+```
+
+Outcome-residual extension:
+
+```text
+#1, #2, #5, #8, #13, maybe #4 and #15
+```
+
+Out of scope:
 
 ```text
 #3, #6, #9, #10, #11, #14
 ```
 
-## Related-Work Positioning
-
-MetaWindow is distinct from:
-
-```text
-EDP-style error-code propagation:
-  MetaWindow tracks metadata effects exposed before failure, not only return
-  values.
-
-Runtime consistency checking:
-  MetaWindow is static source analysis and focuses on software error exits.
-
-API postcondition mining:
-  MetaWindow does not depend on target API pairs as the specification source.
-
-MOCC-SE:
-  MetaWindow removes protocol EFSMs, rule registries, owner hierarchies, and
-  large accounting systems.
-
-MDR:
-  MDR requires comparable paths; MetaWindow uses metadata windows as the primary
-  detection entry and uses path comparison only as extra evidence.
-```
-
-## Evaluation Plan
-
-Start with the curated ledger in `outputs/confirmed_bugs.md`.
-
 Report:
 
 ```text
-in-scope confirmed findings expressible as windows
-out-of-scope findings rejected by metadata scope
-EXPOSED/PROTECTED/CLOSED/UNKNOWN distribution
+residual-expressible curated findings
+out-of-scope filtering decisions
+EXPOSED / PROTECTED / CLOSED / UNKNOWN distribution
 candidate precision after manual review
-main false-positive causes
 manual review time with and without MDR evidence
-```
-
-Do not report ordinary memory/resource cleanup recall as MetaWindow recall.
-
-## Implementation Plan
-
-Phase 1:
-
-```text
-define dataclasses and report schema
-parse functions into FunctionIR and CFG
-identify simple fallible edges
-extract assignment/call-based metadata effects
-load metadata scope and confirmed-bug scope labels
-```
-
-Phase 2:
-
-```text
-propagate EXPOSED/CLOSED/PROTECTED/UNKNOWN over CFG
-emit UNCLOSED_METADATA_FAILURE_WINDOW reports
-add tests for synthetic ext4/btrfs/xfs-like snippets
-```
-
-Phase 3:
-
-```text
-add helper summaries for transaction/recovery protection
-add optional MDR evidence and restoration hints
-evaluate curated findings and a fresh source slice
+configuration size compared with MOCC-SE
 ```
 
 ## Paper Non-Claims
@@ -172,10 +136,10 @@ evaluate curated findings and a fresh source slice
 Do not claim:
 
 ```text
-first filesystem error-path checker
 complete Linux C soundness
 complete crash consistency
 automatic bug confirmation
 coverage of ordinary resource leaks
-large-scale filesystem protocol verification
+first-ever error-path checker
+full replacement for filesystem semantic validation
 ```

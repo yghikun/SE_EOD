@@ -8,5 +8,5 @@ metadata_scope/metadata_scope_v1.json
   confirmed findings.
 ```
 
-MetaWindow does not use MOCC-SE protocol families, filesystem bindings,
-operation instances, rule registries, or validation manifests.
+The residual-analysis method does not use MOCC-SE protocol families, filesystem
+bindings, operation instances, rule registries, or validation manifests.

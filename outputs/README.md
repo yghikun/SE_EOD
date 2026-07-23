@@ -1,6 +1,6 @@
 # Outputs
 
-Only curated evidence needed by MetaWindow is retained.
+Only curated evidence needed by metadata residual analysis is retained.
 
 ```text
 confirmed_bugs.md
