@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "scope_version": "1.0.0",
+  "scope_id": "metawindow.metadata_scope",
+  "target_filesystems": ["ext4", "xfs", "btrfs", "f2fs"],
+  "metadata_domains": [
+    {
+      "domain_id": "replay_recovery",
+      "title": "Replay and recovery",
+      "rule_family_ids": ["replay_recovery"],
+      "description": "Replay steps, recovery ownership, and completion outcomes for persistent metadata changes."
+    },
+    {
+      "domain_id": "topology_membership",
+      "title": "Topology and membership",
+      "rule_family_ids": ["topology_membership"],
+      "description": "Device, root, list, pointer, and membership changes that must roll back or transfer ownership."
+    },
+    {
+      "domain_id": "return_retry",
+      "title": "Return and retry provenance",
+      "rule_family_ids": ["return_retry"],
+      "description": "The returned result must describe the current metadata operation attempt."
+    },
+    {
+      "domain_id": "accounting_reservation",
+      "title": "Accounting and reservation",
+      "rule_family_ids": ["accounting_reservation"],
+      "description": "Reservations, pending metadata work, counters, and activation obligations."
+    },
+    {
+      "domain_id": "transaction_lifecycle",
+      "title": "Metadata transaction lifecycle",
+      "rule_family_ids": ["transaction_lifecycle"],
+      "description": "Journal or transaction begin, commit, abort, and ownership transfer around metadata updates."
+    },
+    {
+      "domain_id": "allocation_lifecycle",
+      "title": "Metadata allocation lifecycle",
+      "rule_family_ids": ["allocation_lifecycle"],
+      "description": "Allocation, publication, rollback, and release when the object is part of a metadata operation."
+    },
+    {
+      "domain_id": "namespace_orphan",
+      "title": "Namespace and orphan state",
+      "rule_family_ids": ["namespace_orphan"],
+      "description": "Directory membership, link counts, orphan tracking, and namespace failure completion."
+    },
+    {
+      "domain_id": "quota_refcount",
+      "title": "Quota and reference accounting",
+      "rule_family_ids": ["quota_refcount"],
+      "description": "Quota objects, reference counts, and paired accounting updates for metadata mutations."
+    },
+    {
+      "domain_id": "deferred_ownership",
+      "title": "Deferred metadata ownership",
+      "rule_family_ids": ["deferred_ownership"],
+      "description": "Incomplete metadata work transferred to recovery, background, or deferred handlers."
+    }
+  ],
+  "inclusion_requirements": [
+    "The filesystem is one of the four target filesystems.",
+    "The operation changes, restores, accounts for, or controls persistent filesystem metadata.",
+    "The suspected obligation can be stated as an exposed metadata effect, explicit protection, closure, retry result, or accounting relation.",
+    "Object identity and the relevant failure or success exit are explicit enough for conservative analysis."
+  ],
+  "supporting_resource_policy": {
+    "default": "outside_scope",
+    "include_when": [
+      "The resource is a named protocol object whose lifetime is necessary for a metadata effect or legal exit.",
+      "Independent evidence connects the resource lifecycle to metadata consistency, recovery, namespace, quota, or topology state."
+    ],
+    "exclude_when": [
+      "The record only proves a generic temporary memory, buffer, folio, path, or filename leak.",
+      "No metadata effect, accounting obligation, ownership transfer, or operation completion consequence is established."
+    ],
+    "uncertain_action": "needs_scope_review"
+  },
+  "confirmed_bug_decisions": [
+    {"bug_id": 1, "status": "in_scope", "domain_ids": ["replay_recovery"], "rationale": "Required ext4 replay step and returned outcome."},
+    {"bug_id": 2, "status": "in_scope", "domain_ids": ["replay_recovery"], "rationale": "Required ext4 replay step and returned outcome."},
+    {"bug_id": 3, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a buffer_head leak but no metadata completion or consistency obligation."},
+    {"bug_id": 4, "status": "in_scope", "domain_ids": ["return_retry"], "rationale": "The returned error describes a stale metadata-space attempt after retry."},
+    {"bug_id": 5, "status": "in_scope", "domain_ids": ["replay_recovery"], "rationale": "The replay error propagation is in scope; the separate iloc.bh leak is not used as rule evidence."},
+    {"bug_id": 6, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a mapping_node leak without an explicit metadata completion obligation."},
+    {"bug_id": 7, "status": "in_scope", "domain_ids": ["topology_membership", "deferred_ownership"], "rationale": "Relocation-root membership and recovery failure rollback are metadata topology state."},
+    {"bug_id": 8, "status": "in_scope", "domain_ids": ["replay_recovery"], "rationale": "Realtime summary metadata copy must propagate its operation outcome."},
+    {"bug_id": 9, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a buffer_head leak; it does not establish a directory metadata completion violation."},
+    {"bug_id": 10, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a temporary extent-path leak without an explicit metadata completion obligation."},
+    {"bug_id": 11, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a temporary filename buffer leak without an explicit namespace completion violation."},
+    {"bug_id": 12, "status": "in_scope", "domain_ids": ["quota_refcount"], "rationale": "A dquot reference is a quota metadata ownership and accounting object."},
+    {"bug_id": 13, "status": "in_scope", "domain_ids": ["replay_recovery"], "rationale": "Realtime metadata inode loading must propagate failure to the operation exit."},
+    {"bug_id": 14, "status": "out_of_scope", "domain_ids": [], "rationale": "The ledger establishes a dentry folio leak without an explicit namespace completion obligation."},
+    {"bug_id": 15, "status": "in_scope", "domain_ids": ["accounting_reservation"], "rationale": "Chunk metadata reservation is an explicit accounting obligation."},
+    {"bug_id": 16, "status": "in_scope", "domain_ids": ["topology_membership", "deferred_ownership"], "rationale": "Failed device addition leaves metadata topology membership on the transaction update list."},
+    {"bug_id": 17, "status": "in_scope", "domain_ids": ["topology_membership", "deferred_ownership"], "rationale": "Failed device addition must restore active metadata topology pointers."},
+    {"bug_id": 18, "status": "in_scope", "domain_ids": ["topology_membership", "deferred_ownership"], "rationale": "Failed device addition must roll back filesystem device topology state."}
+  ]
+}

@@ -1,310 +1,125 @@
-# MOCC-SE
+# MetaWindow
 
-MOCC-SE（Metadata Operation Completion Consistency for Static Error-path
-analysis）面向 Linux 文件系统 C 代码，静态检查多阶段元数据操作在失败路径上是否以
-合法方式完成。
+MetaWindow is a lightweight static-analysis prototype for Linux file-system
+error paths.  The project now focuses on one research question:
 
-方法将操作形式化为参数化、分层扩展状态机。独立证据约束“应该满足什么”；抽象
-protocol family 描述可复用角色和义务；filesystem binding 把角色和动作映射到具体 API；
-operation instance 声明入口、适用范围和合法出口。三层组合成运行时 `MetadataProtocol`，
-再由通用分析传播 `OperationControlState`、effect ledger、failure attempt、accounting
-obligation 和返回值来源。
+> Does an error exit leave an unprotected file-system metadata effect exposed?
 
-系统输出待人工复核的候选，不直接声称候选一定是真实 bug。
+The method is intentionally narrower than the previous MOCC-SE direction.  It
+does not verify complete file-system protocol state machines, infer full
+metadata invariants, or check ordinary cleanup bugs.  It tracks metadata effects
+that become exposed before a fallible operation, then verifies whether the
+error path closes the effect, protects it through transaction/recovery
+machinery, or must conservatively report an unknown.
 
-## 核心判定
+## Core Idea
 
-```text
-failure_reported_as_success
-  必要元数据步骤失败且未解决，却到达成功出口
-
-incomplete_failure_completion
-  required effect 在退出时仍开放，或没有合法责任主体
-
-metadata_state_divergence
-  返回值、attempt、元数据阶段或记账状态不满足协议约束
-```
-
-合法完成模式包括：
+MetaWindow detects unprotected metadata failure windows:
 
 ```text
-COMMITTED
-ROLLED_BACK
-ABORTED
-RECOVERY_DELEGATED
-DEFERRED
+metadata effect opens
+  -> later operation may fail
+  -> error path exits
+  -> effect is not closed, protected, or marked unknown
 ```
 
-无法证明对象、handler 或路径语义时，系统输出 `ANALYSIS_UNKNOWN`，不把不确定性
-解释为安全或真实违规。
-
-## 当前架构
+Each tracked effect has a lightweight state:
 
 ```text
-independent evidence -> rule registry -> authority/split/coverage audit
-                              |
-protocol family -> filesystem binding -> operation instance
-                              |
-                              v
-                    runtime MetadataProtocol
-                              |
-Linux fs/ source -> frontend-neutral FunctionIR
-  -> function-local CFG
-  -> protocol applicability
-  -> metadata event extraction
-  -> effect/failure/accounting propagation
-  -> legal-exit verification
-  -> exact protocol candidate or unknown
-  -> broad semantic discovery/review
-  -> freeze-bound batch candidate scan
-  -> source review and repair evidence
+EXPOSED    metadata was changed and is not yet protected
+PROTECTED  transaction, journal, orphan, recovery, or deferred machinery owns it
+CLOSED     rollback, compensation, or normal completion closed it
+UNKNOWN    aliasing, async handoff, indirect calls, or helper semantics are unclear
 ```
 
-当前没有独立 `state_machine.py`；协议模型、`MetadataOperationInstance`、tracker 和
-legal-exit verifier 共同实现受支持的 EFSM 片段。旧 `src.main`、resource lifecycle、
-ranking/LLM 和 benchmark/experiment 运行时代码已经删除。旧输出只作为历史数据保留。
+MDR-style differential restoration is retained only as supporting evidence:
+when MetaWindow finds an exposed effect, the tool may look for a nearby path
+that closes a similar effect and use it as a patch hint.  MDR is not the main
+detection entry.
 
-`configs/metadata_rules/rule_registry_v2.json` 是协议之上的知识来源和覆盖审计层。当前
-1 条 normative、7 条 confirmed 与 2 条 heuristic development rule 覆盖全部 12 个
-operation。14 份外部材料由版本化或不可变 locator、SHA-256 和逐字摘录固定，包括官方
-文档、主线历史修复和独立维护者/审阅者邮件。逐规则覆盖和缺口见
-[`configs/metadata_rules/EVIDENCE_AUDIT.md`](configs/metadata_rules/EVIDENCE_AUDIT.md)。registry
-禁止 construction/evaluation 复用同一 locator；目前 validation/frozen rule 数量仍为 0。
-`configs/validation/` 已冻结 active protocols/rules，并建立第一批 10 个 blind、unlabeled
-validation 样本；reviewer/adjudication 模板与校验器也已建立。这只是独立验证入口，
-不是验证结果。
+## Metadata Scope
 
-详细模块和实现边界见
-[`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md)。
-
-## 当前状态
-
-截至 2026-07-22：
-
-| 能力 | 状态 |
-|---|---|
-| tree-sitter/frontend-neutral IR | 已实现 |
-| 函数内 CFG | 已实现 |
-| protocol schema/validation | 已实现；扁平 schema v1/v2 向后兼容，package schema v1 可组合 family/binding/operation |
-| evidence-backed rule registry | v2.2 已实现，1 normative + 7 confirmed + 2 heuristic development rule / 12 个 operation |
-| operation control state / effect submachine | 已实现，含 control trace 和非法转移 unknown |
-| metadata event extraction | 已实现 |
-| effect/failure/accounting tracker | 已实现 |
-| legal exit 和三类候选 | 已实现 |
-| Protocol A replay/recovery | MVP 已实现 |
-| Protocol B device/topology rollback | MVP 已实现 |
-| Protocol C activation/accounting | MVP 已实现 |
-| Protocol D XFS/ext4 transaction lifecycle | MVP 已实现并物理分层，含参数与返回值两类调用点对象替换 |
-| Protocol E Btrfs allocation lifecycle | 首个开发实例已实现并物理分层，覆盖 path 分配、同对象释放和 NULL 失败 |
-| fresh source-tree discovery | M11 开发链已实现 |
-| 独立冻结 benchmark | 已实现 freeze/manifest v1、reviewer/adjudication 模板、validation runner、validation selection audit 和 freeze-bound batch scanner；首批 10 个样本在 lifecycle discovery 扩展后有 2 个可分析、8 个 out of scope，覆盖仍不足，因此该批次不能用于精度指标，需重新预注册可分析样本 |
-| 大多数文件系统泛化结论 | 尚无充分证据 |
-
-测试基线：
+MetaWindow only analyzes file-system metadata effects:
 
 ```text
-279 passed
+inode and filesystem-private inode fields
+directory entries, extents, B-tree items
+block/inode bitmap and free-space state
+quota, reservation, and refcount metadata
+root, device, chunk, and topology state
+journal, transaction, orphan, replay, and recovery state
+persistent or recovery-visible counters and flags
 ```
 
-## 文档入口
+It excludes ordinary resources:
 
-1. [`docs/MOCC_SE_FULL_ARCHITECTURE.md`](docs/MOCC_SE_FULL_ARCHITECTURE.md)：参数化扩展状态机和目标方法。
-2. [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md)：当前保留的代码和真实运行入口。
-3. [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md)：当前实施边界和复核任务。
-4. [`docs/PROJECT_CLOSURE_PLAN.md`](docs/PROJECT_CLOSURE_PLAN.md)：方法、评估和论文门禁。
-5. [`PAPER_ROADMAP.md`](PAPER_ROADMAP.md)：研究问题和论文路线。
-6. [`outputs/README.md`](outputs/README.md)：保留输出、历史数据和证据语义。
+```text
+kmalloc memory
+temporary buffer_head or folio references
+path/name buffers
+locks
+logging
+pure local variables
+generic helper temporaries
+```
 
-## 安装与测试
+A normally temporary-looking object can be in scope only when it carries
+metadata completion semantics, such as `xfs_trans`, `btrfs_block_rsv`, `dquot`,
+`delayed_ref`, `reloc_root`, a journal handle, or a reservation ticket.
+
+## Retained Project Shape
+
+```text
+src/frontend/              frontend-neutral C IR and tree-sitter adapter
+src/cfg.py                 function-local CFG utilities
+src/parser.py              C parser fallback helpers
+src/function_extractor.py  function extraction helpers
+src/metadata_scope.py      versioned metadata scope contract
+src/metawindow.py          lightweight MetaWindow data model
+configs/metadata_scope/    metadata boundary and confirmed-bug scope labels
+outputs/confirmed_bugs.md  curated evidence ledger used for motivation
+docs/                      current architecture and paper notes
+linux-sources/             local Linux source inputs, not project logic
+```
+
+## Current Evidence Mapping
+
+Primary MetaWindow examples:
+
+```text
+#7   btrfs_recover_relocation: relocation-root recovery state left exposed
+#16  btrfs_init_new_device: transaction update list membership left exposed
+#17  btrfs_init_new_device: active device pointers not restored
+#18  btrfs_init_new_device: fs_devices sprout topology not rolled back
+#12  xfs_qm_quotacheck_dqadjust: dquot metadata ownership/reference case
+```
+
+Outcome-window extensions:
+
+```text
+#1, #2, #5, #8, #13  metadata failure reported as success
+#4                   stale error after successful metadata retry
+#15                  positive success skips chunk metadata reservation
+```
+
+Out of scope for the main method:
+
+```text
+#3, #6, #9, #10, #11, #14
+```
+
+These are useful historical resource-cleanup findings, but they are not
+MetaWindow metadata-window evidence.
+
+## Install and Check
 
 ```powershell
 python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-准备本地 Linux `fs/` 源码：
-
-```powershell
-python scripts/download_linux_fs.py
-python scripts/download_linux_fs.py `
-  --ref v7.1 `
-  --target linux-sources/linux-v7.1-fs `
-  --sparse-path fs
-```
-
-`linux-sources/` 是本地输入，不应提交。
-
-## 运行协议分析
-
-先校验规则来源和 active protocol operation 覆盖：
-
-```powershell
-python -m src.metadata_rule_registry
-python -m src.metadata_evidence_verifier
-python -m src.metadata_validation_manifest
-python -m src.metadata_validation_labels `
-  --labels configs/validation/reviewer_a_labels_v1.json `
-  --labels configs/validation/reviewer_b_labels_v1.json `
-  --adjudication configs/validation/adjudication_v1.json
-python -m src.metadata_validation_run `
-  --out outputs/mocc-validation-v1/unseen-batch-1-predictions.json
-python -m src.metadata_validation_selection `
-  --source 7.1=linux-sources/linux-v7.1-fs/fs/ext4/fast_commit.c `
-  --samples-per-protocol 0 `
-  --out outputs/mocc-validation-v1/batch-2-selection-smoke.json
-```
-
-`metadata_validation_run` 在不读取标签的前提下逐个执行冻结样本，先报告协议适用率，只有
-完整 reviewer labels 和 adjudication 均通过门禁后才计算 precision、recall、F1 和
-prediction coverage。当前 batch 1 的 10 个 near-neighbor 样本中只有 2 个 analyzable
-（1 个 legal、1 个 analysis_unknown），其余 8 个为 out of scope，因此
-`metrics_available` 为 false，不能把 out-of-scope 样本计为 legal。
-
-`metadata_validation_selection` 是 batch 2 的预注册入口：它只使用冻结协议和源码事实生成
-protocol-applicable 候选池与 `draft_manifest`，输出语义是
-`selection_audit_not_evaluation`。正式 batch 2 应以独立长任务运行全量 source roots；
-当前 smoke artifact 只证明工具链可复现地报告候选池状态，不是最终抽样结果。该 artifact
-同时显示 32/32 个 registered exact-entry identities 均为 construction overlap，
-因此当前 freeze 下 batch 2 不能靠 exact entry 抽样，只能依赖 semantic/fresh discovery
-或先扩展 protocol applicability。
-
-生命周期协议的 discovery 已扩展为 acquire/open-first：XFS `xfs_trans_alloc()`、
-ext4 `ext4_journal_start()`、Btrfs `btrfs_alloc_path()` 可作为 semantic operation
-analysis 入口；commit/stop/free 等 terminal 动作不再阻止进入 discovery，而是保留为
-analyzer obligation。当前 targeted selection audit 证明该扩展能产生可审计池：
-Btrfs targeted pool 118（其中 Protocol E 为 110）、XFS targeted pool 5（Protocol D）、
-ext4 targeted pool 47（Protocol D）。这些 artifact 仍是
-`selection_audit_not_evaluation`，不是 label 或 precision/recall 结果。
-
-单函数分析：
-
-```powershell
-python -m src.metadata_protocol_analyzer `
-  --protocol configs/metadata_protocols/protocol_a_replay_recovery_v1.json `
-  --source linux-sources/linux-v6.8-fs/fs/ext4/fast_commit.c `
-  --source-version linux-v6.8
-```
-
-fresh source-tree discovery：
-
-```powershell
-python -m src.metadata_protocol_discovery `
-  --protocol configs/metadata_protocols/protocol_a_replay_recovery_v1.json `
-  --protocol configs/metadata_protocols/protocol_b_device_topology_v1.json `
-  --protocol configs/metadata_protocols/protocol_c_activation_accounting_v1.json `
-  --protocol configs/metadata_protocols/protocol_d_transaction_lifecycle_v2.json `
-  --source-root linux-sources/linux-v6.8-fs/fs `
-  --source-version linux-v6.8 `
-  --out outputs/mocc-discovery-v2/linux-v6.8-fresh-review.json
-```
-
-该 discovery 默认排除 confirmed functions 和 regression seeds。宽松 semantic match
-只进入 `DISCOVERY_REVIEW`，不会升级为协议已证明 candidate。
-
-freeze-bound batch candidate scan：
-
-```powershell
-python -m src.metadata_batch_scan `
-  --source-root linux-sources/linux-v7.1-fs/fs `
-  --source-version 7.1 `
-  --out outputs/mocc-batch-scan-v1/linux-v7.1-fs.json
-```
-
-该命令会先校验 protocol/rule freeze 和 validation manifest，再按当前规则适用版本加载
-active protocols。输出语义是 `candidate_queue_not_bug_claims`：可以用于全量候选扫描，
-但不能直接宣称 bug。报告中的 `coverage_health` 独立记录 exact/semantic 协议分析是否
-真正执行；当前 v7.1 full scan 的 `applicable_functions` 为 294，均为 semantic
-operation analysis，`protocol_candidate_occurrences` 仍为 0，因为 semantic matches
-只进入 review/unknown 队列。需要把“没有精确候选”和“没有函数进入精确分析”严格区分。
-CI 或正式实验可增加 `--require-protocol-analysis`，在协议分析覆盖为零时直接失败。
-
-batch scan triage：
-
-```powershell
-python -m src.metadata_batch_triage `
-  --batch-report outputs/mocc-batch-scan-v1/linux-v7.1-fs.json `
-  --out-json outputs/mocc-batch-scan-v1/linux-v7.1-fs-triage.json `
-  --out-md outputs/mocc-batch-scan-v1/linux-v7.1-fs-triage.md
-```
-
-当前 v7.1 全量扫描 triage 为：15 条 triage item，其中 2 条 P0
-`needs_external_semantics`，13 条 P2 `uncertain`；按协议看，Protocol A 为 2 条、
-Protocol D 为 9 条、Protocol E 为 4 条。它们仍不是 bug 结论，而是扩展后的
-review/unknown 工作队列。
-
-ext4 replay bookkeeping 源码事实审计：
-
-```powershell
-python -m src.metadata_ext4_replay_bookkeeping_audit `
-  --source-root linux-sources/linux-v7.1-fs/fs `
-  --source-version 7.1 `
-  --out-json outputs/mocc-batch-scan-v1/ext4-replay-bookkeeping-audit.json `
-  --out-md outputs/mocc-batch-scan-v1/ext4-replay-bookkeeping-audit.md
-```
-
-该审计只记录 public `int` return、caller ignored return、`ext4_map_blocks()`
-失败后到 `return 0`、以及 bookkeeping/partial mutation 事实；结论是
-`needs_external_semantics`，不是 confirmed bug。
-
-XFS tempfile exchange transaction 源码事实审计：
-
-```powershell
-python -m src.metadata_xfs_tempexch_transaction_audit `
-  --source-root linux-sources/linux-v7.1-fs/fs `
-  --source-version 7.1 `
-  --out-json outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.json `
-  --out-md outputs/mocc-batch-scan-v1/xfs-tempexch-transaction-audit.md
-```
-
-该审计记录 `xrep_tempexch_trans_alloc()` 分配 `sc->tp` 后返回 quota reserve
-结果、quota helper 失败返回前没有可见 cleanup、以及 6 个调用点错误传播前没有本地可见
-cleanup；结论是 `strong_manual_review_candidate_not_confirmed_bug`，仍不是
-confirmed bug。
-
-窄范围 ext4 helper fault model：
-
-```powershell
-python scripts/validate_ext4_fc_replay_helpers.py
-```
-
-它是窄范围源码控制流模型，不是完整内核 fault-injection。
-
-## 目录结构
-
-```text
-src/frontend/              versioned frontend IR and tree-sitter adapter
-src/metadata_*.py          protocol, EFSM state, discovery and review pipeline
-src/cfg.py                 function-local CFG
-src/parser.py              C source parsing and fallback
-src/function_extractor.py  function extraction used by the frontend
-configs/protocol_families  reusable abstract roles, actions and obligations
-configs/filesystem_bindings filesystem API/object mappings
-configs/operations         entry-specific protocol instantiation
-configs/metadata_protocols runtime protocol files and package manifests
-configs/metadata_rules     evidence authority, usage, split and coverage targets
-configs/validation         frozen protocol/rule inputs and blind validation manifest
-tests/                     retained frontend/CFG/MOCC tests
-scripts/                   source download and current validation only
-outputs/                   retained development evidence and historical data
-linux-sources/             local Linux source inputs
-```
-
-## 研究边界
-
-当前不声称：
-
-- 完整 Clang/Kbuild、SSA 或 points-to；
-- 递归或通用跨函数 handler/effect summary；当前只支持配置化、`max_call_depth == 1` 的有界摘要；
-- 任意文件系统不变量或元数据算术自动推导；
-- 完整并发或 crash-consistency 证明；
-- LLM 自动确认 bug；
-- 自动生成可合并内核补丁；
-- 已适用于大多数文件系统。
-
-当前 ext4/JBD2 handle lifecycle 已由版本固定官方文档支持并升级为 normative；7 条规则由
-implementation evidence 加独立 historical-fix 或 maintainer evidence 支持并升级为
-confirmed。sprout multi-effect rollback 和 XFS 完整 transaction failure lifecycle 只有部分
-外部覆盖，继续保持 heuristic。所有 10 条规则的 maturity 仍是 development；只有在隔离的
-validation/frozen 数据上完成评估后，才能升级 maturity。
-
-历史补丁、人工判断和维护者反馈只能用于复核和验证，不能反向改变静态协议状态。
+The current codebase is a trimmed research scaffold.  It preserves the parser,
+frontend, CFG, metadata scope, and evidence inputs needed to implement the
+MetaWindow prototype.  Removed MOCC-SE protocol, rule-registry, validation, and
+batch-review artifacts should be treated as historical design material, not as
+active project state.

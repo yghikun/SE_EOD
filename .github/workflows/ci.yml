@@ -42,14 +42,5 @@ jobs:
       - name: Compile
         run: python -m compileall -q src tests scripts
 
-      - name: Validate frozen research inputs
-        run: |
-          python -m src.metadata_rule_registry
-          python -m src.metadata_validation_manifest
-          python -m src.metadata_validation_labels \
-            --labels configs/validation/reviewer_a_labels_v1.json \
-            --labels configs/validation/reviewer_b_labels_v1.json \
-            --adjudication configs/validation/adjudication_v1.json
-
       - name: Test
         run: python -m pytest -q

@@ -1,4 +1,4 @@
-"""Sparse-download pinned Linux filesystem sources needed by MOCC-SE.
+"""Sparse-download pinned Linux filesystem sources needed by MetaWindow.
 
 Default result:
   linux-sources/linux-v6.8-fs/
@@ -28,7 +28,7 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Sparse-checkout Linux filesystem sources for MOCC-SE."
+        description="Sparse-checkout Linux filesystem sources for MetaWindow."
     )
     parser.add_argument("--repo", default=DEFAULT_REPO, help="Linux git repository URL.")
     parser.add_argument("--ref", default=DEFAULT_REF, help="Git tag/branch/commit.")
