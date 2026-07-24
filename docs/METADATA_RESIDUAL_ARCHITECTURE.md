@@ -16,7 +16,6 @@ Linux FS Source
   -> Identity-Aware Cancellation
   -> Residual Normalization
   -> Error-Exit Verification
-  -> Optional MDR Evidence
   -> Witness Report
 ```
 
@@ -152,15 +151,21 @@ OUT_OF_SCOPE
   The effect is ordinary resource cleanup rather than filesystem metadata.
 ```
 
-## Optional MDR Evidence
+## Evidence Boundary
 
-After a residual is found, a sibling or nearby cleanup path may be used as
-supporting evidence:
+Witness reports are derived from the failure-local residual slice itself:
 
 ```text
-another path cancels the same Root/Key/Plane effect
-a cleanup label contains the missing inverse action
-a historical fix inserted a matching restoration fragment
+failure point
+error exit
+E_f
+C_f
+T_f
+R_f
+scope rationale
+unknown causes
+confidence
 ```
 
-MDR evidence improves witness quality, but detection does not depend on it.
+The detector does not require sibling-path comparison or differential
+restoration evidence.

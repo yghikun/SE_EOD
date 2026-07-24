@@ -62,8 +62,7 @@ RQ1: How many curated metadata findings are expressible as residuals?
 RQ2: How much ordinary cleanup noise does the metadata scope gate remove?
 RQ3: How accurately can identity-aware cancellation compute C_f?
 RQ4: How often are residuals resolved as protected rather than exposed?
-RQ5: Does optional MDR evidence improve review quality or patch hints?
-RQ6: How much configuration is avoided compared with MOCC-SE?
+RQ5: How much configuration is avoided compared with MOCC-SE?
 ```
 
 ## Method Pipeline
@@ -78,7 +77,6 @@ source
   -> identity-aware cancellation
   -> residual normalization
   -> error-exit verification
-  -> optional MDR evidence
 ```
 
 ## Relationship to Prior Internal Designs
@@ -87,9 +85,6 @@ source
 MOCC-SE:
   Too heavy.  It modeled protocol EFSMs, owner/handler transfer, accounting
   obligations, and rule registries.
-
-MDR:
-  Useful as evidence, but too dependent on comparable sibling paths.
 
 MetaWindow:
   Good intuition, but the four-state model alone looks like domain-specific
@@ -127,7 +122,6 @@ residual-expressible curated findings
 out-of-scope filtering decisions
 EXPOSED / PROTECTED / CLOSED / UNKNOWN distribution
 candidate precision after manual review
-manual review time with and without MDR evidence
 configuration size compared with MOCC-SE
 ```
 

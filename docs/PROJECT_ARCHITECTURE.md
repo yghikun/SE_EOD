@@ -32,7 +32,7 @@ configs/metadata_scope/metadata_scope_v1.json
   Metadata boundary and curated confirmed-bug scope decisions.
 
 outputs/confirmed_bugs.md
-  Evidence ledger for motivating and evaluating MetaWindow.
+  Evidence ledger for motivating and evaluating metadata residual analysis.
 
 linux-sources/
   Local Linux source trees used as analysis inputs.

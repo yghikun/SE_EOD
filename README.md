@@ -65,9 +65,9 @@ generic typestate verification
 large MOCC-SE rule registries
 ```
 
-MDR-style differential restoration is retained only as supporting evidence.  It
-may explain that another nearby path cancels a similar residual and can provide
-a patch hint, but the primary detector does not depend on sibling paths.
+The detector does not include differential restoration.  It does not depend on
+finding sibling paths or nearby comparable cleanup code; the active method is
+the failure-local residual computation itself.
 
 ## Active Architecture
 
@@ -81,7 +81,7 @@ Linux FS source
   -> forward error-path slice for C_f and T_f
   -> residual normalization
   -> error-exit verification
-  -> optional MDR evidence
+  -> witness report
 ```
 
 ## Retained Project Shape
