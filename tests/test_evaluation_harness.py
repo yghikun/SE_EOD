@@ -66,6 +66,9 @@ int work(struct inode *inode, long nr)
     assert summary["candidate_count"] == 1
     assert summary["confirmed_bug_records"] == 1
     assert summary["confirmed_bug_functions_in_source"] == ["work"]
+    assert summary["scope_id"] == "metadata_residual.metadata_scope"
+    assert summary["target_filesystems"] == ["ext4", "xfs", "btrfs", "f2fs"]
+    assert summary["metadata_domain_ids"][0] == "replay_recovery"
     assert all_reports[0]["kind"] == "UNCLOSED_METADATA_RESIDUAL"
     assert "UNCLOSED_METADATA_RESIDUAL: work" in markdown
     assert list((out_dir / "reports").glob("0001_work_*.json"))
@@ -162,8 +165,15 @@ out:
     assert result.summary["unknown_cause_counts"] == {
         "unresolved_metadata_helper_on_error_path": 1,
     }
+    assert result.summary["unknown_taxonomy_counts"] == {"missing_summary": 1}
+    assert result.summary["unknown_taxonomy_category_counts"] == {
+        "missing_summary": {
+            "unresolved_metadata_helper_on_error_path": 1,
+        },
+    }
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["unknown_cause_counts"] == result.summary["unknown_cause_counts"]
+    assert summary["unknown_taxonomy_counts"] == result.summary["unknown_taxonomy_counts"]
 
 
 def test_batch_evaluation_aggregates_directory_results(tmp_path: Path):
@@ -331,6 +341,45 @@ int work(struct fs_devices *fs_devices)
     residuals = work_reports[0].report.residual_slice.residuals
     assert any(effect.value == "tgt_device->dev_list" for effect in residuals)
     assert any(effect.key == "num_devices" for effect in residuals)
+
+
+def test_batch_evaluation_uses_header_inline_noop_summary(tmp_path: Path):
+    source_dir = tmp_path / "fs" / "btrfs"
+    source_dir.mkdir(parents=True)
+    (source_dir / "helpers.h").write_text(
+        """
+static inline void extent_changeset_free(struct extent_changeset *changeset)
+{
+    kfree(changeset);
+}
+""",
+        encoding="utf-8",
+    )
+    (source_dir / "caller.c").write_text(
+        """
+int work(struct inode *inode, struct extent_changeset *changeset, long nr)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    extent_changeset_free(changeset);
+    return ret;
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = run_batch_evaluation(source_dir, tmp_path / "batch-header", source_root=tmp_path)
+
+    assert result.summary["source_files_analyzed"] == 1
+    assert result.summary["functions_analyzed"] == 1
+    assert result.summary["candidate_count"] == 1
+    assert result.summary["unknown_count"] == 0
 
 
 def test_confirmed_bug_markdown_mapping_is_loaded(tmp_path: Path):

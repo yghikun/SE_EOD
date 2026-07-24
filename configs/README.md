@@ -4,7 +4,7 @@ The active configuration surface is intentionally small:
 
 ```text
 metadata_scope/metadata_scope_v1.json
-  Defines the file-system metadata boundary and scope decisions for curated
+  Defines the filesystem metadata boundary and scope decisions for curated
   confirmed findings.
 ```
 

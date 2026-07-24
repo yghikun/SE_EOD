@@ -2,8 +2,8 @@
 
 Date: 2026-07-23
 
-This document records new btrfs findings surfaced by the failure-local metadata
-residual analyzer and then checked manually against source. They are kept
+This document records new btrfs findings surfaced by the failure-path filesystem
+metadata residual analyzer and then checked manually against source. They are kept
 separate from `outputs/confirmed_bugs.md` until reproduction, duplicate search,
 and patch review are complete.
 
@@ -216,4 +216,3 @@ analysis semantics rather than defects:
 - Check partial `BLOCK_GROUP_FLAG_TO_COPY` rollback for P3.
 - Only after reproduction or equivalent targeted evidence, move records into
   `outputs/confirmed_bugs.md` and prepare patches/reports.
-

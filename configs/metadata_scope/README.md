@@ -1,7 +1,7 @@
-# Metadata Scope
+# Filesystem Metadata Scope
 
-`metadata_scope_v1.json` is the current metadata boundary for metadata residual
-analysis.
+`metadata_scope_v1.json` is the current boundary for filesystem metadata
+residual analysis.
 
 It records:
 
@@ -13,7 +13,7 @@ supporting-resource policy
 confirmed-bug scope decisions
 ```
 
-The scope gate exists to keep residual analysis from becoming a general cleanup
-checker.  Ordinary memory, buffer, folio, path/name, lock, and helper-temporary
-bugs are out of scope unless the object carries file-system metadata completion
-semantics.
+The scope gate keeps the analyzer from becoming a general cleanup checker.
+Ordinary memory, buffer, folio, path/name, lock, and helper-temporary bugs are
+out of scope unless independent evidence connects the object to filesystem
+metadata completion, topology, namespace, quota, recovery, or accounting state.

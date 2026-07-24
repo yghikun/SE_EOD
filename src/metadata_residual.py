@@ -1,4 +1,4 @@
-"""Lightweight data model for failure-local metadata residual analysis."""
+"""Lightweight data model for failure-path filesystem metadata residual analysis."""
 
 from __future__ import annotations
 

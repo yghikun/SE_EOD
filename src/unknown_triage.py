@@ -1,4 +1,4 @@
-"""Triage helpers for METADATA_RESIDUAL_UNKNOWN reports."""
+"""Triage helpers for filesystem metadata residual UNKNOWN reports."""
 
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ from typing import Any, Iterable
 
 
 UNKNOWN_TRIAGE_SCHEMA_VERSION = 1
+
+
+STRUCTURAL_UNKNOWN = "structural"
+MISSING_SUMMARY_UNKNOWN = "missing_summary"
+OTHER_UNKNOWN = "other"
 
 
 def unknown_cause_category(cause: str) -> str:
@@ -28,6 +33,50 @@ def unknown_cause_category(cause: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]+", "_", category).strip("_") or "unknown"
 
 
+def unknown_cause_taxonomy(cause: str) -> str:
+    """Return the high-level UNKNOWN class for milestone accounting."""
+
+    category = unknown_cause_category(cause)
+    if category in {
+        "indirect_call",
+        "indirect_call_on_error_path",
+        "function_pointer_parameter_call",
+        "unbound_callee_local_identity",
+        "unresolved_identity",
+        "unclassified_return_exit",
+        "callee_failure_effect_order_unknown",
+        "lifecycle_exit_partition_unproven",
+        "success_only_publication_not_proven_on_error",
+    }:
+        return STRUCTURAL_UNKNOWN
+    if category in {
+        "unresolved_metadata_helper_on_error_path",
+        "return_bound_unresolved_helper",
+        "cleanup_effect_scope_unproven",
+        "unresolved_metadata_helper",
+        "source_visible_helper_without_summary",
+    }:
+        return MISSING_SUMMARY_UNKNOWN
+    return OTHER_UNKNOWN
+
+
+def unknown_taxonomy_counts(
+    reports: Iterable[Any],
+) -> dict[str, dict[str, int]]:
+    """Count UNKNOWN cause mentions by taxonomy and category."""
+
+    counts: dict[str, Counter[str]] = defaultdict(Counter)
+    for report in reports:
+        for cause in _report_unknown_causes(report):
+            taxonomy = unknown_cause_taxonomy(cause)
+            category = unknown_cause_category(cause)
+            counts[taxonomy][category] += 1
+    return {
+        taxonomy: dict(sorted(category_counts.items()))
+        for taxonomy, category_counts in sorted(counts.items())
+    }
+
+
 def build_unknown_triage(
     reports: Iterable[dict[str, Any]],
     *,
@@ -42,6 +91,7 @@ def build_unknown_triage(
         if report.get("kind") == "METADATA_RESIDUAL_UNKNOWN"
     ]
     category_counts: Counter[str] = Counter()
+    taxonomy_counts: Counter[str] = Counter()
     detail_counts: dict[str, Counter[str]] = defaultdict(Counter)
     function_counts: dict[str, Counter[str]] = defaultdict(Counter)
     detail_examples: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(
@@ -55,10 +105,12 @@ def build_unknown_triage(
         function = str(report.get("function", "unknown")) or "unknown"
         for cause in _unknown_causes(report):
             category = unknown_cause_category(cause)
+            taxonomy = unknown_cause_taxonomy(cause)
             detail = _unknown_cause_detail(cause, category)
             example = _report_example(report, cause)
 
             category_counts[category] += 1
+            taxonomy_counts[taxonomy] += 1
             detail_counts[category][detail] += 1
             function_counts[category][function] += 1
             _append_example(
@@ -103,6 +155,7 @@ def build_unknown_triage(
         "schema_version": UNKNOWN_TRIAGE_SCHEMA_VERSION,
         "unknown_reports": len(unknown_reports),
         "unknown_cause_mentions": sum(category_counts.values()),
+        "unknown_taxonomy_counts": dict(sorted(taxonomy_counts.items())),
         "cause_categories": categories,
     }
 
@@ -156,7 +209,7 @@ def triage_to_markdown(triage: dict[str, Any]) -> str:
     """Render an UNKNOWN triage summary as Markdown."""
 
     lines = [
-        "# Metadata Residual UNKNOWN Triage",
+        "# Filesystem Metadata Residual UNKNOWN Triage",
         "",
         f"- Unknown reports: `{triage.get('unknown_reports', 0)}`",
         f"- Unknown cause mentions: `{triage.get('unknown_cause_mentions', 0)}`",
@@ -222,6 +275,19 @@ def _unknown_causes(report: dict[str, Any]) -> tuple[str, ...]:
     causes = report.get("unknown_causes", ())
     if not isinstance(causes, list):
         return ()
+    return tuple(str(cause) for cause in causes if str(cause).strip())
+
+
+def _report_unknown_causes(report: Any) -> tuple[str, ...]:
+    if isinstance(report, dict):
+        if report.get("kind") != "METADATA_RESIDUAL_UNKNOWN":
+            return ()
+        return _unknown_causes(report)
+    if getattr(report, "kind", None) is not None:
+        kind = getattr(report.kind, "value", report.kind)
+        if kind != "METADATA_RESIDUAL_UNKNOWN":
+            return ()
+    causes = getattr(report, "unknown_causes", ())
     return tuple(str(cause) for cause in causes if str(cause).strip())
 
 

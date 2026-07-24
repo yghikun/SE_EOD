@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from src.function_extractor import extract_functions
-from src.function_summary import build_same_file_summaries
+from src.function_summary import build_project_summaries, build_same_file_summaries
 from src.metadata_residual import ResidualState
 from src.parser import parse_c_file
 from src.residual_slicer import slice_function_residuals
@@ -38,6 +38,133 @@ int work(struct inode *inode, long nr)
     assert len(residual_slice.reaching_effects) == 1
     assert len(residual_slice.residuals) == 1
     assert residual_slice.residuals[0].site.expression == "inode->i_blocks += nr"
+
+
+def test_failure_call_name_guess_is_not_a_reaching_effect(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct trans *trans)
+{
+    int ret;
+
+    ret = btrfs_commit_transaction(trans);
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert residual_slice.reaching_effects == ()
+
+
+def test_unpublished_fresh_local_initialization_is_not_a_residual(tmp_path: Path):
+    allocator, initializer = _functions(
+        tmp_path,
+        """
+static struct device *alloc_device(void)
+{
+    struct device *device = kzalloc(sizeof(*device), GFP_KERNEL);
+
+    return device;
+}
+
+static int init_device(struct fs_info *fs_info, struct device **device_out)
+{
+    struct device *device = alloc_device();
+    int ret;
+
+    if (!device)
+        return -ENOMEM;
+    device->ready = 1;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    *device_out = device;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((allocator, initializer))
+
+    residual_slice = slice_function_residuals(initializer, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert residual_slice.reaching_effects == ()
+
+
+def test_published_fresh_local_initialization_remains_reaching(tmp_path: Path):
+    allocator, initializer = _functions(
+        tmp_path,
+        """
+static struct device *alloc_device(void)
+{
+    struct device *device = kzalloc(sizeof(*device), GFP_KERNEL);
+
+    return device;
+}
+
+static int init_device(struct fs_info *fs_info, struct device **device_out)
+{
+    struct device *device = alloc_device();
+    int ret;
+
+    if (!device)
+        return -ENOMEM;
+    device->ready = 1;
+    *device_out = device;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((allocator, initializer))
+
+    residual_slice = slice_function_residuals(initializer, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.reaching_effects[0].site.expression == "device->ready = 1"
+
+
+def test_caller_structural_binding_exposes_fresh_local_before_output(tmp_path: Path):
+    allocator, initializer = _functions(
+        tmp_path,
+        """
+static struct device *alloc_device(void)
+{
+    struct device *device = kzalloc(sizeof(*device), GFP_KERNEL);
+
+    return device;
+}
+
+static int init_device(struct fs_info *fs_info, struct device **device_out)
+{
+    struct device *device = alloc_device();
+    int ret;
+
+    if (!device)
+        return -ENOMEM;
+    device->fs_info = fs_info;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    *device_out = device;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((allocator, initializer))
+
+    residual_slice = slice_function_residuals(initializer, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.reaching_effects[0].site.expression == "device->fs_info = fs_info"
 
 
 def test_mutation_failure_compensation_return_error_clears_residual(tmp_path: Path):
@@ -203,6 +330,39 @@ out:
     assert "inode_dec_link_count" in residual_slice.rationale
 
 
+
+
+def test_source_proven_noop_error_path_helper_does_not_yield_unknown(tmp_path: Path):
+    helper, work = _functions(
+        tmp_path,
+        """
+void btrfs_new_inode_args_destroy(struct btrfs_new_inode_args *args)
+{
+    posix_acl_release(args->acl);
+    fscrypt_free_filename(&args->fname);
+}
+
+int work(struct inode *inode, struct btrfs_new_inode_args *args, long nr)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    btrfs_new_inode_args_destroy(args);
+    return ret;
+}
+""",
+    )
+    summaries = build_project_summaries((helper, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert "btrfs_new_inode_args_destroy" not in residual_slice.rationale
 
 
 def test_same_file_helper_summary_opens_and_cancels_effects(tmp_path: Path):
@@ -382,6 +542,47 @@ int work(struct inode *inode, long nr)
 
     assert residual_slice.state is ResidualState.EXPOSED
     assert residual_slice.residuals[0].site.expression == "inode->i_blocks += nr"
+
+
+def test_failure_summary_does_not_apply_may_cleanup(tmp_path: Path):
+    helper, work = _functions(
+        tmp_path,
+        """
+static int charge_then_maybe_cleanup(
+    struct inode *inode,
+    long nr,
+    int cleanup)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = reserve_blocks();
+    if (ret) {
+        if (cleanup)
+            inode->i_blocks -= nr;
+        return ret;
+    }
+    return 0;
+}
+
+int work(struct inode *inode, long nr, int cleanup)
+{
+    int ret;
+
+    ret = charge_then_maybe_cleanup(inode, nr, cleanup);
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.residuals[0].site.expression == "inode->i_blocks += nr"
+    assert residual_slice.cancellations == ()
 
 
 def test_failure_summary_drops_unexposed_fresh_local_fields(tmp_path: Path):

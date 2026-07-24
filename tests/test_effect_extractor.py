@@ -245,6 +245,69 @@ int work(struct request_ctx *ctx, long nr)
     )
 
 
+def test_pointer_local_alias_to_parameter_keeps_metadata_identity(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct inode *inode)
+{
+    struct inode *target = inode;
+
+    target->i_blocks++;
+    return 0;
+}
+""",
+    )
+
+    effect = extract_metadata_effects(function)[0]
+    assert (effect.root, effect.key, effect.delta) == (
+        "inode",
+        "i_blocks",
+        MetadataDelta.INC,
+    )
+
+
+def test_dereferenced_output_parameter_is_not_an_identity_alias(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct extent_changeset **reserved_ret)
+{
+    struct extent_changeset *reserved = *reserved_ret;
+
+    reserved->bytes_changed++;
+    return 0;
+}
+""",
+    )
+
+    effect = extract_metadata_effects(function)[0]
+    assert (effect.root, effect.key) == ("reserved", "bytes_changed")
+
+
+def test_scrub_operation_state_is_transient_but_reached_metadata_is_not(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct scrub_stripe *stripe, struct inode *inode)
+{
+    stripe->dev = inode;
+    stripe->inode->i_blocks++;
+    return 0;
+}
+""",
+    )
+
+    effects = extract_metadata_effects(function)
+
+    assert len(effects) == 1
+    assert (effects[0].root, effects[0].key, effects[0].delta) == (
+        "stripe->inode",
+        "i_blocks",
+        MetadataDelta.INC,
+    )
+
+
 def test_ctl_context_fields_are_out_of_scope_but_persistent_target_remains(tmp_path: Path):
     function = _function(
         tmp_path,
@@ -439,6 +502,41 @@ def test_metadata_accessor_call_is_not_a_mutating_effect(tmp_path: Path):
 int work(struct root *root)
 {
     return btrfs_root_ctransid(root);
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_owner_accessor_call_is_not_a_mutating_effect(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct delayed_ref_node *node)
+{
+    return btrfs_delayed_ref_owner(node);
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_observer_lock_and_validator_helpers_are_not_mutating_effects(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct inode *inode, struct dev_extent *extent)
+{
+    trace_btrfs_inode_new(inode);
+    btrfs_inode_lock(inode);
+    btrfs_inode_unlock(inode);
+    if (extent_state_in_tree(extent))
+        return 0;
+    if (btrfs_is_free_space_inode(inode))
+        return btrfs_dev_extent_length(extent);
+    return btrfs_inode_extref_parent(extent);
 }
 """,
     )

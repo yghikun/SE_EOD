@@ -15,7 +15,15 @@ from .effect_extractor import (
 )
 from .failure_points import FailurePoint, find_failure_points
 from .frontend.model import BasicBlockIR, ControlFlowGraphIR, FrontendNode, FunctionIR
-from .function_summary import FunctionSummary, apply_same_file_summary
+from .function_summary import (
+    FunctionSummary,
+    LifecycleEvent,
+    LifecycleExit,
+    LifecycleFact,
+    LocalLifecycleBinding,
+    apply_same_file_summary,
+    build_local_lifecycle_bindings,
+)
 from .metadata_residual import (
     MetadataDelta,
     MetadataEffect,
@@ -61,6 +69,7 @@ def slice_function_residuals(
     summaries = summaries or {}
     failure_points = failure_points if failure_points is not None else find_failure_points(function)
     local_effects = tuple(_LocatedEffect(effect, _block_for_site(cfg, effect.site)) for effect in extract_metadata_effects(function))
+    local_lifecycles = build_local_lifecycle_bindings(function, summaries)
     known_error_path_effect_sites = _known_error_path_effect_sites(local_effects)
     call_apps = tuple(_summary_applications(function, cfg, summaries))
 
@@ -77,6 +86,10 @@ def slice_function_residuals(
 
         for item in local_effects:
             if item.block_id not in reaching_blocks or not _effect_before_failure(item.effect, point):
+                continue
+            if _effect_is_failure_call(item.effect, point):
+                continue
+            if _effect_targets_unpublished_fresh_local(item.effect, point, local_lifecycles):
                 continue
             if item.effect.delta in _CANCEL_DELTAS:
                 cancellations.append(item.effect)
@@ -104,9 +117,9 @@ def slice_function_residuals(
             )
             if (
                 is_failure_call
+                and app.may_fail
                 and app.block_id in reaching_blocks
                 and app.site.line <= point.call_site.line
-                and (app.failure_effects_complete or app.has_ownership_transfer)
             ):
                 reaching_effects.extend(app.error_opens)
                 cancellations.extend(app.error_cancels)
@@ -183,6 +196,12 @@ def slice_function_residuals(
     )
 
 
+_OPEN_DELTAS = {
+    MetadataDelta.ADD,
+    MetadataDelta.SET,
+    MetadataDelta.INC,
+    MetadataDelta.RESERVE,
+}
 _CANCEL_DELTAS = {
     MetadataDelta.REMOVE,
     MetadataDelta.CLEAR,
@@ -217,6 +236,7 @@ class _SummaryApp:
     failure_effects_complete: bool
     may_fail: bool
     has_ownership_transfer: bool
+    lifecycle_facts: tuple[LifecycleFact, ...]
 
     @property
     def cancels_before_failure(self) -> tuple[MetadataEffect, ...]:
@@ -260,15 +280,31 @@ def _summary_applications(
             f"{app.summary.function_name}: unresolved_identity: {item}"
             for item in app.unresolved_identities
         )
-        if app.summary.has_ownership_transfer:
+        if app.summary.has_ownership_transfer or app.summary.may_fail:
             failure_unknown_causes.extend(
                 f"{app.summary.function_name}: {cause}"
-                for cause in app.summary.error_unknown_causes
+                for cause in app.exit_effects.unknown_causes
             )
-        if not app.failure_effects_complete and app.summary.has_ownership_transfer:
+        if (
+            not app.exit_effects.error_complete
+            and app.summary.may_fail
+            and app.exit_effects.error_may
+        ):
             failure_unknown_causes.append(
                 f"{app.summary.function_name}: callee_failure_effect_order_unknown"
             )
+            if app.summary.has_ownership_transfer and app.lifecycle_facts:
+                failure_unknown_causes.append(
+                    f"{app.summary.function_name}: lifecycle_exit_partition_unproven"
+                )
+                if any(
+                    fact.event is LifecycleEvent.PUBLISHED
+                    and fact.exit is LifecycleExit.SUCCESS
+                    for fact in app.lifecycle_facts
+                ):
+                    failure_unknown_causes.append(
+                        f"{app.summary.function_name}: success_only_publication_not_proven_on_error"
+                    )
         transfer_is_caller_owned = _transfer_roots_are_caller_owned(
             function,
             app.ownership_transfer_roots,
@@ -276,9 +312,30 @@ def _summary_applications(
         opens = _in_scope_summary_effects(function, app.opens)
         cancels = _in_scope_summary_effects(function, app.cancels)
         protects = _in_scope_summary_effects(function, app.protects)
-        error_opens = _in_scope_summary_effects(function, app.error_opens)
-        error_cancels = _in_scope_summary_effects(function, app.error_cancels)
-        error_protects = _in_scope_summary_effects(function, app.error_protects)
+        error_opens = _in_scope_summary_effects(
+            function,
+            tuple(
+                effect
+                for effect in app.exit_effects.error_must
+                if effect.delta in _OPEN_DELTAS
+            ),
+        )
+        error_cancels = _in_scope_summary_effects(
+            function,
+            tuple(
+                effect
+                for effect in app.exit_effects.error_must
+                if effect.delta in _CANCEL_DELTAS
+            ),
+        )
+        error_protects = _in_scope_summary_effects(
+            function,
+            tuple(
+                effect
+                for effect in app.exit_effects.error_must
+                if effect.delta in _PROTECT_DELTAS
+            ),
+        )
         error_opens = _drop_unexposed_fresh_error_effects(error_opens)
         error_cancels = _drop_unexposed_fresh_error_effects(error_cancels)
         error_protects = _drop_unexposed_fresh_error_effects(error_protects)
@@ -303,11 +360,12 @@ def _summary_applications(
             unknown_causes=tuple(unknown_causes),
             failure_unknown=bool(failure_unknown_causes),
             failure_unknown_causes=tuple(failure_unknown_causes),
-            failure_effects_complete=app.failure_effects_complete,
+            failure_effects_complete=app.exit_effects.error_complete,
             may_fail=app.summary.may_fail,
             has_ownership_transfer=(
                 app.summary.has_ownership_transfer and transfer_is_caller_owned
             ),
+            lifecycle_facts=app.lifecycle_facts,
         )
 
 
@@ -546,6 +604,30 @@ def _block_for_node(cfg: ControlFlowGraphIR, node: FrontendNode) -> BasicBlockIR
 
 def _effect_before_failure(effect: MetadataEffect, point: FailurePoint) -> bool:
     return effect.site.line <= point.call_site.line
+
+
+def _effect_is_failure_call(effect: MetadataEffect, point: FailurePoint) -> bool:
+    """Exclude unproven helper effects originating at the failing call itself."""
+
+    return (
+        effect.site.line == point.call_site.line
+        and compact_ws(effect.site.expression) == compact_ws(point.call_site.expression)
+    )
+
+
+def _effect_targets_unpublished_fresh_local(
+    effect: MetadataEffect,
+    point: FailurePoint,
+    lifecycles: tuple[LocalLifecycleBinding, ...],
+) -> bool:
+    root = _leading_symbol(effect.root)
+    binding = next(
+        (item for item in lifecycles if item.local_identity == root),
+        None,
+    )
+    if binding is None or effect.site.line < binding.allocation_line:
+        return False
+    return not any(line <= point.call_site.line for line in binding.publication_lines)
 
 
 def _known_error_path_effect_sites(

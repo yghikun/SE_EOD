@@ -1,54 +1,47 @@
-# Failure-Local Metadata Residual Analysis
+# Failure-Path Filesystem Metadata Residual Analysis
 
-This project is a lightweight static-analysis scaffold for Linux file-system
-error paths.  The active research method is:
-
-```text
-Failure-Local Metadata Residual Analysis
-```
-
-Chinese name:
+This project is a lightweight static-analysis scaffold for Linux filesystem
+error paths. The active research method is:
 
 ```text
-面向失败点的元数据残余分析
+Failure-Path Filesystem Metadata Residual Analysis
 ```
 
-MetaWindow remains the intuition: metadata mutations open a risk window before
-later software failures.  The paper method is stronger and more precise: for
-each failure point, compute which metadata effects were created, which were
-cancelled, which were explicitly transferred to transaction/recovery machinery,
-and which residual effects still reach an error exit.
+MetaWindow is only the intuition. The method is stricter: for each failure
+point, compute which filesystem metadata effects were created, which were
+cancelled, which were explicitly transferred to transaction or recovery
+machinery, and which residual metadata effects still reach an error exit.
 
 ## Core Claim
 
 For a failure point `f`, define:
 
 ```text
-E_f = metadata effects that can reach f
+E_f = filesystem metadata effects that can reach f
 C_f = cancellation or compensation effects on the error path
 T_f = effects explicitly protected by transaction, journal, orphan, recovery,
-      or deferred mechanisms
+      or deferred machinery
 
 R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
 If `R_f` is non-empty at an error exit, and the residual is structural,
-accounting, or recovery-visible file-system metadata, the analyzer reports a
+accounting, or recovery-visible filesystem metadata, the analyzer reports a
 candidate:
 
 ```text
 UNCLOSED_METADATA_RESIDUAL
 ```
 
-The innovation target is not a four-state typestate model.  The four states are
-only an implementation lattice.  The method contribution is the failure-local
-residual computation:
+The innovation target is not a four-state typestate model. The states are only
+an implementation lattice. The method contribution is failure-path residual
+computation over filesystem metadata state:
 
 ```text
 metadata effect extraction
 identity-aware cancellation
 failure-anchored bidirectional slicing
-explicit protection/transfer recognition
+explicit protection and transfer recognition
 error-exit residual verification
 ```
 
@@ -57,17 +50,13 @@ error-exit residual verification
 The project intentionally does not attempt:
 
 ```text
-complete file-system protocol EFSMs
+complete filesystem protocol EFSMs
 full crash-consistency verification
 fixed API-pair postcondition checking
-ordinary memory, buffer, folio, path, or lock cleanup analysis
+ordinary memory, buffer, folio, path, lock, or generic resource cleanup analysis
 generic typestate verification
 large MOCC-SE rule registries
 ```
-
-The detector does not include differential restoration.  It does not depend on
-finding sibling paths or nearby comparable cleanup code; the active method is
-the failure-local residual computation itself.
 
 ## Active Architecture
 
@@ -75,7 +64,7 @@ the failure-local residual computation itself.
 Linux FS source
   -> frontend-neutral FunctionIR
   -> function-local CFG
-  -> metadata scope gate
+  -> filesystem metadata scope gate
   -> failure-point discovery
   -> backward slice for E_f
   -> forward error-path slice for C_f and T_f
@@ -90,9 +79,9 @@ Linux FS source
 src/frontend/                 frontend-neutral C IR and tree-sitter adapter
 src/cfg.py                    function-local CFG utilities
 src/parser.py                 C parser fallback helpers
-src/function_extractor.py     function extraction helpers
-src/metadata_scope.py         versioned metadata scope contract
-src/metadata_residual.py      residual-analysis data model
+src/function_extractor.py     function extraction helpers for source files
+src/metadata_scope.py         versioned filesystem metadata scope contract
+src/metadata_residual.py      filesystem metadata residual data model
 configs/metadata_scope/       metadata boundary and confirmed-bug labels
 outputs/confirmed_bugs.md     curated evidence ledger
 docs/                         current architecture and paper notes
@@ -107,8 +96,8 @@ Primary residual-analysis examples:
 #7   btrfs_recover_relocation: relocation-root recovery state remains residual
 #16  btrfs_init_new_device: transaction update-list membership remains residual
 #17  btrfs_init_new_device: active device pointers remain residual
-#18  btrfs_init_new_device: fs_devices sprout topology remains residual
-#12  xfs_qm_quotacheck_dqadjust: dquot metadata ownership/reference residual
+#18  btrfs_init_new_device: fs_devices topology remains residual
+#12  xfs_qm_quotacheck_dqadjust: dquot quota metadata ownership/reference residual
 ```
 
 Outcome residual extensions:

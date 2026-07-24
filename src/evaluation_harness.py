@@ -1,4 +1,4 @@
-"""Small evaluation driver for metadata residual analysis."""
+"""Small evaluation driver for filesystem metadata residual analysis."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from fnmatch import fnmatch
 from typing import Any, Iterable
@@ -14,13 +15,14 @@ from .frontend.tree_sitter_frontend import TreeSitterFrontend
 from .function_summary import FunctionSummary, build_project_summaries
 from .frontend.model import FunctionIR
 from .metadata_residual import ReportKind
+from .metadata_scope import DEFAULT_METADATA_SCOPE, MetadataScope
 from .residual_analyzer import ResidualAnalysisResult, analyze_functions
 from .residual_report import (
     ResidualWitnessReport,
     reports_to_json,
     reports_to_markdown,
 )
-from .unknown_triage import unknown_cause_category
+from .unknown_triage import unknown_cause_category, unknown_cause_taxonomy
 
 
 EVALUATION_SCHEMA_VERSION = 1
@@ -68,6 +70,14 @@ class EvaluationResult:
             for report in self.reports
             for cause in report.unknown_causes
         )
+        unknown_taxonomy_counts = Counter(
+            unknown_cause_taxonomy(cause)
+            for report in self.reports
+            for cause in report.unknown_causes
+        )
+        unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
+            self.reports
+        )
         candidate_count = kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value]
         unknown_count = kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value]
         out_of_scope_count = kind_counts[ReportKind.OUT_OF_SCOPE.value]
@@ -82,6 +92,7 @@ class EvaluationResult:
             "source_file": self.source_file,
             "source_root": self.source_root,
             "output_dir": self.output_dir,
+            **_default_scope_summary(),
             "functions_analyzed": len(self.analyses),
             "functions_with_failure_points": sum(
                 bool(analysis.slicing_result.slices) for analysis in self.analyses
@@ -93,13 +104,15 @@ class EvaluationResult:
             "report_kind_counts": dict(sorted(kind_counts.items())),
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
+            "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
+            "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "confirmed_bug_functions_in_source": sorted(
                 mapped_functions & analyzed_functions
             ),
             "configuration_note": (
-                "uses metadata scope plus source-derived summaries; no protocol "
-                "family or rule registry is loaded"
+                "uses filesystem metadata scope plus source-derived summaries; "
+                "no protocol family or rule registry is loaded"
             ),
         }
 
@@ -147,6 +160,14 @@ class BatchEvaluationResult:
             for report in self.reports
             for cause in report.unknown_causes
         )
+        unknown_taxonomy_counts = Counter(
+            unknown_cause_taxonomy(cause)
+            for report in self.reports
+            for cause in report.unknown_causes
+        )
+        unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
+            self.reports
+        )
         mapped_functions = {
             _function_name_key(record.function)
             for record in self.confirmed_bug_records
@@ -159,6 +180,7 @@ class BatchEvaluationResult:
             "source_root": self.source_root,
             "output_dir": self.output_dir,
             "exclude_globs": list(self.exclude_globs),
+            **_default_scope_summary(),
             "source_files_analyzed": len(self.results),
             "source_files": [result.source_file for result in self.results],
             "functions_analyzed": len(self.analyses),
@@ -172,13 +194,15 @@ class BatchEvaluationResult:
             "report_kind_counts": dict(sorted(kind_counts.items())),
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
+            "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
+            "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "confirmed_bug_functions_in_source": sorted(
                 mapped_functions & analyzed_functions
             ),
             "configuration_note": (
-                "batch run using metadata scope plus source-derived summaries; "
-                "no protocol family or rule registry is loaded"
+                "batch run using filesystem metadata scope plus source-derived "
+                "summaries; no protocol family or rule registry is loaded"
             ),
         }
 
@@ -248,10 +272,20 @@ def run_batch_evaluation(
     results: list[EvaluationResult] = []
     excludes = tuple(exclude_globs)
     source_files = _source_files(source, root, excludes)
+    summary_source_files = _summary_source_files(source, root, excludes)
     frontend = TreeSitterFrontend(root)
-    parsed_units = [(source_file, frontend.parse(source_file)) for source_file in source_files]
+    parsed_summary_units = {
+        source_file: frontend.parse(source_file)
+        for source_file in summary_source_files
+    }
+    parsed_units = [
+        (source_file, parsed_summary_units[source_file])
+        for source_file in source_files
+    ]
     all_functions = tuple(
-        function for _, unit in parsed_units for function in unit.functions
+        function
+        for unit in parsed_summary_units.values()
+        for function in unit.functions
     )
     project_summaries = build_project_summaries(all_functions)
     for source_file, unit in parsed_units:
@@ -322,6 +356,21 @@ def _summaries_visible_from_file(
     return dict(summaries)
 
 
+def _unknown_taxonomy_category_counts(
+    reports: Iterable[ResidualWitnessReport],
+) -> dict[str, dict[str, int]]:
+    counts: dict[str, Counter[str]] = {}
+    for report in reports:
+        for cause in report.unknown_causes:
+            taxonomy = unknown_cause_taxonomy(cause)
+            category = unknown_cause_category(cause)
+            counts.setdefault(taxonomy, Counter())[category] += 1
+    return {
+        taxonomy: dict(sorted(category_counts.items()))
+        for taxonomy, category_counts in sorted(counts.items())
+    }
+
+
 def load_confirmed_bug_mapping(
     path: str | Path,
 ) -> tuple[ConfirmedBugRecord, ...]:
@@ -363,6 +412,17 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+@lru_cache(maxsize=1)
+def _default_scope_summary() -> dict[str, object]:
+    scope = MetadataScope.read_json(DEFAULT_METADATA_SCOPE)
+    return {
+        "scope_id": scope.scope_id,
+        "target_filesystems": list(scope.target_filesystems),
+        "metadata_domain_ids": [domain.domain_id for domain in scope.metadata_domains],
+        "scope_version": scope.scope_version,
+    }
+
+
 def _source_files(
     path: Path,
     source_root: Path,
@@ -372,6 +432,29 @@ def _source_files(
         candidates = (path,) if path.suffix == ".c" else ()
     else:
         candidates = tuple(sorted(item for item in path.rglob("*.c") if item.is_file()))
+    return tuple(
+        item
+        for item in candidates
+        if not _excluded_source(item, source_root, exclude_globs)
+    )
+
+
+def _summary_source_files(
+    path: Path,
+    source_root: Path,
+    exclude_globs: tuple[str, ...] = (),
+) -> tuple[Path, ...]:
+    if path.is_file():
+        candidates = (path,) if path.suffix in {".c", ".h"} else ()
+    else:
+        candidates = tuple(
+            sorted(
+                item
+                for suffix in ("*.c", "*.h")
+                for item in path.rglob(suffix)
+                if item.is_file()
+            )
+        )
     return tuple(
         item
         for item in candidates

@@ -120,6 +120,9 @@ TRANSIENT_CONTEXT_SUFFIXES = {
     "request",
     "spec",
 }
+TRANSIENT_OPERATION_TYPE_TOKENS = {
+    "scrub",
+}
 VFS_WIRING_FIELDS = {
     "a_ops",
     "i_fop",
@@ -146,13 +149,19 @@ METADATA_READER_SUFFIXES = (
     "_flags",
     "_generation",
     "_gid",
+    "_in_tree",
     "_id",
     "_item",
+    "_level",
+    "_len",
+    "_length",
     "_mode",
     "_name",
     "_nlink",
     "_node",
     "_offset",
+    "_owner",
+    "_parent",
     "_refs",
     "_rdev",
     "_root",
@@ -162,10 +171,18 @@ METADATA_READER_SUFFIXES = (
     "_type",
     "_uid",
 )
+NON_METADATA_OBSERVER_PREFIXES = (
+    "trace_",
+)
+NON_METADATA_OBSERVER_SUFFIXES = (
+    "_lock",
+    "_unlock",
+)
 ACCESSOR_VALIDATOR_TOKENS = {
     "can",
     "check",
     "enabled",
+    "find",
     "full",
     "get",
     "has",
@@ -311,6 +328,10 @@ def looks_like_metadata_reader(name: str) -> bool:
     """Recognize metadata-named accessors that do not mutate state."""
 
     lowered = name.lower()
+    if lowered.startswith(NON_METADATA_OBSERVER_PREFIXES):
+        return True
+    if lowered.endswith(NON_METADATA_OBSERVER_SUFFIXES):
+        return True
     if _looks_like_accessor_or_validator(lowered):
         return True
     if lowered.startswith(MUTATING_HELPER_PREFIXES):
@@ -818,7 +839,8 @@ def _is_transient_context_type(text: str) -> bool:
         type_name == suffix or type_name.endswith(f"_{suffix}")
         for suffix in TRANSIENT_CONTEXT_SUFFIXES
     )
-    if not parts or not has_transient_suffix:
+    has_transient_operation = bool(parts & TRANSIENT_OPERATION_TYPE_TOKENS)
+    if not parts or not (has_transient_suffix or has_transient_operation):
         return False
     return not bool(parts & RECOVERY_CONTEXT_TERMS)
 
@@ -875,6 +897,8 @@ def _looks_like_accessor_or_validator(name: str) -> bool:
         return False
     if lowered.startswith(MUTATING_HELPER_PREFIXES):
         return False
+    if re.search(r"(?:^|_)is_", lowered):
+        return True
     return not bool(tokens & MUTATING_HELPER_TOKENS)
 
 
@@ -890,25 +914,69 @@ def _local_aliases(function: FunctionIR) -> dict[str, str]:
     aliases: dict[str, str] = {}
     if function.body_node is None:
         return aliases
+    pointer_locals = _local_pointer_symbols(function)
+    parameter_symbols = set(function.parameters)
     for node in function.body_node.walk():
         if node.type == "init_declarator":
             name = _declarator_name(node.child_by_field_name("declarator"))
             value_node = node.child_by_field_name("value")
             if name and value_node is not None:
-                _record_alias(name, value_node.text, aliases)
+                _record_alias(
+                    name,
+                    value_node.text,
+                    aliases,
+                    pointer_locals=pointer_locals,
+                    parameter_symbols=parameter_symbols,
+                )
         elif node.type == "assignment_expression":
             left = node.child_by_field_name("left")
             right = node.child_by_field_name("right")
             if left is not None and right is not None and left.type == "identifier":
-                _record_alias(left.text, right.text, aliases)
+                _record_alias(
+                    left.text,
+                    right.text,
+                    aliases,
+                    pointer_locals=pointer_locals,
+                    parameter_symbols=parameter_symbols,
+                )
     return aliases
 
 
-def _record_alias(name: str, value: str, aliases: dict[str, str]) -> None:
+def _record_alias(
+    name: str,
+    value: str,
+    aliases: dict[str, str],
+    *,
+    pointer_locals: set[str],
+    parameter_symbols: set[str],
+) -> None:
+    name = compact_ws(name)
+    raw_value = compact_ws(value).strip()
     alias = _replace_aliases(_normalized_path(value), aliases)
-    if not _looks_like_alias_target(alias):
+    direct_parameter_alias = (
+        name in pointer_locals
+        and re.fullmatch(r"[A-Za-z_]\w*", raw_value) is not None
+        and raw_value in parameter_symbols
+    )
+    if not _looks_like_alias_target(alias) and not direct_parameter_alias:
         return
-    aliases[compact_ws(name)] = alias
+    aliases[name] = alias
+
+
+def _local_pointer_symbols(function: FunctionIR) -> set[str]:
+    if function.body_node is None:
+        return set()
+    symbols: set[str] = set()
+    for node in function.body_node.walk():
+        if node.type != "declaration":
+            continue
+        for declarator in _declaration_declarators(node):
+            if not _contains_node_type(declarator, "pointer_declarator"):
+                continue
+            name = _declarator_name(declarator)
+            if name:
+                symbols.add(name)
+    return symbols
 
 
 def _declarator_name(node: FrontendNode | None) -> str | None:

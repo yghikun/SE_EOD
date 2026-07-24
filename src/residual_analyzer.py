@@ -20,8 +20,8 @@ from .residual_slicer import ResidualSlicingResult, slice_function_residuals
 
 
 DEFAULT_SCOPE_RATIONALE = (
-    "source-visible metadata effects are in STRUCTURAL, ACCOUNTING, or RECOVERY "
-    "residual scope"
+    "source-visible filesystem metadata effects are in STRUCTURAL, "
+    "ACCOUNTING, or RECOVERY residual scope"
 )
 
 
@@ -149,7 +149,7 @@ def _scope_rationale_for(
     default: str,
 ) -> str:
     if residual_slice.state in {ResidualState.CLOSED, ResidualState.PROTECTED}:
-        return "no in-scope residual remains after normalization"
+        return "no in-scope filesystem metadata residual remains after normalization"
     return default
 
 

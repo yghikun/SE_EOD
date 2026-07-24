@@ -1,4 +1,4 @@
-"""JSON and Markdown witness reports for metadata residual analysis."""
+"""JSON and Markdown witness reports for filesystem metadata residual analysis."""
 
 from __future__ import annotations
 

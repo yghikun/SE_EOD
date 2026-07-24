@@ -1,26 +1,25 @@
-# Metadata Residual Analysis Handoff
+# Failure-Path Filesystem Metadata Residual Analysis Handoff
 
-Updated: 2026-07-23
+Updated: 2026-07-24
 
-This document is the implementation handoff for the reset project.  The active
-method is:
+This is the current implementation handoff for the reset project. The active
+research object is:
 
 ```text
-Failure-Local Metadata Residual Analysis
+Failure-Path Filesystem Metadata Residual Analysis
 ```
 
-Working Chinese title in discussion: failure-point-centered metadata residual
-analysis.
+MetaWindow is only the motivating intuition. The project should not be framed
+as a generic metadata checker, memory leak detector, resource cleanup checker,
+or typestate verifier. The implementation and paper claim center on filesystem
+metadata effects that remain residual after a source-visible failure path.
 
-MetaWindow is only the motivating intuition.  The implementation and paper
-method must center on residual computation around each failure point.
+## 1. Current Claim
 
-## 1. Research Claim
-
-For a failure point `f`, compute:
+For each failure point `f`, compute:
 
 ```text
-E_f = metadata effects reaching f
+E_f = filesystem metadata effects reaching f
 C_f = cancellation or compensation effects on the error path
 T_f = effects explicitly protected or transferred to transaction, journal,
       orphan, recovery, or deferred machinery
@@ -28,67 +27,23 @@ T_f = effects explicitly protected or transferred to transaction, journal,
 R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-Report only when:
+Report `UNCLOSED_METADATA_RESIDUAL` only when:
 
 ```text
 R_f is non-empty
-and R_f is STRUCTURAL, ACCOUNTING, or RECOVERY metadata
+and R_f is STRUCTURAL, ACCOUNTING, or RECOVERY filesystem metadata
 and R_f reaches an error exit
 and the result is not UNKNOWN
 ```
 
-The novelty target is not a four-state typestate model.  The intended technical
-claims are:
+If object identity, helper semantics, async handoff, return classification, or
+transaction ownership cannot be proven from source, keep the report as
+`METADATA_RESIDUAL_UNKNOWN`. Do not guess safe and do not guess bug.
 
-```text
-automatic metadata effect extraction
-identity-aware metadata effect cancellation
-failure-anchored bidirectional slicing
-explicit protection/transfer recognition
-error-exit residual verification
-```
+## 2. Scope Contract
 
-## 2. Current Repository State
-
-Retained modules:
-
-```text
-src/frontend/
-src/cfg.py
-src/parser.py
-src/function_extractor.py
-src/metadata_scope.py
-src/metadata_residual.py
-configs/metadata_scope/metadata_scope_v1.json
-outputs/confirmed_bugs.md
-outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md
-docs/METADATA_RESIDUAL_ARCHITECTURE.md
-```
-
-Removed direction:
-
-```text
-MOCC-SE protocol families
-filesystem bindings
-operation instances
-rule registry
-validation manifests
-batch discovery/review/ranking
-one-off XFS/ext4 audit scripts
-large historical MOCC outputs
-```
-
-Current verification:
-
-```text
-python -m pytest -q -p no:cacheprovider
-75 passed
-```
-
-## 3. Scope Contract
-
-The metadata scope gate exists to prevent the project from becoming a general
-cleanup checker.
+The filesystem metadata scope gate exists to prevent drift into general cleanup
+analysis.
 
 In scope:
 
@@ -101,7 +56,7 @@ journal, transaction, replay, recovery, delayed metadata work
 persistent or recovery-visible counters and flags
 ```
 
-Out of scope:
+Out of scope unless connected to filesystem metadata completion semantics:
 
 ```text
 ordinary kmalloc memory
@@ -111,62 +66,135 @@ locks
 logging
 pure local variables
 generic helper temporaries
+ordinary resource lifetime bugs
 ```
 
 Boundary rule:
 
-> A supporting object is in scope only when its lifetime carries file-system
+> A supporting object is in scope only when its lifetime carries filesystem
 > metadata completion semantics.
 
-If object identity, helper semantics, async handoff, or transaction ownership
-cannot be proven, mark `UNKNOWN`.  Do not guess legal and do not guess bug.
-
-## 4. Target Architecture
+Current scope files:
 
 ```text
-Linux FS source
-  -> FunctionIR
-  -> CFG
-  -> failure point discovery
+configs/metadata_scope/metadata_scope_v1.json
+configs/metadata_scope/README.md
+src/metadata_scope.py
+```
+
+## 3. Repository State
+
+Active source modules:
+
+```text
+src/frontend/
+src/cfg.py
+src/parser.py
+src/function_extractor.py
+src/failure_points.py
+src/effect_extractor.py
+src/function_summary.py
+src/cancellation.py
+src/residual_slicer.py
+src/residual_analyzer.py
+src/residual_report.py
+src/metadata_residual.py
+src/metadata_scope.py
+src/evaluation_harness.py
+src/candidate_triage.py
+src/unknown_triage.py
+```
+
+Active scripts:
+
+```text
+scripts/evaluate_residuals.py
+scripts/evaluate_residuals_batch.py
+scripts/summarize_candidates.py
+scripts/summarize_unknowns.py
+scripts/compare_residual_runs.py
+scripts/download_linux_fs.py
+scripts/fetch_kernel_source_file.py
+```
+
+Active evidence and documentation:
+
+```text
+README.md
+PAPER_ROADMAP.md
+docs/METADATA_RESIDUAL_ARCHITECTURE.md
+docs/PROJECT_ARCHITECTURE.md
+outputs/confirmed_bugs.md
+outputs/btrfs_tool_findings_pending_review_2026-07-23.md
+outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md
+```
+
+Ignored/generated directories:
+
+```text
+.pytest_cache/
+__pycache__/
+outputs/residual-evaluation/
+outputs/residual-evaluation-batch/
+linux-sources/
+```
+
+The generated `outputs/residual-evaluation*` directories were removed from the
+working tree cleanup. They are ignored run artifacts and should be regenerated
+when a milestone comparison needs them. Do not treat historical paths in old
+milestone notes as required repository files.
+
+## 4. Verification
+
+Current unit-test status:
+
+```text
+python -m pytest -q -p no:cacheprovider
+135 passed
+```
+
+When testing after cache cleanup, use:
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'
+python -m pytest -q -p no:cacheprovider
+```
+
+`git diff --check` currently reports only CRLF normalization warnings on this
+Windows working tree, not whitespace errors.
+
+## 5. Architecture
+
+Pipeline:
+
+```text
+Linux filesystem source
+  -> frontend-neutral FunctionIR
+  -> function-local CFG
+  -> filesystem metadata scope gate
+  -> failure-point discovery
   -> metadata effect extraction
-  -> callee summary generation/application
+  -> function summary generation/application
   -> backward slice for E_f
   -> forward error-path slice for C_f and T_f
   -> identity-aware cancellation
   -> residual normalization
   -> error-exit verification
-  -> witness report
+  -> JSON/Markdown witness report
 ```
 
-Proposed new modules:
+The project intentionally does not use:
 
 ```text
-src/failure_points.py
-  Detect fallible calls, error checks, and error exits.
-
-src/effect_extractor.py
-  Extract raw metadata effects from assignments, updates, list/tree/bit/counter
-  operations, and known structural idioms.
-
-src/function_summary.py
-  Build and apply lightweight callee summaries.
-
-src/residual_slicer.py
-  Compute E_f, C_f, and T_f with failure-anchored backward/forward slicing.
-
-src/cancellation.py
-  Identity-aware inverse-effect matching and normalization.
-
-src/residual_analyzer.py
-  Orchestrate per-function residual analysis and emit reports.
-
-src/residual_report.py
-  Serialize JSON/Markdown witness reports.
+MOCC-SE protocol families
+filesystem operation EFSMs
+rule registries
+validation manifests
+large hand-maintained API-pair specifications
+sibling-path differential cleanup assumptions
 ```
 
-Keep modules small.  Do not recreate protocol packages or rule registries.
-
-## 5. Data Model
+## 6. Data Model
 
 The active model is in `src/metadata_residual.py`.
 
@@ -201,1169 +229,308 @@ METADATA_RESIDUAL_UNKNOWN
 OUT_OF_SCOPE
 ```
 
-The state labels are implementation support, not a protocol EFSM.
+The state labels are implementation support. They are not a protocol EFSM and
+should not be presented as a complete typestate model.
 
-## 6. Function Summary Strategy
+## 7. Summary Model
 
-When metadata changes happen inside helper functions, identify helper effects
-through summaries.
+The main precision work is in `src/function_summary.py` and
+`src/residual_slicer.py`.
 
-Summary sources:
+Current summary fields include:
 
 ```text
-AUTO_LOCAL
-  Generated by scanning a visible helper body.
-
-AUTO_INTERPROCEDURAL
-  Generated from a shallow, bounded callee analysis.
-
-PINNED_CORE_SUMMARY
-  Small hand-written summaries for core mechanisms such as transaction cancel,
-  journal stop, dquot release, and reservation release.
-
-UNKNOWN
-  Used when helper behavior, object binding, or ownership cannot be proven.
+opens
+cancels
+protects
+error_opens
+error_cancels
+error_protects
+may_fail
+returns
+output_mapping
+ownership_transfer_roots
+lifecycle_facts
+exposure_facts
+cleanup_footprints
+exit_effects
+unresolved_calls
+unknown_causes
 ```
 
-Summary shape:
+Exit-sensitive effects:
 
 ```text
-FunctionSummary {
-  function_name
-  parameters
-  opens
-  cancels
-  protects
-  may_fail
-  unknown_escape
-  source
-}
+success_must
+success_may
+error_must
+error_may
+error_complete
 ```
 
-Allowed pinned summaries must answer only:
+Only `ERROR_MUST` cancellation/protection is allowed to resolve a failure-path
+residual. `MAY` evidence is audit information and must not close a residual.
+
+Exposure facts:
 
 ```text
-what metadata effect is opened?
-what metadata effect is cancelled?
-what metadata effect is explicitly protected/transferred?
-can the function fail?
+FRESH_LOCAL
+PRIVATE_LOCAL
+BOUND_TO
+RETURNED
+OUTPUT_BOUND
+PUBLISHED_IN_FIELD
+MEMBER_OF_CONTAINER
 ```
 
-They must not encode full filesystem operation protocols.
-
-## 7. Implementation Phases
-
-### M0: Stabilize Data Model and Scope
-
-Tasks:
+Cleanup footprints:
 
 ```text
-keep metadata_residual.py as the central model
-keep metadata_scope.py loading metadata_scope_v1.json
-add tests for scope decisions and report serialization
+root_pattern
+key_pattern
+plane
+inverse_delta
+value_pattern
+owner_or_container
 ```
 
-Acceptance:
-
-```text
-metadata scope loads
-out-of-scope confirmed bugs are rejected
-UNCLOSED_METADATA_RESIDUAL and UNKNOWN reports serialize deterministically
-```
-
-Status: mostly done.
-
-### M1: Failure Point Discovery
-
-Implement `src/failure_points.py`.
-
-Detect:
-
-```text
-ret = call(); if (ret) goto/return
-ret = call(); if (ret < 0) goto/return
-ptr = call(); if (IS_ERR(ptr)) goto/return
-if (call(...) < 0) goto/return
-return PTR_ERR(ptr)
-return ret / return error on an error edge
-return 0 on an error edge for outcome-extension mode
-```
-
-Output:
-
-```text
-FailurePoint {
-  call_site
-  check_site
-  error_edge
-  result_symbol
-  callee
-}
-```
-
-Acceptance tests:
-
-```text
-simple ret/if/goto fixture
-IS_ERR fixture
-direct return error fixture
-shared out label fixture
-non-error branch ignored
-```
-
-Status: done.
-
-### M2: Raw Metadata Effect Extraction
-
-Implement `src/effect_extractor.py`.
-
-Extract from visible code:
-
-```text
-field assignment and update expression
-+= / -= / ++ / --
-set_bit / clear_bit
-list_add / list_del / list_del_init
-tree/rbtree/xarray insert/remove idioms
-reservation acquire/release naming patterns
-quota/dquot reference operations
-transaction/recovery attach/cancel patterns
-```
-
-Map to:
-
-```text
-MetadataEffect(root, key, plane, delta, value, site)
-```
-
-Acceptance tests:
-
-```text
-inode->i_blocks += nr -> ACCOUNTING INC
-inode->i_blocks -= nr -> ACCOUNTING DEC
-list_add(&dev->post_commit_list, &trans->dev_update_list) -> RECOVERY ADD
-list_del_init(&dev->post_commit_list) -> RECOVERY REMOVE
-fs_root->reloc_root = reloc_root -> RECOVERY SET
-fs_root->reloc_root = NULL -> RECOVERY CLEAR
-ordinary kfree(ptr) -> out of scope
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M2 emits raw MetadataEffect values only.  It classifies visible field, bit,
-list, tree/xarray, reservation, quota/dquot, and transaction/recovery idioms
-into STRUCTURAL, ACCOUNTING, or RECOVERY planes, but leaves identity-aware
-cancellation and failure-local slicing to M4/M5.
-```
-
-### M3: Function Summary Generation
-
-Implement `src/function_summary.py`.
-
-First version:
-
-```text
-generate summaries only for visible static helpers in the same source file
-parameterize effects as arg0, arg1, ...
-record may_fail from return error patterns
-mark unknown_escape for indirect calls, function pointers, async queue handoff
-```
-
-Call-site instantiation:
-
-```text
-summary effect arg0.field, arg1 -> actual0.field, actual1
-```
-
-Acceptance tests:
-
-```text
-charge_inode(arg0,arg1) summary opens INC(arg0.i_blocks,arg1)
-uncharge_inode(arg0,arg1) summary cancels DEC(arg0.i_blocks,arg1)
-call charge_inode(inode,nr) instantiates INC(inode.i_blocks,nr)
-unresolved argument identity becomes UNKNOWN
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M3 provides build_function_summary(), build_same_file_summaries(),
-instantiate_summary(), and apply_same_file_summary().  Summaries are AUTO_LOCAL
-for static same-file helpers, parameterized as arg0/arg1/..., and preserve
-may_fail plus unknown_escape for indirect calls or async/deferred handoff idioms.
-```
-
-### M4: Identity-Aware Cancellation
-
-Implement `src/cancellation.py`.
-
-Inverse pairs:
-
-```text
-INC <-> DEC
-SET <-> CLEAR
-ADD <-> REMOVE
-RESERVE <-> RELEASE
-PROTECT removes from residual only when ownership binding is explicit
-```
-
-Match only when:
-
-```text
-same or normalized Root
-same or compatible Key
-same Plane
-inverse Delta
-same or equivalent Value source
-```
-
-Acceptance tests:
-
-```text
-INC(inode.i_blocks,nr) cancels DEC(inode.i_blocks,nr)
-INC(inode.i_blocks,nr) does not cancel DEC(other.i_blocks,nr)
-INC(inode.i_blocks,nr) does not cancel DEC(inode.i_blocks,old_nr)
-ADD(list,device) cancels REMOVE(list,device)
-ADD(list,device) does not cancel REMOVE(other_list,device)
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M4 provides normalize_residuals(), effects_cancel(), and effect_protected_by().
-List membership matching supports exact list identity and explicit member-head
-identity from M2, but keeps different container roots distinct.
-```
-
-### M5: Failure-Anchored Slicing
-
-Implement `src/residual_slicer.py`.
-
-For each failure point:
-
-```text
-backward slice to collect E_f
-forward error-path slice to collect C_f and T_f
-stop or mark UNKNOWN at indirect calls, async handoff, unresolved helper, or
-unbounded recursion
-```
-
-First version can be intraprocedural plus same-file helper summaries.
-
-Acceptance tests:
-
-```text
-mutation -> failure -> return error leaves residual
-mutation -> failure -> compensation -> return error clears residual
-mutation -> failure -> transaction cancel with explicit binding protects residual
-unknown helper on error path yields METADATA_RESIDUAL_UNKNOWN
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M5 provides slice_function_residuals().  The first implementation is
-intraprocedural, accepts same-file AUTO_LOCAL summaries, collects reaching
-effects before each failure point, walks the verified error edge for
-cancellations/protections, and returns UNKNOWN when an unresolved metadata
-helper, indirect call, or unknown summary escape is on the relevant path.
-```
-
-### M6: Residual Analyzer and Reports
-
-Implement `src/residual_analyzer.py` and `src/residual_report.py`.
-
-Output JSON and Markdown:
-
-```text
-function
-source version
-failure point
-error exit
-E_f
-C_f
-T_f
-R_f
-scope rationale
-unknown causes
-confidence
-```
-
-Report kinds:
-
-```text
-UNCLOSED_METADATA_RESIDUAL
-METADATA_RESIDUAL_UNKNOWN
-OUT_OF_SCOPE
-```
-
-Acceptance tests:
-
-```text
-deterministic JSON
-readable Markdown witness
-candidate only when R_f is non-empty and in scope
-UNKNOWN not counted as bug candidate
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M6 provides analyze_function_residuals(), analyze_functions(),
-ResidualWitnessReport, reports_to_json(), and reports_to_markdown().  The
-analyzer emits UNCLOSED_METADATA_RESIDUAL candidates and UNKNOWN review reports
-by default; CLOSED/PROTECTED slices are emitted as OUT_OF_SCOPE only in
-include_all audit mode.
-```
-
-### M7: Evaluation Harness
-
-Implement a small driver after M1-M6 are stable.
-
-Inputs:
-
-```text
-single source file
-source root
-confirmed bug mapping
-```
-
-Outputs:
-
-```text
-reports/*.json
-reports/*.md
-summary counts
-```
-
-Evaluation metrics:
-
-```text
-curated in-scope findings expressible as residuals
-out-of-scope filtering accuracy
-EXPOSED / PROTECTED / CLOSED / UNKNOWN distribution
-candidate precision after manual review
-configuration size compared with MOCC-SE
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-M7 provides run_evaluation(), load_confirmed_bug_mapping(), EvaluationResult,
-and scripts/evaluate_residuals.py.  The harness analyzes one C source file,
-uses same-file summaries, writes reports/all_reports.{json,md}, per-report
-JSON/Markdown witnesses, summary.json, and evaluation.json, and records summary
-counts for candidates, UNKNOWN reports, OUT_OF_SCOPE audit records, residual
-states, and optional confirmed-bug mapping context.
-```
-
-### M8: Real-Source Precision Pass
-
-Focus:
-
-```text
-reduce false residuals from same-file helper summaries
-keep unproven callee-local identities as UNKNOWN instead of candidates
-normalize source-visible local aliases such as fs_devices = fs_info->fs_devices
-```
-
-Status: started.
-
-Implementation note:
-
-```text
-effect_extractor.py now canonicalizes explicit local metadata aliases before
-effect construction, so matching paths such as fs_devices->num_devices and
-fs_info->fs_devices->num_devices share an identity.  function_summary.py now
-drops AUTO_LOCAL summary effects that still reference unbound callee-local
-base identifiers and marks the summary as unknown_escape, preventing private
-callee identities such as old_devices from leaking into caller residuals.
-Same-file summaries also model a narrow return-value identity binding:
-effects on a final returned local are represented with __return__ and are
-instantiated only when the call result is bound to a visible caller lvalue.
-If such a return-bound summary contains unresolved metadata helper calls, it
-stays UNKNOWN rather than becoming a candidate.
-UNKNOWN causes are now carried as structured-ish labels instead of only the
-coarse unknown_escape boolean, including unbound_callee_local_identity,
-return_bound_unresolved_helper, function_pointer_parameter_call,
-async_or_deferred_handoff, and unresolved metadata helpers on error paths.
-The evaluation summary also includes unknown_cause_counts for review triage.
-```
-
-Latest real-source smoke:
-
-```text
-python scripts/evaluate_residuals.py \
-  linux-sources/linux-v6.14-fs/fs/btrfs/volumes.c \
-  --source-root linux-sources/linux-v6.14-fs \
-  --confirmed-bug-mapping outputs/confirmed_bugs.md \
-  --output-dir outputs/residual-evaluation/linux-v6.14-btrfs-volumes-v8
-
-functions_analyzed: 188
-functions_with_failure_points: 46
-candidate_count: 9
-unknown_count: 49
-reports_written: 58
-confirmed_bug_functions_in_source: btrfs_init_new_device
-unknown_cause_counts:
-  return_bound_unresolved_helper: 12
-  unbound_callee_local_identity: 29
-  unresolved_metadata_helper_on_error_path: 82
-```
-
-### M9: Batch Evaluation Driver
-
-Focus:
-
-```text
-run the harness across a source tree, not just a single file
-keep per-file reports while also writing a batch-level aggregate summary
-preserve the same unknown-cause breakdown at scale
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-src/evaluation_harness.py now provides run_batch_evaluation() and
-BatchEvaluationResult.  The batch driver recursively analyzes every .c file
-under a source path, writes per-file artifacts under output_dir/files/,
-aggregates all reports under output_dir/reports/, and emits a batch summary
-with source_files_analyzed plus unknown_cause_counts.
-```
-
-Full btrfs tree smoke:
-
-```text
-python scripts/evaluate_residuals_batch.py \
-  linux-sources/linux-v6.14-fs/fs/btrfs \
-  --source-root linux-sources/linux-v6.14-fs \
-  --confirmed-bug-mapping outputs/confirmed_bugs.md \
-  --output-dir outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs
-
-source_files_analyzed: 75
-functions_analyzed: 3041
-functions_with_failure_points: 932
-candidate_count: 409
-unknown_count: 770
-reports_written: 1179
-confirmed_bug_functions_in_source:
-  __add_reloc_root
-  btrfs_init_new_device
-  btrfs_recover_relocation
-  reserve_chunk_space
-unknown_cause_counts:
-  unresolved_metadata_helper_on_error_path: 567
-  unbound_callee_local_identity: 910
-  return_bound_unresolved_helper: 378
-  indirect_call: 41
-  function_pointer_parameter_call: 11
-  indirect_call_on_error_path: 1
-  async_or_deferred_handoff: 1
-  unresolved_identity: 4
-```
-
-### M10: Mainline/Test Split
-
-Focus:
-
-```text
-separate fs/btrfs production code from fs/btrfs/tests fixtures
-keep the same batch harness but use exclude_globs for the mainline run
-preserve the tests tree as a smaller sanity corpus
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-run_batch_evaluation() now accepts exclude_globs, and the batch CLI exposes
---exclude-glob.  Mainline btrfs was rerun with fs/btrfs/tests/* excluded, and
-the tests subtree was run separately.  The two corpora together match the
-original recursive batch totals.
-```
-
-Split smoke:
-
-```text
-mainline (fs/btrfs, excluding tests):
-  source_files_analyzed: 65
-  functions_analyzed: 2936
-  candidate_count: 292
-  unknown_count: 698
-
-tests (fs/btrfs/tests):
-  source_files_analyzed: 10
-  functions_analyzed: 105
-  candidate_count: 117
-  unknown_count: 72
-
-combined:
-  source_files_analyzed: 75
-  functions_analyzed: 3041
-  candidate_count: 409
-  unknown_count: 770
-```
-
-Probe note:
-
-```text
-btrfs_init_new_device keeps two early UNCLOSED_METADATA_RESIDUAL reports and
-keeps later sprout/transaction paths as METADATA_RESIDUAL_UNKNOWN because the
-slice crosses unresolved helper semantics.
-```
-
-### M11: UNKNOWN Triage and Relevance Gate
-
-Focus:
-
-```text
-rank UNKNOWN causes by category, helper/detail, function, and concrete failure
-point
-avoid emitting review-only UNKNOWN reports when no source-visible metadata
-effect reaches the failure point
-keep candidate counts unchanged while reducing no-E_f cleanup noise
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-src/unknown_triage.py provides build_unknown_triage(), triage_to_markdown(),
-write_unknown_triage(), and the shared unknown_cause_category() helper.
-scripts/summarize_unknowns.py reads an evaluation output directory or
-reports/all_reports.json and writes unknown_triage.{json,md}.
-
-residual_slicer.py now gates error-path unknown helper causes on the presence
-of source-visible reaching effects.  Pre-failure same-file summary UNKNOWN
-causes are still preserved, including unbound callee-local identities and
-return-bound unresolved helpers.
-```
-
-Latest split outputs:
-
-```text
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs/unknown_triage.md
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main/unknown_triage.md
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-tests/unknown_triage.md
-
-mainline candidate_count: 292
-mainline unknown_count: 698
-mainline reports_written: 990
-mainline top UNKNOWN categories:
-  unbound_callee_local_identity: 828
-  unresolved_metadata_helper_on_error_path: 521
-  return_bound_unresolved_helper: 378
-```
-
-### M12: Known Cleanup De-duplication and Initializer Alias Filter
-
-Focus:
-
-```text
-avoid marking a call UNKNOWN when the same call has already been extracted as a
-known error-path CLOSE, RELEASE, CLEAR, REMOVE, DEC, or PROTECT effect
-prevent compound initializer lists from becoming local metadata aliases
-remove scratch-struct initializer false positives such as local btrfs_key
-designated initializers
-```
-
-Status: done.
-
-Implementation note:
-
-```text
-residual_slicer.py now tracks known error-path effect call sites from M2 and
-skips duplicate unresolved-helper causes for those same source sites.  This
-reduces btrfs_abort_transaction/btrfs_end_transaction-style UNKNOWN noise
-without treating transaction abort/end as a blanket protection for unrelated
+Cleanup matching remains footprint-bounded. A helper named `cleanup`,
+`destroy`, `release`, or `abort` must not be treated as closing arbitrary
 metadata effects.
 
-effect_extractor.py now rejects local alias targets containing compound
-initializer syntax, so declarations such as struct btrfs_key key = { ... } do
-not canonicalize later key.offset assignments into synthetic metadata roots.
-```
+## 8. UNKNOWN Policy
 
-Latest verification:
+UNKNOWN is expected and desirable when source evidence is insufficient.
 
-```text
-python -m compileall -q src scripts
-python -m pytest -q -p no:cacheprovider
-74 passed
-
-mainline:
-  candidate_count: 292
-  unknown_count: 698
-  reports_written: 990
-
-full btrfs:
-  candidate_count: 409
-  unknown_count: 770
-  reports_written: 1179
-```
-
-### M13: Candidate Triage
-
-Focus:
+Current taxonomy in `src/unknown_triage.py`:
 
 ```text
-rank UNCLOSED_METADATA_RESIDUAL candidates by function, residual identity, and
-plane/delta
-include concrete failure-point examples for manual review
-make candidate precision work repeatable instead of relying on one-off scripts
+structural:
+  indirect_call
+  indirect_call_on_error_path
+  function_pointer_parameter_call
+  unbound_callee_local_identity
+  unresolved_identity
+  unclassified_return_exit
+  callee_failure_effect_order_unknown
+  lifecycle_exit_partition_unproven
+  success_only_publication_not_proven_on_error
+
+missing_summary:
+  unresolved_metadata_helper_on_error_path
+  return_bound_unresolved_helper
+  cleanup_effect_scope_unproven
+  unresolved_metadata_helper
+  source_visible_helper_without_summary
+
+other:
+  anything not yet classified
 ```
 
-Status: done.
+Use this taxonomy for milestone reporting. A reduction in UNKNOWN is useful
+only if candidate count does not rise for the wrong reason and known findings
+remain visible.
 
-Implementation note:
+## 9. Last Measured Btrfs State
+
+The last documented mainline measurement was M26. Its output directory has been
+cleaned as a generated artifact, so regenerate a fresh baseline before using
+these numbers as a comparison point.
+
+M26 documented:
 
 ```text
-src/candidate_triage.py provides build_candidate_triage(),
-triage_to_markdown(), and write_candidate_triage().
-scripts/summarize_candidates.py reads an evaluation output directory or
-reports/all_reports.json and writes candidate_triage.{json,md}.
+mainline, fs/btrfs/tests/* excluded:
+  273 candidates
+  393 UNKNOWN
+  666 reports
+
+unknown_taxonomy_counts:
+  missing_summary: 214
+  structural: 459
+
+missing_summary categories:
+  unresolved_metadata_helper_on_error_path: 193
+  return_bound_unresolved_helper: 21
+
+structural categories:
+  callee_failure_effect_order_unknown: 19
+  function_pointer_parameter_call: 2
+  indirect_call: 27
+  unbound_callee_local_identity: 285
+  unclassified_return_exit: 126
 ```
 
-Latest candidate triage outputs:
+Known mapped behavior should remain visible after every milestone:
 
 ```text
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs/candidate_triage.md
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main/candidate_triage.md
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-tests/candidate_triage.md
+btrfs_init_new_device:
+  candidate residuals remain visible
 
-mainline candidate reports: 292
-mainline residual effects: 693
-mainline top residual identities:
-  RECOVERY SET sctx.last_reloc_trans: 28
-  ACCOUNTING INC trans.btrfs_qgroup_trace_extent: 16
-  ACCOUNTING SET ref.bytenr: 13
-  ACCOUNTING SET ref.num_bytes: 13
-  ACCOUNTING INC control.sub_bytes: 12
+btrfs_recover_relocation:
+  recovery residual evidence remains traceable through confirmed_bugs.md and
+  outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md
+
+btrfs_dev_replace_start:
+  P3 should remain at least candidate/UNKNOWN-visible, not silently removed
 ```
 
-Next precision target:
+P2-like ordinary resource lifetime bugs must not be counted as core
+filesystem-metadata residual recall unless independently tied to metadata
+completion semantics.
 
-```text
-distinguish persistent/recovery-visible metadata objects from local request or
-specification structs passed into helpers, especially ref.*, args.*, and
-control.* fields
+## 10. Evaluation Commands
+
+Regenerate a clean btrfs mainline baseline:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+python scripts/evaluate_residuals_batch.py `
+  linux-sources/linux-v6.14-fs/fs/btrfs `
+  --source-root linux-sources/linux-v6.14-fs `
+  --confirmed-bug-mapping outputs/confirmed_bugs.md `
+  --exclude-glob "fs/btrfs/tests/*" `
+  --output-dir outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m28-baseline
 ```
 
-### M14: Transient Object Lifetime Gate
+Summarize UNKNOWN:
 
-Focus:
-
-```text
-exclude direct mutations of temporary request, specification, and operation
-context objects without suppressing effects on persistent objects reached
-through those contexts
-keep generated evaluation witnesses synchronized after a lower-precision
-rerun produces fewer reports
+```powershell
+python scripts/summarize_unknowns.py `
+  outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m28-baseline
 ```
 
-Status: done.
+Summarize candidates:
 
-Implementation note:
-
-```text
-effect_extractor.py now excludes direct field effects on non-pointer automatic
-objects, which removes stack request/spec structs such as btrfs_ref, local
-keys, and checks.  It also recognizes pointer parameters and local pointers
-whose declared type ends in args, check, context, control, ctx, option, param,
-request, or spec as transient operation contexts.  Recovery-bearing context
-types (transaction, journal, recovery, relocation, replay, orphan, delayed,
-ordered, or commit) remain in scope.
-
-The gate preserves a context path after it traverses another pointer, for
-example ctx->inode->i_blocks, so a transient wrapper cannot hide a mutation on
-the persistent inode.  It additionally suppresses heuristic call effects only
-when the effect is rooted directly in a transient context, avoiding false
-RECOVERY effects from send-side helpers such as orphanize_inode(sctx, ...).
-
-evaluation_harness.py now removes only stale numbered per-report witness files
-before rewriting a reports directory.  Aggregate reports and triage artifacts
-are preserved, so reduced reruns cannot leave obsolete witnesses for manual
-review.
+```powershell
+python scripts/summarize_candidates.py `
+  outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m28-baseline
 ```
 
-Verification:
+Compare two runs:
 
-```text
-python -m pytest -q -p no:cacheprovider
-82 passed
-
-mainline (fs/btrfs excluding tests):
-  candidate_count: 239  (was 292)
-  unknown_count: 650    (was 698)
-  reports_written: 889  (was 990)
-  residual effects: 488 (was 693)
-
-tests (fs/btrfs/tests):
-  candidate_count: 100  (was 117)
-  unknown_count: 72     (unchanged)
-
-full fs/btrfs:
-  candidate_count: 339  (was 409)
-  unknown_count: 722    (was 770)
-  reports_written: 1061 (was 1179)
-
-The full-tree totals equal mainline plus tests.  The mainline candidate triage
-no longer contains ref, args, control, check, or direct sctx residual roots.
-The four mapped btrfs functions remain present: btrfs_init_new_device has two
-EXPOSED reports, btrfs_recover_relocation remains UNKNOWN with source-visible
-residuals, and the outcome-residual reserve_chunk_space case remains outside
-the current metadata-residual claim.
+```powershell
+python scripts/compare_residual_runs.py `
+  outputs/residual-evaluation-batch/<baseline> `
+  outputs/residual-evaluation-batch/<current> `
+  --output outputs/residual-evaluation-batch/<current>/unknown_resolution_matrix.json
 ```
 
-Next precision target:
+Generated evaluation outputs are ignored and should not be committed unless the
+research process explicitly chooses to version a curated, small artifact.
+
+## 11. Milestone History
+
+Condensed history:
 
 ```text
-replace name-based helper-call effect guesses on persistent transaction and
-filesystem roots with source-derived same-file summaries where available.
-The dominant remaining candidate identities are transaction/qgroup helper
-effects; this should reduce false positives without weakening the UNKNOWN
-boundary for unresolved helpers.
+M0  Stabilized residual data model and metadata scope.
+M1  Added failure point discovery.
+M2  Added raw filesystem metadata effect extraction.
+M3  Added function summaries.
+M4  Added identity-aware cancellation.
+M5  Added failure-anchored backward/forward slicing.
+M6  Added residual analyzer and witness reports.
+M7  Added evaluation harness.
+M8  Added real-source precision gates for UNKNOWN safety.
+M9  Added batch evaluation.
+M10 Split mainline and fs/btrfs/tests evaluation.
+M11 Added UNKNOWN triage and relevance gate.
+M12 Added known-cleanup de-duplication and initializer alias filtering.
+M13 Added candidate triage.
+M14 Added transient object lifetime gate.
+M15 Improved identity and source-scope precision.
+M16 Added source-derived fresh ownership transfer.
+M17 Added cross-function summary propagation.
+M18 Improved accessor and candidate reduction behavior.
+M19 Added source-derived lifecycle facts and exit-sensitive effects.
+M20 Added narrow local pointer aliases and fresh-object visibility filtering.
+M21 Made callee failure effects stricter with MUST/MAY partitions.
+M22 Added exposure-aware identity and UNKNOWN resolution matrix support.
+M23 Added source-proven no-op helpers and cleanup footprints.
+M24 Added bounded indirect target recovery for no-op callbacks.
+M25 Added UNKNOWN taxonomy accounting.
+M26 Added header inline summary coverage.
+M27 Aligned documentation and output wording to filesystem metadata residual scope.
 ```
 
-### M15: Identity and Source-Scope Precision
+Historical detailed run outputs under `outputs/residual-evaluation*` have been
+removed from the working tree. The handoff now records milestone intent rather
+than treating those directories as persistent project files.
 
-Focus:
+## 12. Next Work
+
+Recommended next milestone:
 
 ```text
-reduce UNKNOWN caused by scalar return bindings and caller-local summary output
-remove source-proven transient/control and VFS wiring false positives
-keep unresolved cleanup helpers UNKNOWN unless their semantics are actually proven
+M28: clean baseline plus missing-summary reduction
 ```
 
-Status: done.
-
-Implementation note:
+M28a: regenerate clean baseline.
 
 ```text
-function_summary.py binds __return__ only for local pointer identities, so a
-scalar status variable such as int ret is not treated as a returned metadata
-object.  residual_slicer.py filters instantiated same-file summary effects that
-land on caller stack objects or transient operation contexts.
-
-effect_extractor.py recognizes read-only metadata accessors while retaining a
-mutation-token guard, so btrfs_root_id()/btrfs_root_ctransid()-style readers do
-not create effects or error-path UNKNOWN, while helpers such as
-inode_dec_link_count() remain mutating and unresolved when no summary exists.
-
-The transient type gate now includes ctl, key, path, ref, and cache_entry
-suffixes and supports multi-token suffixes such as btrfs_lru_cache_entry.  It
-still preserves effects reached through a second pointer hop.  Direct VFS
-operation wiring fields (i_op, i_fop, i_mapping, and a_ops) are outside the
-metadata residual scope.
-
-Source declarations with an explicit immediately preceding "reused for each"
-lifetime comment are treated as ephemeral aggregates for their direct fields.
-This removes send.c clone_root traversal-state residuals without suppressing
-metadata reached through clone_root->root.
-
-An experimental rule that suppressed error-path cleanup UNKNOWN based only on
-argument/residual symbol disjointness was rejected and removed: it reduced
-UNKNOWN but raised mainline candidates from 239 to 261.  Argument non-overlap
-is not sufficient proof that a helper cannot affect metadata completion.
+Re-run btrfs mainline evaluation after the output cleanup.
+Record candidate_count, unknown_count, unknown_taxonomy_counts, and mapped
+P1/P2/P3 behavior.
 ```
 
-Verification:
+M28b: review candidate delta.
 
 ```text
-python -m compileall -q src scripts
-python -m pytest -q -p no:cacheprovider
-92 passed
-
-mainline (fs/btrfs excluding tests):
-  candidate_count: 239  (unchanged from M14)
-  unknown_count: 587    (was 650)
-  reports_written: 826  (was 889)
-  unbound_callee_local_identity: 613
-  unresolved_metadata_helper_on_error_path: 448
-  return_bound_unresolved_helper: 41
-
-tests (fs/btrfs/tests):
-  candidate_count: 100
-  unknown_count: 72
-
-full fs/btrfs:
-  candidate_count: 339  (unchanged from M14)
-  unknown_count: 659    (was 722)
-  reports_written: 998  (was 1061)
-
-The full-tree totals equal mainline plus tests.  btrfs_init_new_device remains
-2 EXPOSED plus 5 UNKNOWN reports, btrfs_recover_relocation remains 4 UNKNOWN
-reports with source-visible residuals, and __add_reloc_root remains one
-candidate whose confirmed issue is an out-of-scope memory leak.
+Diff current candidates against the last measured M26 behavior.
+Manually inspect newly promoted candidates before treating UNKNOWN reduction as
+precision improvement.
 ```
 
-Next precision target:
+M28c: demand-driven helper summaries.
 
 ```text
-add a bounded source-derived transfer summary for fresh/local objects inserted
-into caller-owned lists or trees, and for local objects explicitly assigned to
-caller-owned persistent fields.  The summary must retain container identity,
-represent fresh object identity without guessing cancellation, and avoid
-converting UNKNOWN into candidates unless ownership transfer is proven.
+Target unresolved_metadata_helper_on_error_path first.
+Analyze only helpers on the active failure slice.
+Export MUST_CANCEL or MUST_PROTECT only when source proves the exact residual
+footprint.
+Keep unresolved nested metadata helpers as UNKNOWN.
 ```
 
-### M16: Source-Derived Fresh Ownership Transfer
-
-Focus:
+M28d: return-bound helper summaries.
 
 ```text
-represent fresh helper-local objects only after source-visible ownership transfer
-retain caller container identity for list/tree insertion and persistent fields
-keep helper-call failure ordering UNKNOWN when transfer timing is not proven
-exclude transfer into caller-local temporary containers
+Target return_bound_unresolved_helper.
+Handle pointer returns only.
+Bind returned fresh identities to caller lvalues before applying helper
+summaries.
+Do not treat scalar return values as metadata objects.
 ```
 
-Status: done.
-
-Implementation note:
+Likely M29:
 
 ```text
-function_summary.py now recognizes a narrow set of direct allocation primitives
-and propagates fresh-return facts through visible same-file static helpers for at
-most three passes.  A fresh local receives a summary identity only when it is
-inserted into a parameter-reachable list/tree or assigned to a parameter-reachable
-persistent field.
-
-List/tree transfers use a deterministic call-site-specific __fresh identity, so
-separate calls cannot cancel each other accidentally.  Field transfers bind the
-fresh local to the caller-visible field path.  The summary records transfer roots
-explicitly.
-
-residual_slicer.py applies a transfer summary only when the instantiated container
-is caller-owned.  Transfers into local declarations or LIST_HEAD/HLIST_HEAD work
-lists are treated as transient.  If the transferring helper call itself is the
-failure point, transfer effects remain UNKNOWN because the current summary cannot
-prove whether they occur before the callee error.
-
-Local symbol extraction now handles every declarator in declarations such as
-"struct node *entry, *node".  This prevents missed callee-local identities from
-becoming candidates.
+Improve return classifier for unclassified_return_exit.
+Then revisit structural UNKNOWN, especially unbound_callee_local_identity.
+Do not broaden indirect-call recovery beyond bounded source-visible targets
+until candidate deltas are reviewed.
 ```
 
-Verification:
+## 13. Gate Checklist
+
+Every milestone must check:
 
 ```text
-python -m compileall -q src scripts
-python -m pytest -q -p no:cacheprovider
-100 passed
-
-mainline (fs/btrfs excluding tests):
-  candidate_count: 236  (was 239)
-  unknown_count: 581    (was 587)
-  reports_written: 817  (was 826)
-  unbound_callee_local_identity: 593
-  unresolved_metadata_helper_on_error_path: 442
-  return_bound_unresolved_helper: 31
-  callee_failure_effect_order_unknown: 2
-
-tests (fs/btrfs/tests):
-  candidate_count: 100
-  unknown_count: 72
-
-combined:
-  candidate_count: 336  (was 339)
-  unknown_count: 653    (was 659)
-  reports_written: 989  (was 998)
-
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m16-final2/
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-tests-m16-final/
+unit tests pass
+UNKNOWN count changes by taxonomy, not only total
+candidate count does not rise without review
+known mapped findings remain visible
+P3 remains candidate/UNKNOWN-visible
+P2-like ordinary resource lifetime findings stay out of the core claim
+new CLOSED/PROTECTED resolutions have source evidence
+generated outputs are not mistaken for active documentation
 ```
 
-Manual precision review:
+The correct end state is not UNKNOWN equals zero. The correct end state is:
 
 ```text
-send.c dup_ref() transfers into check_dirs and pending local work lists are now
-closed as transient instead of UNKNOWN or candidate.
-
-btrfs_rebuild_free_space_tree() and btrfs_tree_mod_log_insert_root() candidates
-caused by missed secondary local declarators now remain UNKNOWN.
-
-No new mainline candidate was accepted solely because of a guessed allocator name.
-```
-
-Next precision target:
-
-```text
-make rbtree extraction container-aware: rb_link_node() prepares node linkage but
-does not identify the owning rb_root, while rb_insert_color()/rb_erase() carry the
-container operation.  Then add bounded callee effect ordering so a summary can
-separate effects guaranteed before a particular error return from success-only
-ownership transfer, reducing callee_failure_effect_order_unknown without assuming
-that every helper effect occurred on the failure edge.
-```
-
-## 8. Confirmed Bug Mapping
-
-Core residual examples:
-
-```text
-#7   btrfs_recover_relocation
-#16  btrfs_init_new_device
-#17  btrfs_init_new_device
-#18  btrfs_init_new_device
-#12  xfs_qm_quotacheck_dqadjust, if framed as quota metadata ownership
-```
-
-Outcome-residual extension:
-
-```text
-#1, #2, #5, #8, #13
-#4 and #15 as return/outcome-value variants
-```
-
-Out of scope:
-
-```text
-#3, #6, #9, #10, #11, #14
-```
-
-Do not use out-of-scope resource leaks as residual-analysis recall.
-
-## 9. Engineering Rules
-
-```text
-Prefer source-derived summaries over hand-written summaries.
-Keep pinned summaries small and auditable.
-Do not add a rule registry.
-Do not add protocol families or operation instances.
-Do not claim confirmed bugs from static reports alone.
-Do not classify UNKNOWN as safe or as bug.
-Keep tests synthetic and minimal before running large source scans.
-```
-
-## 10. Suggested Build Order
-
-Recommended next coding order:
-
-```text
-1. failure_points.py
-2. effect_extractor.py
-3. cancellation.py
-4. function_summary.py
-5. residual_slicer.py
-6. residual_analyzer.py
-7. residual_report.py
-8. evaluation driver
-```
-
-After each module:
-
-```text
-add synthetic C fixture
-add unit tests
-run pytest
-update PROJECT_HANDOFF.md if the implemented behavior differs from this plan
-```
-
-## 11. Paper Boundary
-
-Do not claim:
-
-```text
-complete Linux C soundness
-complete crash consistency
-automatic bug confirmation
-coverage of ordinary resource leaks
-first-ever error-path checker
-full filesystem semantic validation
-```
-
-The target claim is:
-
-> A failure-local residual analysis can detect Linux file-system error exits
-> where source-visible metadata effects remain neither cancelled nor explicitly
-> protected, while avoiding the heavy protocol modeling of MOCC-SE and the
-> need for sibling-path comparison.
-
-## M17 Update
-
-Cross-function summary propagation is now in place with bounded inter-TU fresh-return facts, caller output-identity binding for `T **out` style parameters, and failure-exit-sensitive summary application in the residual slicer.
-
-Validation:
-
-```text
-pytest: 104 passed
-mainline smoke: 248 candidate / 474 UNKNOWN / 722 reports
-tests smoke: 102 candidate / 65 UNKNOWN
-```
-
-Key result:
-
-```text
-btrfs_dev_replace_start()
-  btrfs_init_dev_replace_tgtdev(..., &tgt_device): CLOSED
-  mark_block_group_to_copy(...): EXPOSED
-```
-
-Outputs:
-
-```text
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m17-final/
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-tests-m17-final/
-```
-
-Notes:
-
-```text
-UNKNOWN dropped by 107 on the btrfs mainline batch versus M16.
-Candidate count rose by 12 overall; the new candidates are in the final batch output and need review.
-Do not treat UNKNOWN as safe.
-```
-
-## M18 Update
-
-Precision follow-up after reviewing M17 candidate churn:
-
-```text
-Treat getter/checker/full-accounting style helper names as readers instead of
-guessed metadata mutations when no source-derived body summary proves a write.
-
-Do not propagate failure-edge effects on fresh local objects unless that fresh
-identity is exposed to the caller/container on the same failure edge.  This
-keeps resource-leak-shaped fresh-local writes out of metadata residual reports.
-```
-
-Guarded reader examples:
-
-```text
-btrfs_get_root_last_trans()
-btrfs_qgroup_full_accounting()
-btrfs_qgroup_check_inherit()
-```
-
-Validation:
-
-```text
-compileall: passed
-pytest: 106 passed
-mainline: 238 candidate / 466 UNKNOWN / 704 reports
-tests: 102 candidate / 65 UNKNOWN
-```
-
-Outputs:
-
-```text
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-main-m18-final/
-outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-tests-m18-final/
-```
-
-Current comparison point:
-
-```text
-M16 mainline: 236 candidate / 581 UNKNOWN
-M17 mainline: 248 candidate / 474 UNKNOWN
-M18 mainline: 238 candidate / 466 UNKNOWN
-
-M18 keeps the btrfs_dev_replace_start() mark_block_group_to_copy() candidate
-opened by M17, while removing confirmed accessor/checker helper noise.
-```
-
-## UNKNOWN Source And State Machine Plan
-
-Current M18 UNKNOWN sources are not one category.  The mainline counts are:
-
-```text
-unresolved_metadata_helper_on_error_path: 406
-unbound_callee_local_identity: 465
-indirect_call: 31
-return_bound_unresolved_helper: 23
-function_pointer_parameter_call: 2
-callee_failure_effect_order_unknown: 2
-unclassified_return_exit: 1
-```
-
-Interpretation:
-
-```text
-unresolved_metadata_helper_on_error_path:
-  A visible residual reaches an error path, but the error path calls a helper
-  that looks metadata-mutating and has no applicable source-derived summary.
-
-unbound_callee_local_identity:
-  A helper summary sees metadata effects on a callee-local object, but the
-  analysis cannot prove that local object is returned, assigned to an output
-  parameter, inserted into caller-owned state, or otherwise exposed.
-
-indirect_call / function_pointer_parameter_call:
-  Call target is not statically direct enough for current summary indexing.
-
-return_bound_unresolved_helper:
-  A returned object carries effects, but a metadata-looking helper on that
-  return-bound object remains unresolved.
-
-callee_failure_effect_order_unknown:
-  Only two remain after M17.  These are suitable for failure-exit-sensitive
-  summaries or small state machines, not broad helper-name guesses.
-
-unclassified_return_exit:
-  Return classification gap.
-```
-
-State machine judgment:
-
-```text
-A bounded state-machine layer is useful, but it should not be a global
-filesystem protocol model.
-
-Good targets:
-  device lifecycle
-  transaction lifecycle
-  root/log lifecycle
-  qgroup/reservation lifecycle
-  block_group/space_info lifecycle
-
-Use state machines only when they encode source-visible object states such as:
-  fresh -> initialized -> attached/published -> cleaned/rolled_back
-  transaction_started -> committed/aborted/ended
-  reserved -> released
-
-Expected benefit:
-  Reduce some unresolved_metadata_helper_on_error_path cases.
-  Reduce some unbound_callee_local_identity cases by making exposure and cleanup
-  states explicit.
-  Keep callee failure handling success/error sensitive.
-
-Limits:
-  State machines will not solve indirect calls without target recovery.
-  They should not classify UNKNOWN as safe.
-  They should not become MDR/protocol-family registries.
-  They should be source-derived first, with only small auditable pinned states
-  if necessary.
-```
-
-Recommended next implementation step:
-
-```text
-M19: add a small object-state summary layer for device and transaction paths.
-
-Start with:
-  btrfs device attach/replace flow
-  btrfs transaction start/commit/end/abort flow
-
-Acceptance:
-  lower UNKNOWN from unresolved error-path helpers without increasing candidate
-  count through helper-name guessing;
-  preserve the M18 btrfs_dev_replace_start() candidate;
-  all new candidates must be diff-reviewed before accepting the change.
+source-provable residuals -> UNCLOSED_METADATA_RESIDUAL
+source-provable cancellation/protection -> CLOSED or PROTECTED
+source-provable private/non-metadata state -> OUT_OF_SCOPE
+insufficient source evidence -> METADATA_RESIDUAL_UNKNOWN
 ```

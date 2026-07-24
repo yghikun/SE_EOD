@@ -1,4 +1,4 @@
-"""Triage helpers for UNCLOSED_METADATA_RESIDUAL candidate reports."""
+"""Triage helpers for filesystem metadata residual candidate reports."""
 
 from __future__ import annotations
 
@@ -125,7 +125,7 @@ def write_candidate_triage(
 
 def triage_to_markdown(triage: dict[str, Any]) -> str:
     lines = [
-        "# Metadata Residual Candidate Triage",
+        "# Filesystem Metadata Residual Candidate Triage",
         "",
         f"- Candidate reports: `{triage.get('candidate_reports', 0)}`",
         f"- Residual effects: `{triage.get('residual_effects', 0)}`",

@@ -1,22 +1,21 @@
-# Failure-Local Metadata Residual Analysis
+# Failure-Path Filesystem Metadata Residual Analysis
 
-This document defines the current project architecture.  MetaWindow is the
-motivation; residual analysis is the method.
+This document defines the current analysis architecture.
 
 ## Overview
 
 ```text
-Linux FS Source
-  -> Frontend + FunctionIR
-  -> CFG Builder
-  -> Metadata Scope Gate
-  -> Failure Point Discovery
-  -> Backward Slice: E_f
-  -> Forward Error-Path Slice: C_f and T_f
-  -> Identity-Aware Cancellation
-  -> Residual Normalization
-  -> Error-Exit Verification
-  -> Witness Report
+Linux FS source
+  -> frontend-neutral FunctionIR
+  -> CFG builder
+  -> filesystem metadata scope gate
+  -> failure-point discovery
+  -> backward slice for E_f
+  -> forward error-path slice for C_f and T_f
+  -> identity-aware cancellation
+  -> residual normalization
+  -> error-exit verification
+  -> witness report
 ```
 
 ## Residual Equation
@@ -24,16 +23,16 @@ Linux FS Source
 For a failure point `f`:
 
 ```text
-E_f = metadata effects that can reach f
+E_f = filesystem metadata effects that can reach f
 C_f = cancellation or compensation effects along the error path
-T_f = explicitly protected or transferred effects
+T_f = explicitly protected or transferred filesystem metadata effects
 
 R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-`R_f` is the residual metadata state at an error exit.
+`R_f` is the residual filesystem metadata state at an error exit.
 
-## Metadata Effect
+## Filesystem Metadata Effect
 
 Each effect is represented as:
 
@@ -86,9 +85,6 @@ RESERVE(rsv, bytes)          cancels with RELEASE(rsv, bytes)
 ATTACH(fs_root.reloc_root)   cancels with DROP(fs_root.reloc_root)
 ```
 
-This is more specific than generic open/close typestate because cancellation is
-computed over metadata identity and value source.
-
 ## Failure-Anchored Bidirectional Slicing
 
 The analysis is anchored at each failure point.
@@ -96,7 +92,7 @@ The analysis is anchored at each failure point.
 Backward slice:
 
 ```text
-find metadata effects that can reach the failure point -> E_f
+find filesystem metadata effects that can reach the failure point -> E_f
 ```
 
 Forward error-path slice:
@@ -105,9 +101,7 @@ Forward error-path slice:
 find cancellation, compensation, protection, and transfer effects -> C_f, T_f
 ```
 
-This avoids propagating a complete operation protocol from function entry to all
-exits.  Only the slice relevant to `mutation -> failure -> error exit` is
-analyzed.
+Only the slice relevant to `mutation -> failure -> error exit` is analyzed.
 
 ## Protection Set
 
@@ -122,7 +116,7 @@ deferred cleanup ownership
 verified invalidation that prevents direct reuse of partial metadata
 ```
 
-If protection cannot be proven, the effect is `UNKNOWN`, not legal.
+If protection cannot be proven, the effect stays `UNKNOWN`.
 
 ## State Labels
 
@@ -153,7 +147,7 @@ OUT_OF_SCOPE
 
 ## Evidence Boundary
 
-Witness reports are derived from the failure-local residual slice itself:
+Witness reports are derived from the failure-path residual slice itself:
 
 ```text
 failure point

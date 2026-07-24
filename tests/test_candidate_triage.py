@@ -67,7 +67,7 @@ def test_candidate_triage_ranks_functions_and_residual_identities(tmp_path: Path
     assert triage["top_plane_deltas"][0]["plane_delta"] == "ACCOUNTING INC"
 
     markdown = triage_to_markdown(triage)
-    assert "Candidate Triage" in markdown
+    assert "Filesystem Metadata Residual Candidate Triage" in markdown
     assert "inode.i_blocks" in markdown
     assert "work @ fs/btrfs/example.c:10" in markdown
 
