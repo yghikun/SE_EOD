@@ -27,11 +27,16 @@ R_f = Normalize(E_f (+) C_f) - T_f
 
 If `R_f` is non-empty at an error exit, and the residual is structural,
 accounting, or recovery-visible filesystem metadata, the analyzer reports a
-candidate:
+candidate only when the effect has direct source or explicit primitive
+evidence:
 
 ```text
 UNCLOSED_METADATA_RESIDUAL
 ```
+
+Name-only helper inference is emitted separately as
+`METADATA_RESIDUAL_REVIEW`. `METADATA_RESIDUAL_UNKNOWN` requires a non-empty
+residual; uncertainty without a residual is diagnostic data, not a finding.
 
 The innovation target is not a four-state typestate model. The states are only
 an implementation lattice. The method contribution is failure-path residual
@@ -42,6 +47,8 @@ metadata effect extraction
 identity-aware cancellation
 failure-anchored bidirectional slicing
 explicit protection and transfer recognition
+failed-owner and terminal failure-domain containment
+conservative multi-field write-only output-state exclusion
 error-exit residual verification
 ```
 
@@ -94,7 +101,8 @@ Primary residual-analysis examples:
 
 ```text
 #7   btrfs_recover_relocation: relocation-root recovery state remains residual
-#16  btrfs_init_new_device: transaction update-list membership remains residual
+#16  btrfs_init_new_device: transaction update-list membership is a target;
+     full-chain post_commit_list propagation is not yet exact
 #17  btrfs_init_new_device: active device pointers remain residual
 #18  btrfs_init_new_device: fs_devices topology remains residual
 #12  xfs_qm_quotacheck_dqadjust: dquot quota metadata ownership/reference residual

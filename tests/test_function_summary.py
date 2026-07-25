@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from src.function_extractor import extract_functions
 from src.function_summary import (
     ExposureKind,
@@ -148,9 +150,9 @@ static void attach_private_device(struct fs_info *fs_info)
     application = instantiate_summary(summary, "attach_private_device(fs_info)")
 
     assert summary.opens == ()
-    assert summary.unknown_escape is True
-    assert summary.unknown_causes == ("unbound_callee_local_identity",)
-    assert application.unknown
+    assert summary.unknown_escape is False
+    assert summary.unknown_causes == ()
+    assert application.unknown is False
     assert application.opens == ()
 
 
@@ -273,6 +275,38 @@ static int install_device(struct fs_devices *fs_devices)
     assert installer_summary.unknown_causes == ()
 
 
+def test_same_file_summaries_include_external_helper_body(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+void assign_active_device(struct fs_info *fs_info, struct device *device)
+{
+    fs_info->fs_devices->latest_dev = device;
+    fs_info->sb->s_bdev = device->bdev;
+}
+
+int add_device(struct fs_info *fs_info, struct device *device)
+{
+    int ret;
+
+    assign_active_device(fs_info, device);
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    summaries = build_same_file_summaries((helper, caller))
+
+    assert "assign_active_device" in summaries
+    assert {effect.key for effect in summaries["assign_active_device"].opens} == {
+        "latest_dev",
+        "s_bdev",
+    }
+
+
 def test_summary_binds_fresh_local_to_output_parameter(tmp_path: Path):
     function = _functions(
         tmp_path,
@@ -310,6 +344,63 @@ static int init_device(struct fs_devices *fs_devices, struct device **device_out
         and fact.target == "tgt_device"
         for fact in application.exposure_facts
     )
+
+
+def test_summary_binds_fresh_local_published_through_sb_accessor(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int init_btree_inode(struct super_block *sb)
+{
+    struct fs_info *fs_info = btrfs_sb(sb);
+    struct inode *inode;
+
+    inode = new_inode(sb);
+    if (!inode)
+        return -ENOMEM;
+    inode->i_size = OFFSET_MAX;
+    fs_info->btree_inode = inode;
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.unknown_causes == ()
+    assert any(
+        effect.root == "arg0->btree_inode" and effect.key == "i_size"
+        for effect in summary.opens
+    )
+    assert any(
+        fact.kind is ExposureKind.PUBLISHED_IN_FIELD
+        and fact.target == "arg0->btree_inode"
+        for fact in summary.exposure_facts
+    )
+
+
+def test_summary_does_not_bind_generic_helper_return_as_owner_alias(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int init_device(struct context *ctx)
+{
+    struct fs_info *fs_info = lookup_owner(ctx);
+    struct device *device;
+
+    device = kzalloc(sizeof(*device), GFP_KERNEL);
+    if (!device)
+        return -ENOMEM;
+    device->ready = 1;
+    fs_info->device = device;
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.unknown_causes == ()
 
 
 def test_summary_local_scalar_value_is_not_unbound_identity(tmp_path: Path):
@@ -464,6 +555,68 @@ static inline void extent_changeset_free(struct extent_changeset *changeset)
     assert summaries["extent_changeset_free"].unresolved_calls == ()
 
 
+def test_project_summaries_propagate_source_visible_cleanup_wrapper(tmp_path: Path):
+    path = tmp_path / "summary.h"
+    path.write_text(
+        """
+static inline void extent_changeset_release(struct extent_changeset *changeset)
+{
+    if (!changeset)
+        return;
+    changeset->bytes_changed = 0;
+}
+
+static inline void extent_changeset_free(struct extent_changeset *changeset)
+{
+    if (!changeset)
+        return;
+    extent_changeset_release(changeset);
+    kfree(changeset);
+}
+""",
+        encoding="utf-8",
+    )
+    release, destroy = extract_functions(parse_c_file(path))
+
+    summaries = build_project_summaries((release, destroy))
+
+    summary = summaries["extent_changeset_free"]
+    assert summary.unresolved_calls == ()
+    assert len(summary.cancels) == 1
+    assert summary.cancels[0].root == "arg0"
+    assert summary.cancels[0].key == "bytes_changed"
+    assert summary.cancels[0].delta is MetadataDelta.CLEAR
+    assert "extent_changeset_release" in summary.cancels[0].site.expression
+    assert summary.cleanup_footprints[0].root_pattern == "arg0"
+
+
+def test_project_summaries_do_not_propagate_cleanup_into_opening_wrapper(
+    tmp_path: Path,
+):
+    path = tmp_path / "summary.h"
+    path.write_text(
+        """
+static inline void release_count(struct inode *inode)
+{
+    inode->reserved--;
+}
+
+static inline void replace_count(struct inode *inode)
+{
+    inode->reserved++;
+    release_count(inode);
+}
+""",
+        encoding="utf-8",
+    )
+    release, replace = extract_functions(parse_c_file(path))
+
+    summaries = build_project_summaries((release, replace))
+
+    assert "release_count" in summaries
+    assert "replace_count" not in summaries
+
+
 def test_summary_tracks_all_pointer_symbols_in_multi_declaration(tmp_path: Path):
     function = _functions(
         tmp_path,
@@ -484,7 +637,7 @@ static int insert_node(struct tree *tree)
     summary = build_function_summary(function)
 
     assert summary.opens == ()
-    assert summary.unknown_causes == ("unbound_callee_local_identity",)
+    assert summary.unknown_causes == ()
 
 
 def test_summary_binds_returned_local_identity_to_call_lvalue(tmp_path: Path):
@@ -969,3 +1122,261 @@ static int charge_before_failure(
         "required",
         "optional",
     }
+
+
+def test_summary_binds_exhaustive_safe_list_cleanup_to_parameter_container(
+    tmp_path: Path,
+):
+    function = _functions(
+        tmp_path,
+        """
+static void drain(struct context *ctx)
+{
+    struct item *curr;
+    struct item *next;
+
+    list_for_each_entry_safe(curr, next, &ctx->items, list) {
+        list_del(&curr->list);
+        kfree(curr);
+    }
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+    application = instantiate_summary(summary, "drain(ctx)")
+
+    assert summary.unknown_causes == ()
+    assert len(summary.cancels) == 1
+    cleanup = summary.cancels[0]
+    assert (cleanup.root, cleanup.key, cleanup.value) == (
+        "arg0->items",
+        "list_membership",
+        "*",
+    )
+    assert cleanup.container_iteration_cleanup is not None
+    assert cleanup.container_iteration_cleanup.member_field == "list"
+    assert application.cancels[0].root == "ctx->items"
+    assert application.cancels[0].container_iteration_cleanup.container_root == (
+        "ctx->items"
+    )
+
+
+def test_summary_rejects_conditional_safe_list_cleanup(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static void drain_some(struct context *ctx, bool stop)
+{
+    struct item *curr;
+    struct item *next;
+
+    list_for_each_entry_safe(curr, next, &ctx->items, list) {
+        if (stop)
+            break;
+        list_del(&curr->list);
+    }
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.cancels == ()
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)
+
+
+def test_summary_rejects_safe_list_cleanup_of_different_member(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static void drain_wrong_member(struct context *ctx)
+{
+    struct item *curr;
+    struct item *next;
+
+    list_for_each_entry_safe(curr, next, &ctx->items, list) {
+        list_del(&curr->other_list);
+    }
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.cancels == ()
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)
+
+
+def test_summary_rejects_safe_list_cleanup_of_nonparameter_container(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static void drain_global(void)
+{
+    struct item *curr;
+    struct item *next;
+
+    list_for_each_entry_safe(curr, next, &global_items, list) {
+        list_del(&curr->list);
+    }
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.cancels == ()
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)
+
+
+def test_summary_binds_possible_cpu_slot_to_parameter_field(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int init_percpu(struct mount *mp)
+{
+    struct inodegc *gc;
+    int cpu;
+
+    for_each_possible_cpu(cpu) {
+        gc = per_cpu_ptr(mp->inodegc, cpu);
+        INIT_DELAYED_WORK(&gc->work, inodegc_worker);
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+    application = instantiate_summary(summary, "init_percpu(mp)")
+
+    assert summary.unknown_causes == ()
+    assert len(summary.cancels) == 1
+    effect = summary.cancels[0]
+    assert (effect.root, effect.key, effect.value) == (
+        "PER_CPU_SLOT(arg0->inodegc)->work",
+        "INIT_DELAYED_WORK",
+        "inodegc_worker",
+    )
+    relation = effect.percpu_slot_relation
+    assert relation is not None
+    assert (relation.base_root, relation.slot_local, relation.index_local) == (
+        "arg0->inodegc",
+        "gc",
+        "cpu",
+    )
+    instantiated = application.cancels[0]
+    assert instantiated.root == "PER_CPU_SLOT(mp->inodegc)->work"
+    assert instantiated.percpu_slot_relation.base_root == "mp->inodegc"
+
+
+@pytest.mark.parametrize(
+    "loop, declaration, accessor, prefix, suffix",
+    [
+        (
+            "for_each_online_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = per_cpu_ptr(mp->inodegc, cpu);",
+            "",
+            "",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = per_cpu_ptr(global_inodegc, cpu);",
+            "",
+            "",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = per_cpu_ptr(mp->inodegc, other_cpu);",
+            "",
+            "",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc gc;",
+            "gc = per_cpu_ptr(mp->inodegc, cpu);",
+            "",
+            "",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = per_cpu_ptr(mp->inodegc, cpu);",
+            "",
+            "gc = fallback_gc;",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = per_cpu_ptr(mp->inodegc, cpu);",
+            "",
+            "if (stop) break;",
+        ),
+        (
+            "for_each_possible_cpu(cpu)",
+            "struct inodegc *gc;",
+            "gc = lookup_percpu(mp->inodegc, cpu);",
+            "",
+            "",
+        ),
+    ],
+)
+def test_summary_rejects_unproven_possible_cpu_slot(
+    tmp_path: Path,
+    loop: str,
+    declaration: str,
+    accessor: str,
+    prefix: str,
+    suffix: str,
+):
+    function = _functions(
+        tmp_path,
+        f"""
+static int init_percpu(struct mount *mp, int other_cpu, bool stop)
+{{
+    {declaration}
+    int cpu;
+
+    {loop} {{
+        {prefix}
+        {accessor}
+        INIT_DELAYED_WORK(&gc->work, inodegc_worker);
+        {suffix}
+    }}
+    return 0;
+}}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.cancels == ()
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)
+
+
+def test_summary_rejects_percpu_slot_effect_before_accessor(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int init_percpu(struct mount *mp)
+{
+    struct inodegc *gc;
+    int cpu;
+
+    for_each_possible_cpu(cpu) {
+        INIT_DELAYED_WORK(&gc->work, inodegc_worker);
+        gc = per_cpu_ptr(mp->inodegc, cpu);
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert summary.cancels == ()
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)

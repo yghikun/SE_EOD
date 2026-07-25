@@ -23,9 +23,13 @@ from .residual_report import (
     reports_to_markdown,
 )
 from .unknown_triage import unknown_cause_category, unknown_cause_taxonomy
+from .transient_provenance import (
+    TransientArgumentProvenance,
+    infer_transient_argument_provenance,
+)
 
 
-EVALUATION_SCHEMA_VERSION = 1
+EVALUATION_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,12 @@ class EvaluationResult:
     @property
     def summary(self) -> dict[str, object]:
         kind_counts = Counter(report.kind.value for report in self.reports)
+        unknown_diagnostics = _unknown_diagnostics(self.analyses)
+        quality = _report_quality_summary(
+            self.reports,
+            self.analyses,
+            self.confirmed_bug_records,
+        )
         state_counts = Counter(
             residual_slice.state.value
             for analysis in self.analyses
@@ -79,14 +89,9 @@ class EvaluationResult:
             self.reports
         )
         candidate_count = kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value]
+        contained_count = kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value]
         unknown_count = kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value]
         out_of_scope_count = kind_counts[ReportKind.OUT_OF_SCOPE.value]
-        mapped_functions = {
-            _function_name_key(record.function)
-            for record in self.confirmed_bug_records
-            if record.function
-        }
-        analyzed_functions = {_function_name_key(analysis.function) for analysis in self.analyses}
         return {
             "schema_version": EVALUATION_SCHEMA_VERSION,
             "source_file": self.source_file,
@@ -99,7 +104,11 @@ class EvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": candidate_count,
+            "contained_count": contained_count,
             "unknown_count": unknown_count,
+            "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
+            **unknown_diagnostics,
+            **quality,
             "out_of_scope_count": out_of_scope_count,
             "report_kind_counts": dict(sorted(kind_counts.items())),
             "residual_state_counts": dict(sorted(state_counts.items())),
@@ -107,12 +116,10 @@ class EvaluationResult:
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
-            "confirmed_bug_functions_in_source": sorted(
-                mapped_functions & analyzed_functions
-            ),
             "configuration_note": (
                 "uses filesystem metadata scope plus source-derived summaries; "
-                "no protocol family or rule registry is loaded"
+                "a small terminal failure-domain primitive contract is loaded, "
+                "but no protocol family or report suppression registry is loaded"
             ),
         }
 
@@ -150,6 +157,12 @@ class BatchEvaluationResult:
     @property
     def summary(self) -> dict[str, object]:
         kind_counts = Counter(report.kind.value for report in self.reports)
+        unknown_diagnostics = _unknown_diagnostics(self.analyses)
+        quality = _report_quality_summary(
+            self.reports,
+            self.analyses,
+            self.confirmed_bug_records,
+        )
         state_counts = Counter(
             residual_slice.state.value
             for analysis in self.analyses
@@ -168,12 +181,6 @@ class BatchEvaluationResult:
         unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
             self.reports
         )
-        mapped_functions = {
-            _function_name_key(record.function)
-            for record in self.confirmed_bug_records
-            if record.function
-        }
-        analyzed_functions = {_function_name_key(analysis.function) for analysis in self.analyses}
         return {
             "schema_version": EVALUATION_SCHEMA_VERSION,
             "source_path": self.source_path,
@@ -189,7 +196,11 @@ class BatchEvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value],
+            "contained_count": kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value],
             "unknown_count": kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value],
+            "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
+            **unknown_diagnostics,
+            **quality,
             "out_of_scope_count": kind_counts[ReportKind.OUT_OF_SCOPE.value],
             "report_kind_counts": dict(sorted(kind_counts.items())),
             "residual_state_counts": dict(sorted(state_counts.items())),
@@ -197,12 +208,10 @@ class BatchEvaluationResult:
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
-            "confirmed_bug_functions_in_source": sorted(
-                mapped_functions & analyzed_functions
-            ),
             "configuration_note": (
                 "batch run using filesystem metadata scope plus source-derived "
-                "summaries; no protocol family or rule registry is loaded"
+                "summaries and a small terminal failure-domain primitive contract; "
+                "no protocol family or report suppression registry is loaded"
             ),
         }
 
@@ -246,6 +255,7 @@ def run_evaluation(
         confirmed_bug_records=bug_records,
         include_all=include_all,
         inherited_summaries=None,
+        transient_provenance=infer_transient_argument_provenance(unit.functions),
     )
     return result
 
@@ -288,6 +298,7 @@ def run_batch_evaluation(
         for function in unit.functions
     )
     project_summaries = build_project_summaries(all_functions)
+    transient_provenance = infer_transient_argument_provenance(all_functions)
     for source_file, unit in parsed_units:
         result = _evaluate_functions_to_dir(
             source_file=source_file,
@@ -300,6 +311,7 @@ def run_batch_evaluation(
                 project_summaries,
                 source_file,
             ),
+            transient_provenance=transient_provenance,
         )
         results.append(result)
 
@@ -326,6 +338,9 @@ def _evaluate_functions_to_dir(
     confirmed_bug_records: tuple[ConfirmedBugRecord, ...],
     include_all: bool,
     inherited_summaries: dict[str, FunctionSummary] | None,
+    transient_provenance: dict[
+        str, tuple[TransientArgumentProvenance, ...]
+    ] | None,
 ) -> EvaluationResult:
     reports_dir = output_path / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -333,6 +348,7 @@ def _evaluate_functions_to_dir(
         functions,
         inherited_summaries=inherited_summaries,
         include_all=include_all,
+        transient_provenance=transient_provenance,
     )
     reports = tuple(report for analysis in analyses for report in analysis.reports)
     result = EvaluationResult(
@@ -371,6 +387,137 @@ def _unknown_taxonomy_category_counts(
     }
 
 
+def _unknown_diagnostics(
+    analyses: Iterable[ResidualAnalysisResult],
+) -> dict[str, object]:
+    slices = tuple(
+        residual_slice
+        for analysis in analyses
+        for residual_slice in analysis.slicing_result.slices
+        if residual_slice.state.value == "UNKNOWN"
+    )
+    cause_counts = Counter(
+        unknown_cause_category(cause)
+        for residual_slice in slices
+        for cause in _slice_unknown_causes(residual_slice.rationale)
+    )
+    return {
+        "unknown_diagnostic_slices": len(slices),
+        "unknown_diagnostic_slices_with_residual": sum(
+            bool(residual_slice.residuals) for residual_slice in slices
+        ),
+        "unknown_diagnostic_slices_without_residual": sum(
+            not residual_slice.residuals for residual_slice in slices
+        ),
+        "unknown_diagnostic_cause_counts": dict(sorted(cause_counts.items())),
+    }
+
+
+def _report_quality_summary(
+    reports: Iterable[ResidualWitnessReport],
+    analyses: Iterable[ResidualAnalysisResult],
+    confirmed_bug_records: Iterable[ConfirmedBugRecord],
+) -> dict[str, object]:
+    report_tuple = tuple(reports)
+    analysis_tuple = tuple(analyses)
+    mapped_functions = {
+        _function_name_key(record.function)
+        for record in confirmed_bug_records
+        if record.function
+    }
+    scope = _default_metadata_scope()
+    in_scope_bug_ids = {
+        decision.bug_id
+        for decision in scope.confirmed_bug_decisions
+        if decision.status == "in_scope"
+    }
+    in_scope_records = tuple(
+        record for record in confirmed_bug_records if record.bug_id in in_scope_bug_ids
+    )
+    in_scope_mapped_functions = {
+        _function_name_key(record.function)
+        for record in in_scope_records
+        if record.function
+    }
+    analyzed_functions = {
+        _function_name_key(analysis.function) for analysis in analysis_tuple
+    }
+    functions_by_kind = {
+        kind: {
+            _function_name_key(report.report.function)
+            for report in report_tuple
+            if report.kind is kind
+        }
+        for kind in (
+            ReportKind.UNCLOSED_METADATA_RESIDUAL,
+            ReportKind.METADATA_RESIDUAL_UNKNOWN,
+            ReportKind.METADATA_RESIDUAL_REVIEW,
+        )
+    }
+    reported_functions = set().union(*functions_by_kind.values())
+    in_source = mapped_functions & analyzed_functions
+    residual_evidence_counts = Counter(
+        effect.evidence.value
+        for report in report_tuple
+        for effect in report.report.residual_slice.residuals
+    )
+    evidence_by_kind = {
+        kind.value: dict(sorted(Counter(
+            effect.evidence.value
+            for report in report_tuple
+            if report.kind is kind
+            for effect in report.report.residual_slice.residuals
+        ).items()))
+        for kind in (
+            ReportKind.UNCLOSED_METADATA_RESIDUAL,
+            ReportKind.METADATA_RESIDUAL_UNKNOWN,
+            ReportKind.METADATA_RESIDUAL_REVIEW,
+        )
+    }
+    in_scope_functions = in_scope_mapped_functions & analyzed_functions
+    return {
+        "confirmed_bug_alignment_level": "function_only",
+        "failure_slices_total": sum(
+            len(analysis.slicing_result.slices) for analysis in analysis_tuple
+        ),
+        "zero_residual_finding_count": sum(
+            not report.report.residual_slice.residuals for report in report_tuple
+        ),
+        "residual_effect_evidence_counts": dict(sorted(residual_evidence_counts.items())),
+        "residual_effect_evidence_by_report_kind": evidence_by_kind,
+        "confirmed_bug_functions_in_source": sorted(in_source),
+        "confirmed_bug_functions_reported": sorted(in_source & reported_functions),
+        "confirmed_bug_candidate_functions": sorted(
+            in_source & functions_by_kind[ReportKind.UNCLOSED_METADATA_RESIDUAL]
+        ),
+        "confirmed_bug_unknown_functions": sorted(
+            in_source & functions_by_kind[ReportKind.METADATA_RESIDUAL_UNKNOWN]
+        ),
+        "confirmed_bug_review_functions": sorted(
+            in_source & functions_by_kind[ReportKind.METADATA_RESIDUAL_REVIEW]
+        ),
+        "confirmed_in_scope_bug_records": len(in_scope_records),
+        "confirmed_in_scope_bug_functions_in_source": sorted(in_scope_functions),
+        "confirmed_in_scope_bug_functions_reported": sorted(
+            in_scope_functions & reported_functions
+        ),
+        "confirmed_in_scope_bug_candidate_functions": sorted(
+            in_scope_functions
+            & functions_by_kind[ReportKind.UNCLOSED_METADATA_RESIDUAL]
+        ),
+        "confirmed_in_scope_bug_unknown_functions": sorted(
+            in_scope_functions & functions_by_kind[ReportKind.METADATA_RESIDUAL_UNKNOWN]
+        ),
+        "confirmed_in_scope_bug_review_functions": sorted(
+            in_scope_functions & functions_by_kind[ReportKind.METADATA_RESIDUAL_REVIEW]
+        ),
+    }
+
+
+def _slice_unknown_causes(rationale: str) -> tuple[str, ...]:
+    return tuple(item.strip() for item in rationale.split(";") if item.strip())
+
+
 def load_confirmed_bug_mapping(
     path: str | Path,
 ) -> tuple[ConfirmedBugRecord, ...]:
@@ -379,8 +526,19 @@ def load_confirmed_bug_mapping(
     source = Path(path)
     text = source.read_text(encoding="utf-8")
     if source.suffix.lower() == ".json":
-        return _records_from_json(json.loads(text))
-    return _records_from_markdown(text)
+        records = _records_from_json(json.loads(text))
+    else:
+        records = _records_from_markdown(text)
+    return _dedupe_confirmed_bug_records(records)
+
+
+def _dedupe_confirmed_bug_records(
+    records: Iterable[ConfirmedBugRecord],
+) -> tuple[ConfirmedBugRecord, ...]:
+    by_id: dict[int, ConfirmedBugRecord] = {}
+    for record in records:
+        by_id.setdefault(record.bug_id, record)
+    return tuple(by_id.values())
 
 
 def _write_reports(
@@ -414,13 +572,18 @@ def _write_text(path: Path, text: str) -> None:
 
 @lru_cache(maxsize=1)
 def _default_scope_summary() -> dict[str, object]:
-    scope = MetadataScope.read_json(DEFAULT_METADATA_SCOPE)
+    scope = _default_metadata_scope()
     return {
         "scope_id": scope.scope_id,
         "target_filesystems": list(scope.target_filesystems),
         "metadata_domain_ids": [domain.domain_id for domain in scope.metadata_domains],
         "scope_version": scope.scope_version,
     }
+
+
+@lru_cache(maxsize=1)
+def _default_metadata_scope() -> MetadataScope:
+    return MetadataScope.read_json(DEFAULT_METADATA_SCOPE)
 
 
 def _source_files(

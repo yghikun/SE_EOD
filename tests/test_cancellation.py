@@ -4,11 +4,36 @@ from src.cancellation import (
     normalize_residuals,
 )
 from src.metadata_residual import (
+    ContainerIterationCleanup,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
     SourceSite,
 )
+
+
+def _drain_effect(root: str = "ctx->items", member_field: str = "list") -> MetadataEffect:
+    site = SourceSite("fs/example.c", 20, "list_del(&curr->list)")
+    return MetadataEffect(
+        root=root,
+        key="list_membership",
+        plane=MetadataPlane.STRUCTURAL,
+        delta=MetadataDelta.REMOVE,
+        value="*",
+        site=site,
+        container_iteration_cleanup=ContainerIterationCleanup(
+            container_root=root,
+            iterator="curr",
+            next_iterator="next",
+            member_field=member_field,
+            iteration_site=SourceSite(
+                "fs/example.c",
+                19,
+                "list_for_each_entry_safe(curr, next, &ctx->items, list)",
+            ),
+            source_identity=f"fs/example.c:19:curr:{root}:{member_field}",
+        ),
+    )
 
 
 def _effect(
@@ -55,6 +80,19 @@ def test_inc_does_not_cancel_dec_with_different_value_source():
 
     assert not effects_cancel(inc, dec)
     assert normalize_residuals((inc,), (dec,)).residuals == (inc,)
+
+
+def test_z3_closes_multi_effect_counter_balance():
+    increments = (
+        _effect(root="devices", key="num_devices", delta=MetadataDelta.INC, value="1"),
+        _effect(root="devices", key="num_devices", delta=MetadataDelta.INC, value="1"),
+    )
+    decrement = _effect(root="devices", key="num_devices", delta=MetadataDelta.DEC, value="2")
+
+    result = normalize_residuals(increments, (decrement,))
+
+    assert result.residuals == ()
+    assert "SMT proves" in result.cancelled[0].reason
 
 
 def test_list_add_cancels_matching_remove():
@@ -115,6 +153,54 @@ def test_m2_list_identity_can_match_remove_by_member_head():
 
     assert effects_cancel(add, remove)
     assert normalize_residuals((add,), (remove,)).residuals == ()
+
+
+def test_exhaustive_list_cleanup_cancels_all_matching_container_members():
+    additions = (
+        _effect(
+            root="ctx->items",
+            key="list_membership",
+            plane=MetadataPlane.STRUCTURAL,
+            delta=MetadataDelta.ADD,
+            value="first->list",
+        ),
+        _effect(
+            root="ctx->items",
+            key="list_membership",
+            plane=MetadataPlane.STRUCTURAL,
+            delta=MetadataDelta.ADD,
+            value="second->list",
+        ),
+    )
+
+    result = normalize_residuals(additions, (_drain_effect(),))
+
+    assert result.residuals == ()
+    assert len(result.cancelled) == 2
+
+
+def test_exhaustive_list_cleanup_does_not_cross_container_or_member_field():
+    wrong_container = _effect(
+        root="other->items",
+        key="list_membership",
+        plane=MetadataPlane.STRUCTURAL,
+        delta=MetadataDelta.ADD,
+        value="item->list",
+    )
+    wrong_member = _effect(
+        root="ctx->items",
+        key="list_membership",
+        plane=MetadataPlane.STRUCTURAL,
+        delta=MetadataDelta.ADD,
+        value="item->other_list",
+    )
+
+    result = normalize_residuals(
+        (wrong_container, wrong_member),
+        (_drain_effect(),),
+    )
+
+    assert result.residuals == (wrong_container, wrong_member)
 
 
 def test_set_clear_cancels_same_field_even_when_clear_value_is_null():

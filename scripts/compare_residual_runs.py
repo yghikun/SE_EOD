@@ -1,13 +1,21 @@
-"""Compare two residual batch outputs and summarize UNKNOWN resolution."""
+"""Compare residual runs with source-stable, per-effect witnesses.
+
+Reports intentionally omit CLOSED and PROTECTED slices.  This tool therefore
+reads file-level ``evaluation.json`` artifacts when they are available and
+falls back to ``all_reports.json`` for older outputs.  A source effect retained
+only in ``reaching_effects`` is ``RETAINED_REACHING``; a truly missing current
+witness is ``UNMATCHED`` and is never treated as a fix.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -16,107 +24,532 @@ if str(ROOT) not in sys.path:
 from src.unknown_triage import unknown_cause_category, unknown_cause_taxonomy
 
 
+SCHEMA_VERSION = 2
+KNOWN_CLASSES = ("CANDIDATE", "UNKNOWN", "REVIEW")
+TERMINAL_CLASSES = ("CLOSED", "PROTECTED", "OUT_OF_SCOPE")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compare all_reports.json files from two residual runs."
+        description="Compare residual runs using per-effect source witnesses."
     )
-    parser.add_argument("baseline", help="baseline output dir or all_reports.json")
-    parser.add_argument("current", help="current output dir or all_reports.json")
+    parser.add_argument("baseline", help="baseline output directory or JSON artifact")
+    parser.add_argument("current", help="current output directory or JSON artifact")
     parser.add_argument(
         "--output",
-        help="optional JSON path for the comparison matrix",
+        help="optional path for report_transition_matrix.json",
+    )
+    parser.add_argument(
+        "--output-dir",
+        help="directory for the transition artifacts (defaults to --output parent)",
     )
     args = parser.parse_args(argv)
 
-    matrix = compare_runs(_reports_path(args.baseline), _reports_path(args.current))
-    text = json.dumps(matrix, indent=2, sort_keys=True)
+    comparison = compare_runs(Path(args.baseline), Path(args.current))
+    output_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else Path(args.output).parent
+        if args.output
+        else None
+    )
+    if output_dir is not None:
+        write_comparison_artifacts(comparison, output_dir)
     if args.output:
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(text + "\n", encoding="utf-8")
-    print(text)
+        output.write_text(
+            json.dumps(comparison["report_transition_matrix"], indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+    print(json.dumps(comparison["report_transition_matrix"], indent=2, sort_keys=True))
     return 0
 
 
 def compare_runs(baseline_path: Path, current_path: Path) -> dict[str, object]:
-    baseline = _load_reports(baseline_path)
-    current = _load_reports(current_path)
-    current_by_key = {_report_key(report): report for report in current}
-    rows: dict[str, dict[str, int]] = defaultdict(
-        lambda: {
-            "to_candidate": 0,
-            "to_unknown": 0,
-            "to_out_of_scope_or_removed": 0,
-        }
+    """Return report-level transitions, retaining unmatched evidence explicitly."""
+
+    baseline = _load_witnesses(baseline_path)
+    current = _load_witnesses(current_path)
+    current_by_key = {witness["stable_key"]: witness for witness in current}
+    baseline_by_key = {witness["stable_key"]: witness for witness in baseline}
+    transitions = [
+        _transition(baseline_witness, current_by_key.get(baseline_witness["stable_key"]))
+        for baseline_witness in baseline
+    ]
+    new_candidates = [
+        witness
+        for witness in current
+        if witness["classification"] == "CANDIDATE"
+        and witness["stable_key"] not in baseline_by_key
+    ]
+    lost_known_witnesses = [
+        item
+        for item in transitions
+        if item["old_state"] in KNOWN_CLASSES and item["new_state"] == "UNMATCHED"
+    ]
+    matrix = Counter((item["old_state"], item["new_state"]) for item in transitions)
+    matrix_rows = [
+        {"old_state": old_state, "new_state": new_state, "count": count}
+        for (old_state, new_state), count in sorted(matrix.items())
+    ]
+
+    report_transition_matrix = {
+        "schema_version": SCHEMA_VERSION,
+        "baseline": baseline_path.as_posix(),
+        "current": current_path.as_posix(),
+        "baseline_witness_count": len(baseline),
+        "current_witness_count": len(current),
+        "transition_matrix": matrix_rows,
+        "unmatched_baseline_witness_count": sum(
+            item["new_state"] == "UNMATCHED" for item in transitions
+        ),
+        "new_candidate_count": len(new_candidates),
+        "transition_policy": (
+            "A missing current witness is UNMATCHED, not CLOSED, PROTECTED, or "
+            "OUT_OF_SCOPE. CLOSED and PROTECTED require an exact current "
+            "failure/effect witness from a full evaluation artifact. An effect "
+            "still present only in reaching_effects is RETAINED_REACHING, not "
+            "resolved."
+        ),
+    }
+    return {
+        "report_transition_matrix": report_transition_matrix,
+        "resolved_candidates": [
+            item
+            for item in transitions
+            if item["old_state"] == "CANDIDATE"
+            and item["new_state"] in TERMINAL_CLASSES
+        ],
+        "resolved_unknowns": [
+            item
+            for item in transitions
+            if item["old_state"] == "UNKNOWN"
+            and item["new_state"] in TERMINAL_CLASSES
+        ],
+        "new_candidates": new_candidates,
+        "lost_known_witnesses": lost_known_witnesses,
+        "transitions": transitions,
+        # Retained for M31 consumers, but generated from the full transition set.
+        **_unknown_resolution_compatibility(transitions),
+    }
+
+
+def write_comparison_artifacts(comparison: dict[str, object], output_dir: Path) -> dict[str, Path]:
+    """Write stable, reviewable artifacts without placing generated data in Git."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "report_transition_matrix": output_dir / "report_transition_matrix.json",
+        "resolved_candidates": output_dir / "resolved_candidates.json",
+        "resolved_unknowns": output_dir / "resolved_unknowns.json",
+        "new_candidates": output_dir / "new_candidates.json",
+        "lost_known_witnesses": output_dir / "lost_known_witnesses.json",
+    }
+    for name, path in paths.items():
+        path.write_text(
+            json.dumps(comparison[name], indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    return paths
+
+
+def _load_witnesses(path: Path) -> list[dict[str, Any]]:
+    evaluations = _evaluation_paths(path)
+    if evaluations:
+        witnesses = [
+            witness
+            for evaluation_path in evaluations
+            for witness in _witnesses_from_evaluation(evaluation_path)
+        ]
+        return _dedupe_witnesses(witnesses)
+    return _dedupe_witnesses(_witnesses_from_reports(_load_reports(_reports_path(path))))
+
+
+def _evaluation_paths(path: Path) -> tuple[Path, ...]:
+    if path.is_file():
+        return (path,) if path.name == "evaluation.json" else ()
+    if not path.is_dir():
+        return ()
+    file_evaluations = tuple(sorted((path / "files").glob("*/evaluation.json")))
+    if file_evaluations:
+        return file_evaluations
+    direct = path / "evaluation.json"
+    return (direct,) if direct.is_file() else ()
+
+
+def _witnesses_from_evaluation(path: Path) -> Iterable[dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for analysis in payload.get("analyses", ()):  # file-level EvaluationResult only
+        function = str(analysis.get("function", ""))
+        for residual_slice in (analysis.get("slicing_result") or {}).get("slices", ()):
+            yield from _witnesses_from_slice(function, residual_slice)
+
+
+def _witnesses_from_reports(reports: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
+    for report in reports:
+        function = str(report.get("function", ""))
+        residual_slice = report.get("residual_slice") or {}
+        kind = str(report.get("kind", "OUT_OF_SCOPE"))
+        witnesses = list(_witnesses_from_slice(function, residual_slice))
+        if not witnesses:
+            witnesses = [_legacy_report_witness(function, residual_slice)]
+        for witness in witnesses:
+            witness["classification"] = _classification_from_kind(kind)
+            witness["kind"] = kind
+            witness["unknown_causes"] = list(report.get("unknown_causes") or ())
+            yield witness
+
+
+def _legacy_report_witness(
+    function: str, residual_slice: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep pre-M32 report-only comparisons usable without inventing an effect."""
+
+    witness = {
+        "filesystem": _filesystem_for_site(residual_slice.get("failure_site") or {}),
+        "function": function,
+        "failure_site": _site(residual_slice.get("failure_site")),
+        "exit_site": _site(residual_slice.get("exit_site")),
+        "effect": {"legacy_report_without_effect": True},
+        "classification": "OUT_OF_SCOPE",
+        "kind": "OUT_OF_SCOPE",
+        "slice_state": str(residual_slice.get("state", "")),
+        "unknown_causes": [],
+        "cancellations": [],
+        "protections": [],
+        "rationale": str(residual_slice.get("rationale", "")),
+    }
+    witness["stable_witness"] = {
+        "filesystem": witness["filesystem"],
+        "function": function,
+        "failure_site": witness["failure_site"],
+        "exit_site": witness["exit_site"],
+        "effect": witness["effect"],
+    }
+    witness["stable_key"] = json.dumps(
+        witness["stable_witness"], sort_keys=True, separators=(",", ":")
     )
-    taxonomy_rows: dict[str, dict[str, int]] = defaultdict(
-        lambda: {
-            "to_candidate": 0,
-            "to_unknown": 0,
-            "to_out_of_scope_or_removed": 0,
+    return witness
+
+
+def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    residuals = tuple(residual_slice.get("residuals") or ())
+    reaching = tuple(residual_slice.get("reaching_effects") or ())
+    out_of_scope = tuple(residual_slice.get("out_of_scope_effects") or ())
+    effects = (reaching or residuals) + out_of_scope
+    slice_classification, slice_kind = _slice_classification(residual_slice, residuals)
+    residual_keys = {_effect_key(effect) for effect in residuals}
+    cancellations = tuple(residual_slice.get("cancellations") or ())
+    protections = tuple(residual_slice.get("protections") or ())
+    out_of_scope_keys = {_effect_key(effect) for effect in out_of_scope}
+    for effect in effects:
+        if _effect_key(effect) in out_of_scope_keys:
+            classification, kind, causes = "OUT_OF_SCOPE", "OUT_OF_SCOPE", []
+        else:
+            classification, kind, causes = _effect_classification(
+                effect,
+                residual_keys=residual_keys,
+                cancellations=cancellations,
+                protections=protections,
+                slice_classification=slice_classification,
+                slice_kind=slice_kind,
+                slice_causes=_slice_unknown_causes(residual_slice),
+            )
+        if classification is None:
+            continue
+        witness = {
+            "filesystem": _filesystem_for_site(residual_slice.get("failure_site") or {}),
+            "function": function,
+            "failure_site": _site(residual_slice.get("failure_site")),
+            "exit_site": _site(residual_slice.get("exit_site")),
+            "effect": _effect(effect),
+            "classification": classification,
+            "kind": kind,
+            "slice_state": str(residual_slice.get("state", "")),
+            "unknown_causes": causes,
+            "cancellations": [_effect(item) for item in cancellations],
+            "protections": [_effect(item) for item in protections],
+            "rationale": str(residual_slice.get("rationale", "")),
+            "out_of_scope_evidence": (
+                list(effect.get("transient_provenance") or ())
+                if _effect_key(effect) in out_of_scope_keys
+                else []
+            ),
         }
+        witness["stable_witness"] = {
+            "filesystem": witness["filesystem"],
+            "function": function,
+            "failure_site": witness["failure_site"],
+            "exit_site": witness["exit_site"],
+            "effect": witness["effect"],
+        }
+        witness["stable_key"] = json.dumps(
+            witness["stable_witness"], sort_keys=True, separators=(",", ":")
+        )
+        yield witness
+
+
+def _effect_classification(
+    effect: dict[str, Any],
+    *,
+    residual_keys: set[str],
+    cancellations: tuple[dict[str, Any], ...],
+    protections: tuple[dict[str, Any], ...],
+    slice_classification: str,
+    slice_kind: str,
+    slice_causes: list[str],
+) -> tuple[str | None, str, list[str]]:
+    if _effect_key(effect) in residual_keys:
+        return slice_classification, slice_kind, slice_causes
+    if any(_cancellation_covers(effect, candidate) for candidate in cancellations):
+        return "CLOSED", "OUT_OF_SCOPE", []
+    if any(_protection_covers(effect, candidate) for candidate in protections):
+        return "PROTECTED", "OUT_OF_SCOPE", []
+    if slice_classification in {"CLOSED", "PROTECTED", "OUT_OF_SCOPE"}:
+        return slice_classification, slice_kind, []
+    # The effect still exists in the full slice, but the residual projection
+    # omitted it. Preserve that fact without inventing a fix or a candidate.
+    return "RETAINED_REACHING", "OUT_OF_SCOPE", []
+
+
+def _cancellation_covers(effect: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    if not _same_effect_identity(effect, candidate):
+        return False
+    if candidate.get("delta") == "RESTORE":
+        return effect.get("delta") == "SET" and bool(candidate.get("snapshot_relation"))
+    inverse = {
+        "INC": "DEC",
+        "DEC": "INC",
+        "SET": "CLEAR",
+        "CLEAR": "SET",
+        "ADD": "REMOVE",
+        "REMOVE": "ADD",
+        "RESERVE": "RELEASE",
+        "RELEASE": "RESERVE",
+    }
+    if inverse.get(effect.get("delta")) != candidate.get("delta"):
+        return False
+    left = _normalized_value(effect.get("value"))
+    right = _normalized_value(candidate.get("value"))
+    if effect.get("delta") in {"SET", "CLEAR"}:
+        return left in _CLEAR_VALUES or right in _CLEAR_VALUES or left == right
+    return left == right
+
+
+def _protection_covers(effect: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    if candidate.get("delta") != "PROTECT" or not _same_effect_identity(effect, candidate):
+        return False
+    left = _normalized_value(effect.get("value"))
+    right = _normalized_value(candidate.get("value"))
+    return not left or not right or left == right
+
+
+def _same_effect_identity(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    return all(
+        _normalized_value(left.get(name)) == _normalized_value(right.get(name))
+        for name in ("root", "key", "plane")
     )
 
-    for report in baseline:
-        if report.get("kind") != "METADATA_RESIDUAL_UNKNOWN":
+
+def _effect_key(effect: dict[str, Any]) -> str:
+    return json.dumps(_effect(effect), sort_keys=True, separators=(",", ":"))
+
+
+_CLEAR_VALUES = {"", "0", "0L", "0UL", "NULL", "false", "FALSE"}
+
+
+def _normalized_value(value: object) -> str:
+    return re.sub(r"\s+", "", str(value or "").strip())
+
+
+def _slice_classification(
+    residual_slice: dict[str, Any], residuals: tuple[dict[str, Any], ...]
+) -> tuple[str, str]:
+    state = str(residual_slice.get("state", ""))
+    if state == "CLOSED":
+        return "CLOSED", "OUT_OF_SCOPE"
+    if state == "PROTECTED":
+        return "PROTECTED", "OUT_OF_SCOPE"
+    if state == "UNKNOWN":
+        return (
+            ("UNKNOWN", "METADATA_RESIDUAL_UNKNOWN")
+            if residuals
+            else ("DIAGNOSTIC_UNKNOWN", "OUT_OF_SCOPE")
+        )
+    if state == "EXPOSED" and residuals:
+        if all(item.get("evidence") == "NAME_INFERRED" for item in residuals):
+            return "REVIEW", "METADATA_RESIDUAL_REVIEW"
+        return "CANDIDATE", "UNCLOSED_METADATA_RESIDUAL"
+    return "OUT_OF_SCOPE", "OUT_OF_SCOPE"
+
+
+def _classification_from_kind(kind: str) -> str:
+    return {
+        "UNCLOSED_METADATA_RESIDUAL": "CANDIDATE",
+        "METADATA_RESIDUAL_UNKNOWN": "UNKNOWN",
+        "METADATA_RESIDUAL_REVIEW": "REVIEW",
+    }.get(kind, "OUT_OF_SCOPE")
+
+
+def _transition(
+    old: dict[str, Any], new: dict[str, Any] | None
+) -> dict[str, Any]:
+    new_state = str(new["classification"]) if new is not None else "UNMATCHED"
+    record = {
+        "stable_witness": old["stable_witness"],
+        "old_state": old["classification"],
+        "new_state": new_state,
+        "old_kind": old["kind"],
+        "new_kind": new["kind"] if new is not None else None,
+        "old_slice_state": old["slice_state"],
+        "new_slice_state": new["slice_state"] if new is not None else None,
+        "old_unknown_causes": old["unknown_causes"],
+        "new_unknown_causes": new["unknown_causes"] if new is not None else [],
+        "resolution_reason": _resolution_reason(old, new),
+        "new_cancellation_evidence": (
+            [
+                item
+                for item in new["cancellations"]
+                if _cancellation_covers(old["effect"], item)
+            ]
+            if new is not None
+            else []
+        ),
+        "new_protection_evidence": (
+            [
+                item
+                for item in new["protections"]
+                if _protection_covers(old["effect"], item)
+            ]
+            if new is not None
+            else []
+        ),
+        "new_out_of_scope_evidence": (
+            new.get("out_of_scope_evidence", []) if new is not None else []
+        ),
+    }
+    return record
+
+
+def _resolution_reason(old: dict[str, Any], new: dict[str, Any] | None) -> list[str]:
+    if new is None:
+        return ["current_witness_unmatched"]
+    if old["classification"] == new["classification"]:
+        return ["classification_unchanged"]
+    reasons = [f"classification:{old['classification']}->{new['classification']}"]
+    if new["classification"] == "CLOSED":
+        reasons.append(
+            "source_visible_cancellation"
+            if new["cancellations"]
+            else "no_residual_after_normalization"
+        )
+    elif new["classification"] == "PROTECTED":
+        reasons.append(
+            "source_visible_protection"
+            if new["protections"]
+            else "protected_state_without_effect_witness"
+        )
+    elif new["classification"] == "OUT_OF_SCOPE":
+        reasons.append("source_classified_out_of_scope")
+    removed_causes = sorted(set(old["unknown_causes"]) - set(new["unknown_causes"]))
+    if removed_causes:
+        reasons.append("unknown_causes_removed")
+    return reasons
+
+
+def _unknown_resolution_compatibility(
+    transitions: Iterable[dict[str, Any]],
+) -> dict[str, list[dict[str, object]]]:
+    rows: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"to_candidate": 0, "to_unknown": 0, "to_out_of_scope_or_removed": 0}
+    )
+    taxonomy_rows: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"to_candidate": 0, "to_unknown": 0, "to_out_of_scope_or_removed": 0}
+    )
+    for transition in transitions:
+        if transition["old_state"] != "UNKNOWN":
             continue
-        current_report = current_by_key.get(_report_key(report))
-        bucket = _current_bucket(current_report)
-        for cause in report.get("unknown_causes") or ("uncategorized",):
+        bucket = {
+            "CANDIDATE": "to_candidate",
+            "UNKNOWN": "to_unknown",
+        }.get(transition["new_state"], "to_out_of_scope_or_removed")
+        for cause in transition["old_unknown_causes"] or ("uncategorized",):
             reason = unknown_cause_category(str(cause))
             taxonomy = unknown_cause_taxonomy(str(cause))
             rows[reason][bucket] += 1
             taxonomy_rows[taxonomy][bucket] += 1
-
     return {
-        "baseline": baseline_path.as_posix(),
-        "current": current_path.as_posix(),
         "unknown_taxonomy_resolution": [
             {"taxonomy": taxonomy, **counts}
             for taxonomy, counts in sorted(taxonomy_rows.items())
         ],
         "unknown_resolution_matrix": [
-            {"taxonomy": _taxonomy_for_reason(reason), "reason": reason, **counts}
+            {"taxonomy": unknown_cause_taxonomy(reason), "reason": reason, **counts}
             for reason, counts in sorted(rows.items())
         ],
     }
 
 
-def _reports_path(value: str) -> Path:
-    path = Path(value)
-    if path.is_file():
-        return path
-    return path / "reports" / "all_reports.json"
+def _reports_path(value: Path) -> Path:
+    return value if value.is_file() else value / "reports" / "all_reports.json"
 
 
 def _load_reports(path: Path) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _report_key(report: dict[str, Any]) -> tuple[object, ...]:
-    residual_slice = report.get("residual_slice") or {}
-    failure_site = residual_slice.get("failure_site") or {}
-    return (
-        report.get("function", ""),
-        failure_site.get("file", ""),
-        failure_site.get("line", ""),
-        failure_site.get("expression", ""),
-    )
+def _dedupe_witnesses(witnesses: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    return list({witness["stable_key"]: witness for witness in witnesses}.values())
 
 
-def _current_bucket(report: dict[str, Any] | None) -> str:
-    if report is None:
-        return "to_out_of_scope_or_removed"
-    kind = report.get("kind")
-    if kind == "UNCLOSED_METADATA_RESIDUAL":
-        return "to_candidate"
-    if kind == "METADATA_RESIDUAL_UNKNOWN":
-        return "to_unknown"
-    return "to_out_of_scope_or_removed"
+def _site(value: Any) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    return {
+        "file": str(source.get("file", "")),
+        "line": source.get("line", ""),
+        "expression": str(source.get("expression", "")),
+    }
 
 
-def _taxonomy_for_reason(reason: str) -> str:
-    return unknown_cause_taxonomy(reason)
+def _effect(value: Any) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    effect = {
+        "root": str(source.get("root", "")),
+        "key": str(source.get("key", "")),
+        "plane": str(source.get("plane", "")),
+        "delta": str(source.get("delta", "")),
+        "value": str(source.get("value", "")),
+        "evidence": str(source.get("evidence", "")),
+        "site": _site(source.get("site")),
+    }
+    if isinstance(source.get("snapshot_relation"), dict):
+        relation = source["snapshot_relation"]
+        effect["snapshot_relation"] = {
+            "snapshot_root": str(relation.get("snapshot_root", "")),
+            "owner_root": str(relation.get("owner_root", "")),
+            "aggregate_key": str(relation.get("aggregate_key", "")),
+            "capture_site": _site(relation.get("capture_site")),
+            "capture_block": relation.get("capture_block"),
+            "source_identity": str(relation.get("source_identity", "")),
+        }
+    return effect
+
+
+def _slice_unknown_causes(residual_slice: dict[str, Any]) -> list[str]:
+    if residual_slice.get("state") != "UNKNOWN":
+        return []
+    return [
+        item.strip()
+        for item in str(residual_slice.get("rationale", "")).split(";")
+        if item.strip()
+    ]
+
+
+def _filesystem_for_site(site: dict[str, Any]) -> str:
+    match = re.search(r"(?:^|[\\/])fs[\\/](btrfs|ext4|xfs|f2fs)(?:[\\/]|$)", str(site.get("file", "")))
+    return match.group(1) if match else ""
 
 
 if __name__ == "__main__":

@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Iterable
 
 from .effect_extractor import extract_metadata_effects, looks_like_metadata_reader
+from .failure_domain_primitives import is_failure_domain_key
 from .cfg import build_cfg
 from .failure_points import find_failure_points
 from .frontend.model import FrontendNode, FunctionIR
-from .metadata_residual import MetadataDelta, MetadataEffect, MetadataPlane, SourceSite
+from .metadata_residual import (
+    ContainerIterationCleanup,
+    MetadataDelta,
+    MetadataEffect,
+    MetadataPlane,
+    PerCpuSlotRelation,
+    SourceSite,
+)
 from .parser import call_name_and_args, compact_ws, extract_return_expr, split_args
 
 
@@ -173,6 +181,7 @@ DIRECT_FRESH_ALLOCATORS = {
     "kmalloc_obj",
     "kmem_cache_alloc",
     "kmem_cache_zalloc",
+    "new_inode",
     "kzalloc",
     "kvcalloc",
     "kvmalloc",
@@ -299,8 +308,25 @@ def build_function_summary(
     parameters = _ordered_parameters(function)
     local_symbols = _local_symbols(function)
     pointer_locals = _local_pointer_symbols(function)
+    owner_aliases = _parameter_derived_owner_aliases(
+        function,
+        parameters,
+        pointer_locals,
+    )
     return_symbols = _success_return_symbols(function, pointer_locals)
-    raw_effects = tuple(extract_metadata_effects(function))
+    raw_effects = _bind_percpu_slot_effects(
+        function,
+        tuple(extract_metadata_effects(function)),
+        parameters,
+        local_symbols,
+        pointer_locals,
+    )
+    raw_effects = _bind_exhaustive_container_cleanups(
+        function,
+        raw_effects,
+        parameters,
+        pointer_locals,
+    )
     fresh_allocation_lines = _direct_fresh_allocation_lines(
         function,
         pointer_locals,
@@ -312,6 +338,7 @@ def build_function_summary(
         parameters,
         pointer_locals,
         fresh_return_helpers or set(),
+        owner_aliases,
     )
     output_mapping = _output_transfer_mapping(
         function,
@@ -320,6 +347,7 @@ def build_function_summary(
         fresh_allocation_lines,
     )
     transfer_mapping = {**transfer_mapping, **output_mapping}
+    symbol_mapping = {**owner_aliases, **transfer_mapping}
     exposure_facts = _build_exposure_facts(
         function,
         raw_effects,
@@ -328,24 +356,25 @@ def build_function_summary(
         fresh_allocation_lines,
         transfer_mapping,
         return_symbols,
+        owner_aliases,
     )
     parameterized_effects = tuple(
         _parameterize_effect(
             effect,
             parameters,
             return_symbols,
-            transfer_mapping,
+            symbol_mapping,
         )
         for effect in raw_effects
     )
     returns = tuple(
         _replace_symbols(
             item,
-            _summary_symbol_mapping(parameters, return_symbols, transfer_mapping),
+            _summary_symbol_mapping(parameters, return_symbols, symbol_mapping),
         )
         for item in _success_return_expressions(function)
     )
-    unbound_local_symbols = local_symbols - set(transfer_mapping)
+    unbound_local_symbols = local_symbols - set(symbol_mapping)
     dropped_effects = tuple(
         effect
         for effect in parameterized_effects
@@ -354,11 +383,12 @@ def build_function_summary(
     effects = tuple(
         effect
         for effect in parameterized_effects
-        if effect not in dropped_effects
+        if effect not in dropped_effects and not is_failure_domain_key(effect.key)
     )
     private_fresh_locals = set(fresh_allocation_lines) - set(transfer_mapping)
-    dropped_unbound_effect = any(
+    dropped_unbound_cancellation = any(
         not _references_only_private_fresh(effect, unbound_local_symbols, private_fresh_locals)
+        and effect.delta in (CANCEL_DELTAS | PROTECT_DELTAS)
         for effect in dropped_effects
     )
     has_return_bound_effect = any(
@@ -368,7 +398,7 @@ def build_function_summary(
     unresolved_helper_names = _unresolved_metadata_helper_names(function, raw_effects)
     unknown_causes: list[str] = []
     unknown_causes.extend(_unknown_escape_causes(function))
-    if dropped_unbound_effect:
+    if dropped_unbound_cancellation:
         unknown_causes.append("unbound_callee_local_identity")
     if has_return_bound_effect:
         unknown_causes.extend(
@@ -452,10 +482,28 @@ def build_same_file_summaries(
     *,
     inherited_summaries: dict[str, FunctionSummary] | None = None,
 ) -> dict[str, FunctionSummary]:
-    """Build summaries for visible static helpers in a translation unit."""
+    """Build summaries for source-visible helpers in one translation unit.
+
+    File-local calls can target both ``static`` helpers and externally visible
+    functions defined in the same C file.  Name ambiguity is a project-level
+    concern; within one parsed translation unit the visible body is exact.
+    """
 
     function_tuple = tuple(functions)
-    static_functions = tuple(function for function in function_tuple if _is_static_function(function))
+    directly_called = {
+        name
+        for caller in function_tuple
+        if caller.body_node is not None
+        for node in caller.body_node.walk()
+        if node.type == "call_expression"
+        for name, _ in (call_name_and_args(compact_ws(node.text)),)
+    }
+    visible_functions = tuple(
+        function
+        for function in function_tuple
+        if function.body_node is not None
+        and (_is_static_function(function) or function.name in directly_called)
+    )
     inherited = inherited_summaries or {}
     fresh_return_helpers: set[str] = {
         name for name, summary in inherited.items() if summary.returns_fresh_identity
@@ -467,7 +515,7 @@ def build_same_file_summaries(
                 function,
                 fresh_return_helpers=fresh_return_helpers,
             )
-            for function in static_functions
+            for function in visible_functions
         }
         discovered = {
             name
@@ -477,6 +525,11 @@ def build_same_file_summaries(
         if discovered <= fresh_return_helpers:
             break
         fresh_return_helpers.update(discovered)
+    summaries = _resolve_source_visible_cleanup_direct_summaries(
+        summaries,
+        function_tuple,
+        inherited_summaries=inherited,
+    )
     summaries = _resolve_source_visible_noop_direct_unknowns(summaries)
     return _resolve_bounded_noop_indirect_unknowns(summaries, function_tuple)
 
@@ -510,6 +563,11 @@ def build_project_summaries(
             )
             for name, function in eligible.items()
         }
+        built_summaries = _resolve_source_visible_cleanup_direct_summaries(
+            built_summaries,
+            function_tuple,
+            inherited_summaries=summaries,
+        )
         built_summaries = _resolve_source_visible_noop_direct_unknowns(built_summaries)
         next_summaries = {
             name: exported
@@ -651,13 +709,25 @@ def _parameterize_effect(
         transfer_mapping or {},
     )
     key_mapping = _summary_symbol_mapping(parameters, return_symbols or set())
-    return MetadataEffect(
+    cleanup = effect.container_iteration_cleanup
+    if cleanup is not None:
+        cleanup = replace(
+            cleanup,
+            container_root=_replace_symbols(cleanup.container_root, mapping),
+        )
+    percpu = effect.percpu_slot_relation
+    if percpu is not None:
+        percpu = replace(
+            percpu,
+            base_root=_replace_symbols(percpu.base_root, mapping),
+        )
+    return replace(
+        effect,
         root=_replace_symbols(effect.root, mapping),
         key=_replace_symbols(effect.key, key_mapping),
-        plane=effect.plane,
-        delta=effect.delta,
         value=_replace_symbols(effect.value, mapping),
-        site=effect.site,
+        container_iteration_cleanup=cleanup,
+        percpu_slot_relation=percpu,
     )
 
 
@@ -665,13 +735,25 @@ def _instantiate_effect(
     effect: MetadataEffect,
     mapping: dict[str, str],
 ) -> MetadataEffect:
-    return MetadataEffect(
+    cleanup = effect.container_iteration_cleanup
+    if cleanup is not None:
+        cleanup = replace(
+            cleanup,
+            container_root=_replace_symbols(cleanup.container_root, mapping),
+        )
+    percpu = effect.percpu_slot_relation
+    if percpu is not None:
+        percpu = replace(
+            percpu,
+            base_root=_replace_symbols(percpu.base_root, mapping),
+        )
+    return replace(
+        effect,
         root=_replace_symbols(effect.root, mapping),
         key=_replace_symbols(effect.key, mapping),
-        plane=effect.plane,
-        delta=effect.delta,
         value=_replace_symbols(effect.value, mapping),
-        site=effect.site,
+        container_iteration_cleanup=cleanup,
+        percpu_slot_relation=percpu,
     )
 
 
@@ -830,6 +912,7 @@ def _build_exposure_facts(
     allocation_lines: dict[str, int],
     transfer_mapping: dict[str, str],
     return_symbols: set[str],
+    owner_aliases: dict[str, str] | None = None,
 ) -> tuple[ExposureFact, ...]:
     if function.body_node is None:
         return ()
@@ -879,7 +962,7 @@ def _build_exposure_facts(
                     )
                 )
 
-        if not _is_parameter_owned(effect.root, parameter_set):
+        if not _is_parameter_owned(effect.root, parameter_set, owner_aliases):
             continue
         if effect.delta is MetadataDelta.SET:
             local = _plain_local_symbol(effect.value, allocation_lines)
@@ -893,6 +976,7 @@ def _build_exposure_facts(
                         target=_parameterize_path(
                             _field_path(effect.root, effect.key),
                             parameters,
+                            owner_aliases,
                         ),
                         site=effect.site,
                         evidence=effect.site.expression,
@@ -907,7 +991,7 @@ def _build_exposure_facts(
                         local_identity=local,
                         summary_identity=transfer_mapping.get(local, local),
                         kind=ExposureKind.MEMBER_OF_CONTAINER,
-                        target=_parameterize_path(effect.root, parameters),
+                        target=_parameterize_path(effect.root, parameters, owner_aliases),
                         site=effect.site,
                         evidence=effect.site.expression,
                     )
@@ -1277,6 +1361,7 @@ def _ownership_transfer_mapping(
     parameters: tuple[str, ...],
     pointer_locals: set[str],
     fresh_return_helpers: set[str],
+    owner_aliases: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Bind directly allocated locals only after caller ownership is visible."""
 
@@ -1292,7 +1377,7 @@ def _ownership_transfer_mapping(
     field_targets: dict[str, set[str]] = {}
     container_transfers: set[str] = set()
     for effect in effects:
-        if not _is_parameter_owned(effect.root, parameter_set):
+        if not _is_parameter_owned(effect.root, parameter_set, owner_aliases):
             continue
         if effect.delta is MetadataDelta.SET:
             local = _plain_local_symbol(effect.value, allocation_lines)
@@ -1300,6 +1385,7 @@ def _ownership_transfer_mapping(
                 target = _parameterize_path(
                     _field_path(effect.root, effect.key),
                     parameters,
+                    owner_aliases,
                 )
                 field_targets.setdefault(local, set()).add(target)
             continue
@@ -1716,6 +1802,171 @@ def _is_exportable_noop_summary(summary: FunctionSummary) -> bool:
     )
 
 
+def _resolve_source_visible_cleanup_direct_summaries(
+    summaries: dict[str, FunctionSummary],
+    functions: Iterable[FunctionIR],
+    *,
+    inherited_summaries: dict[str, FunctionSummary] | None = None,
+) -> dict[str, FunctionSummary]:
+    """Propagate exact cancellation effects through source-visible wrappers."""
+
+    if not summaries:
+        return summaries
+    function_map = {function.name: function for function in functions}
+    inherited = inherited_summaries or {}
+    result = dict(summaries)
+    changed = True
+    while changed:
+        changed = False
+        visible = {**inherited, **result}
+        next_result = dict(result)
+        for name, summary in result.items():
+            function = function_map.get(name)
+            if (
+                function is None
+                or not summary.unresolved_calls
+                or summary.may_fail
+                or summary.opens
+                or summary.protects
+                or summary.has_ownership_transfer
+            ):
+                continue
+            propagated: list[MetadataEffect] = []
+            resolved: set[str] = set()
+            for callee_name in summary.unresolved_calls:
+                callee_summary = visible.get(callee_name)
+                if (
+                    callee_summary is None
+                    or not _is_exportable_cleanup_summary(callee_summary)
+                ):
+                    continue
+                calls = _direct_calls_to(function, callee_name)
+                if not calls:
+                    continue
+                applications = tuple(
+                    instantiate_summary(callee_summary, call)
+                    for call in calls
+                )
+                if any(application.unresolved_identities for application in applications):
+                    continue
+                call_effects = tuple(
+                    _effect_at_call_site(effect, function, call, callee_name)
+                    for call, application in zip(calls, applications)
+                    for effect in application.cancels
+                )
+                if not call_effects:
+                    continue
+                propagated.extend(call_effects)
+                resolved.add(callee_name)
+            if not resolved:
+                continue
+            next_result[name] = _with_propagated_cleanup_effects(
+                function,
+                summary,
+                tuple(propagated),
+                resolved,
+            )
+            changed = True
+        result = next_result
+    return result
+
+
+def _direct_calls_to(
+    function: FunctionIR,
+    callee_name: str,
+) -> tuple[FrontendNode, ...]:
+    if function.body_node is None:
+        return ()
+    calls: list[FrontendNode] = []
+    for node in function.body_node.walk():
+        if node.type != "call_expression":
+            continue
+        callee = node.child_by_field_name("function")
+        name, _ = call_name_and_args(compact_ws(node.text))
+        if callee is not None and callee.type == "identifier" and name == callee_name:
+            calls.append(node)
+    return tuple(calls)
+
+
+def _effect_at_call_site(
+    effect: MetadataEffect,
+    function: FunctionIR,
+    call: FrontendNode,
+    callee_name: str,
+) -> MetadataEffect:
+    call_text = compact_ws(call.text)
+    evidence = compact_ws(effect.site.expression)
+    return replace(
+        effect,
+        site=SourceSite(
+            function.file.as_posix(),
+            call.start_line,
+            f"{call_text} via {callee_name}: {evidence}",
+        ),
+    )
+
+
+def _with_propagated_cleanup_effects(
+    function: FunctionIR,
+    summary: FunctionSummary,
+    propagated: tuple[MetadataEffect, ...],
+    resolved: set[str],
+) -> FunctionSummary:
+    parameters = _ordered_parameters(function)
+    parameterized = tuple(
+        _parameterize_effect(effect, parameters)
+        for effect in propagated
+    )
+    cancels = tuple(dict.fromkeys((*summary.cancels, *parameterized)))
+    all_effects = tuple((*summary.opens, *cancels, *summary.protects))
+    exit_effects = _exit_sensitive_effects(function, all_effects)
+    unresolved_calls = tuple(
+        call for call in summary.unresolved_calls if call not in resolved
+    )
+    unknown_causes = tuple(
+        cause
+        for cause in summary.unknown_causes
+        if not any(
+            cause == f"return_bound_unresolved_helper: {call}"
+            for call in resolved
+        )
+    )
+    return FunctionSummary(
+        function_name=summary.function_name,
+        parameters=summary.parameters,
+        returns=summary.returns,
+        fresh_identities=summary.fresh_identities,
+        has_ownership_transfer=summary.has_ownership_transfer,
+        ownership_transfer_roots=summary.ownership_transfer_roots,
+        returns_fresh_identity=summary.returns_fresh_identity,
+        opens=summary.opens,
+        cancels=cancels,
+        protects=summary.protects,
+        output_identities=summary.output_identities,
+        error_opens=tuple(
+            effect for effect in exit_effects.error_must if effect.delta in OPEN_DELTAS
+        ),
+        error_cancels=tuple(
+            effect for effect in exit_effects.error_must if effect.delta in CANCEL_DELTAS
+        ),
+        error_protects=tuple(
+            effect for effect in exit_effects.error_must if effect.delta in PROTECT_DELTAS
+        ),
+        failure_effects_complete=exit_effects.error_complete,
+        error_unknown_causes=exit_effects.unknown_causes,
+        lifecycle_facts=summary.lifecycle_facts,
+        exposure_facts=summary.exposure_facts,
+        cleanup_footprints=tuple(_cleanup_footprint(effect) for effect in cancels),
+        exit_effects=exit_effects,
+        unresolved_calls=unresolved_calls,
+        source_file=summary.source_file,
+        may_fail=summary.may_fail,
+        unknown_escape=bool(unknown_causes),
+        unknown_causes=unknown_causes,
+        source=summary.source,
+    )
+
+
 def _resolve_bounded_noop_indirect_unknowns(
     summaries: dict[str, FunctionSummary],
     functions: Iterable[FunctionIR],
@@ -2066,9 +2317,397 @@ def _node_contains(parent: FrontendNode, child: FrontendNode) -> bool:
     return parent.start_byte <= child.start_byte and child.end_byte <= parent.end_byte
 
 
-def _is_parameter_owned(path: str, parameters: set[str]) -> bool:
+def _parameter_derived_owner_aliases(
+    function: FunctionIR,
+    parameters: tuple[str, ...],
+    pointer_locals: set[str],
+) -> dict[str, str]:
+    """Bind a narrow, source-visible conversion accessor to its parameter.
+
+    The ``*_sb`` form captures container/cast accessors such as
+    ``btrfs_sb(sb)``.  It intentionally excludes ordinary helper return
+    values, multi-argument calls, and non-pointer locals: those still require
+    an interprocedural summary before they can establish caller ownership.
+    """
+
+    if function.body_node is None:
+        return {}
+    parameter_index = {name: index for index, name in enumerate(parameters)}
+    aliases: dict[str, str] = {}
+    for node in function.body_node.walk():
+        if node.type not in {"assignment_expression", "init_declarator"}:
+            continue
+        if node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            local = compact_ws(left.text) if left is not None else ""
+            expression = compact_ws(right.text) if right is not None else ""
+        else:
+            declarator = node.child_by_field_name("declarator")
+            value = node.child_by_field_name("value")
+            local = _declarator_name(declarator) or ""
+            expression = compact_ws(value.text) if value is not None else ""
+        if local not in pointer_locals:
+            continue
+        name, args = call_name_and_args(expression)
+        if not name.endswith("_sb") or len(args) != 1:
+            continue
+        argument = compact_ws(args[0]).strip("()")
+        if argument not in parameter_index:
+            continue
+        aliases[local] = f"arg{parameter_index[argument]}"
+    return aliases
+
+
+@dataclass(frozen=True)
+class _PerCpuSlotBinding:
+    relation: PerCpuSlotRelation
+    body_start_line: int
+    body_end_line: int
+    accessor_line: int
+
+
+def _bind_percpu_slot_effects(
+    function: FunctionIR,
+    effects: tuple[MetadataEffect, ...],
+    parameters: tuple[str, ...],
+    local_symbols: set[str],
+    pointer_locals: set[str],
+) -> tuple[MetadataEffect, ...]:
+    """Bind effects reached through an exact possible-CPU slot accessor."""
+
+    bindings = _percpu_slot_bindings(
+        function,
+        parameters,
+        local_symbols,
+        pointer_locals,
+    )
+    if not bindings:
+        return effects
+    result: list[MetadataEffect] = []
+    for effect in effects:
+        matches = [
+            binding
+            for binding in bindings
+            if (
+                binding.accessor_line < effect.site.line <= binding.body_end_line
+                and binding.body_start_line <= effect.site.line
+                and _rooted_at_symbol(effect.root, binding.relation.slot_local)
+            )
+        ]
+        if len(matches) != 1:
+            result.append(effect)
+            continue
+        relation = matches[0].relation
+        result.append(
+            replace(
+                effect,
+                root=_replace_symbols(
+                    effect.root,
+                    {relation.slot_local: f"PER_CPU_SLOT({relation.base_root})"},
+                ),
+                percpu_slot_relation=relation,
+            )
+        )
+    return tuple(result)
+
+
+def _percpu_slot_bindings(
+    function: FunctionIR,
+    parameters: tuple[str, ...],
+    local_symbols: set[str],
+    pointer_locals: set[str],
+) -> tuple[_PerCpuSlotBinding, ...]:
+    if function.body_node is None:
+        return ()
+    parameter_set = set(parameters)
+    result: list[_PerCpuSlotBinding] = []
+    for loop in function.body_node.walk():
+        if loop.type != "function_definition":
+            continue
+        loop_type = loop.child_by_field_name("type")
+        declarator = loop.child_by_field_name("declarator")
+        body = loop.child_by_field_name("body")
+        if (
+            loop_type is None
+            or compact_ws(loop_type.text) != "for_each_possible_cpu"
+            or declarator is None
+            or declarator.type != "parenthesized_declarator"
+            or body is None
+            or body.type != "compound_statement"
+        ):
+            continue
+        index_local = compact_ws(declarator.text).strip("()")
+        if (
+            re.fullmatch(r"[A-Za-z_]\w*", index_local) is None
+            or index_local not in local_symbols
+            or index_local in pointer_locals
+        ):
+            continue
+        if any(node.type in _CONTAINER_LOOP_ESCAPE_TYPES for node in body.walk()):
+            continue
+        accessors: list[tuple[FrontendNode, str, str]] = []
+        for statement in body.children:
+            assignment = _top_level_assignment(statement)
+            if assignment is None:
+                continue
+            left, right = assignment
+            slot_local = compact_ws(left.text)
+            accessor_name, args = call_name_and_args(compact_ws(right.text))
+            if (
+                slot_local not in pointer_locals
+                or accessor_name != "per_cpu_ptr"
+                or len(args) != 2
+                or compact_ws(args[1]).strip("()") != index_local
+            ):
+                continue
+            base_root = _parameter_container_path(args[0], parameter_set)
+            if not base_root:
+                continue
+            accessors.append((statement, slot_local, base_root))
+        if len(accessors) != 1:
+            continue
+        accessor, slot_local, base_root = accessors[0]
+        if _local_assignment_count(function, slot_local) != 1:
+            continue
+        if _local_has_initializer(function, slot_local):
+            continue
+        loop_site = SourceSite(
+            function.file.as_posix(),
+            loop.start_line,
+            f"for_each_possible_cpu({index_local})",
+        )
+        accessor_site = SourceSite(
+            function.file.as_posix(),
+            accessor.start_line,
+            compact_ws(accessor.text),
+        )
+        relation = PerCpuSlotRelation(
+            base_root=base_root,
+            slot_local=slot_local,
+            index_local=index_local,
+            loop_site=loop_site,
+            accessor_site=accessor_site,
+            source_identity=(
+                f"{function.file.as_posix()}:{loop.start_line}:"
+                f"{slot_local}:per_cpu_ptr({base_root},{index_local})"
+            ),
+        )
+        result.append(
+            _PerCpuSlotBinding(
+                relation=relation,
+                body_start_line=body.start_line,
+                body_end_line=body.end_line,
+                accessor_line=accessor.start_line,
+            )
+        )
+    return tuple(result)
+
+
+def _top_level_assignment(
+    statement: FrontendNode,
+) -> tuple[FrontendNode, FrontendNode] | None:
+    if statement.type != "expression_statement":
+        return None
+    assignments = [
+        child for child in statement.children if child.type == "assignment_expression"
+    ]
+    if len(assignments) != 1:
+        return None
+    assignment = assignments[0]
+    left = assignment.child_by_field_name("left")
+    right = assignment.child_by_field_name("right")
+    return (left, right) if left is not None and right is not None else None
+
+
+def _local_assignment_count(function: FunctionIR, local: str) -> int:
+    if function.body_node is None:
+        return 0
+    return sum(
+        1
+        for node in function.body_node.walk()
+        if node.type == "assignment_expression"
+        and node.child_by_field_name("left") is not None
+        and compact_ws(node.child_by_field_name("left").text) == local
+    )
+
+
+def _local_has_initializer(function: FunctionIR, local: str) -> bool:
+    if function.body_node is None:
+        return False
+    return any(
+        node.type == "init_declarator"
+        and _declarator_name(node.child_by_field_name("declarator")) == local
+        for node in function.body_node.walk()
+    )
+
+
+def _rooted_at_symbol(root: str, symbol: str) -> bool:
+    return re.match(rf"^{re.escape(symbol)}(?=$|->|\.)", compact_ws(root)) is not None
+
+
+_CONTAINER_LOOP_ESCAPE_TYPES = {
+    "break_statement",
+    "continue_statement",
+    "goto_statement",
+    "return_statement",
+}
+
+
+def _bind_exhaustive_container_cleanups(
+    function: FunctionIR,
+    effects: tuple[MetadataEffect, ...],
+    parameters: tuple[str, ...],
+    pointer_locals: set[str],
+) -> tuple[MetadataEffect, ...]:
+    """Bind an unconditional safe-list drain to its parameter container."""
+
+    relations = _exhaustive_container_cleanup_relations(
+        function,
+        parameters,
+        pointer_locals,
+    )
+    if not relations:
+        return effects
+    result: list[MetadataEffect] = []
+    for effect in effects:
+        relation = relations.get((effect.site.line, compact_ws(effect.site.expression)))
+        if relation is None:
+            result.append(effect)
+            continue
+        result.append(
+            replace(
+                effect,
+                root=relation.container_root,
+                value="*",
+                container_iteration_cleanup=relation,
+            )
+        )
+    return tuple(result)
+
+
+def _exhaustive_container_cleanup_relations(
+    function: FunctionIR,
+    parameters: tuple[str, ...],
+    pointer_locals: set[str],
+) -> dict[tuple[int, str], ContainerIterationCleanup]:
+    if function.body_node is None:
+        return {}
+    parameter_set = set(parameters)
+    result: dict[tuple[int, str], ContainerIterationCleanup] = {}
+    for parent in function.body_node.walk():
+        children = parent.children
+        for index, statement in enumerate(children[:-1]):
+            if statement.type != "expression_statement":
+                continue
+            loop_call = _single_direct_call(statement)
+            if loop_call is None:
+                continue
+            name, args = call_name_and_args(compact_ws(loop_call.text))
+            if name != "list_for_each_entry_safe" or len(args) != 4:
+                continue
+            body = children[index + 1]
+            if body.type != "compound_statement":
+                continue
+            iterator = compact_ws(args[0])
+            next_iterator = compact_ws(args[1])
+            member_field = compact_ws(args[3])
+            if (
+                iterator not in pointer_locals
+                or next_iterator not in pointer_locals
+                or iterator == next_iterator
+                or re.fullmatch(r"[A-Za-z_]\w*", member_field) is None
+            ):
+                continue
+            container_root = _parameter_container_path(args[2], parameter_set)
+            if not container_root:
+                continue
+            if any(
+                node.type in _CONTAINER_LOOP_ESCAPE_TYPES
+                for node in body.walk()
+            ):
+                continue
+            removal = _unconditional_iterator_removal(
+                body,
+                iterator,
+                member_field,
+            )
+            if removal is None:
+                continue
+            relation = ContainerIterationCleanup(
+                container_root=container_root,
+                iterator=iterator,
+                next_iterator=next_iterator,
+                member_field=member_field,
+                iteration_site=SourceSite(
+                    function.file.as_posix(),
+                    loop_call.start_line,
+                    compact_ws(loop_call.text),
+                ),
+                source_identity=(
+                    f"{function.file.as_posix()}:{loop_call.start_line}:"
+                    f"{iterator}:{container_root}:{member_field}"
+                ),
+            )
+            result[(removal.start_line, compact_ws(removal.text))] = relation
+    return result
+
+
+def _single_direct_call(statement: FrontendNode) -> FrontendNode | None:
+    calls = [child for child in statement.children if child.type == "call_expression"]
+    return calls[0] if len(calls) == 1 else None
+
+
+def _parameter_container_path(text: str, parameters: set[str]) -> str:
+    path = compact_ws(text).strip("()")
+    while path.startswith("&"):
+        path = path[1:].strip()
+    match = re.fullmatch(
+        r"([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)+)",
+        path,
+    )
+    if match is None or match.group(1) not in parameters:
+        return ""
+    return path
+
+
+def _unconditional_iterator_removal(
+    body: FrontendNode,
+    iterator: str,
+    member_field: str,
+) -> FrontendNode | None:
+    expected = {f"{iterator}->{member_field}", f"{iterator}.{member_field}"}
+    matches: list[FrontendNode] = []
+    for statement in body.children:
+        if statement.type != "expression_statement":
+            continue
+        call = _single_direct_call(statement)
+        if call is None:
+            continue
+        name, args = call_name_and_args(compact_ws(call.text))
+        if name not in {"list_del", "list_del_init"} or len(args) != 1:
+            continue
+        target = compact_ws(args[0]).strip("()")
+        while target.startswith("&"):
+            target = target[1:].strip()
+        if target in expected:
+            matches.append(call)
+    return matches[0] if len(matches) == 1 else None
+
+
+def _is_parameter_owned(
+    path: str,
+    parameters: set[str],
+    owner_aliases: dict[str, str] | None = None,
+) -> bool:
     match = re.match(r"^([A-Za-z_]\w*)", compact_ws(path).lstrip("&*()"))
-    return bool(match and match.group(1) in parameters)
+    return bool(
+        match
+        and (
+            match.group(1) in parameters
+            or match.group(1) in (owner_aliases or {})
+        )
+    )
 
 
 def _plain_local_symbol(
@@ -2093,8 +2732,14 @@ def _field_path(root: str, key: str) -> str:
     return f"{root}->{key}" if root else key
 
 
-def _parameterize_path(path: str, parameters: tuple[str, ...]) -> str:
-    return _replace_symbols(path, {name: f"arg{index}" for index, name in enumerate(parameters)})
+def _parameterize_path(
+    path: str,
+    parameters: tuple[str, ...],
+    owner_aliases: dict[str, str] | None = None,
+) -> str:
+    mapping = {name: f"arg{index}" for index, name in enumerate(parameters)}
+    mapping.update(owner_aliases or {})
+    return _replace_symbols(path, mapping)
 
 
 def _references_unbound_local(

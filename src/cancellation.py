@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 
 from .metadata_residual import MetadataDelta, MetadataEffect
+from .smt_solver import counter_balance_proven
 
 
 INVERSE_DELTAS = {
@@ -84,7 +85,14 @@ def normalize_residuals(
         )
         if match_index is None:
             continue
-        closing = unused_cancellations.pop(match_index)
+        closing = unused_cancellations[match_index]
+        # A single whole-aggregate restore covers every earlier SET of the
+        # matching field; ordinary inverse effects remain one-to-one.
+        if (
+            closing.delta is not MetadataDelta.RESTORE
+            and closing.container_iteration_cleanup is None
+        ):
+            unused_cancellations.pop(match_index)
         remaining.remove(effect)
         cancelled.append(
             CancellationPair(effect, closing, cancellation_reason(effect, closing))
@@ -107,6 +115,8 @@ def normalize_residuals(
             ProtectionPair(effect, protection, protection_reason(effect, protection))
         )
 
+    _close_smt_balanced_counters(remaining, unused_cancellations, cancelled)
+
     return CancellationResult(
         cancelled=tuple(cancelled),
         protected=tuple(protected_pairs),
@@ -114,16 +124,73 @@ def normalize_residuals(
     )
 
 
+def _close_smt_balanced_counters(
+    remaining: list[MetadataEffect],
+    unused_cancellations: list[MetadataEffect],
+    cancelled: list[CancellationPair],
+) -> None:
+    """Close visible counter deltas only when Z3 proves a zero net change."""
+
+    groups: dict[tuple[str, str, object], list[MetadataEffect]] = {}
+    for effect in (*remaining, *unused_cancellations):
+        if effect.delta not in {MetadataDelta.INC, MetadataDelta.DEC}:
+            continue
+        key = (_norm(effect.root), _norm(effect.key), effect.plane)
+        groups.setdefault(key, []).append(effect)
+    for effects in groups.values():
+        opens = [effect for effect in effects if effect in remaining]
+        closes = [effect for effect in effects if effect in unused_cancellations]
+        if not opens or not closes:
+            continue
+        deltas = [(effect.delta.value, effect.value) for effect in effects]
+        if not counter_balance_proven(deltas):
+            continue
+        closing = closes[0]
+        for effect in opens:
+            remaining.remove(effect)
+            cancelled.append(
+                CancellationPair(
+                    effect,
+                    closing,
+                    "SMT proves visible counter deltas sum to zero",
+                )
+            )
+        for effect in closes:
+            unused_cancellations.remove(effect)
+
+
 def effects_cancel(opened: MetadataEffect, closed: MetadataEffect) -> bool:
     """Return true when ``closed`` is an identity-compatible inverse effect."""
 
     if opened.plane is not closed.plane:
         return False
+    if closed.delta is MetadataDelta.RESTORE:
+        return (
+            opened.delta is MetadataDelta.SET
+            and closed.snapshot_relation is not None
+            and _same_or_compatible_identity(opened, closed)
+        )
     if INVERSE_DELTAS.get(opened.delta) is not closed.delta:
         return False
+    if closed.container_iteration_cleanup is not None:
+        return _container_iteration_cleanup_cancels(opened, closed)
     if not _same_or_compatible_identity(opened, closed):
         return False
     return _same_or_equivalent_value(opened, closed)
+
+
+def _container_iteration_cleanup_cancels(
+    opened: MetadataEffect,
+    closed: MetadataEffect,
+) -> bool:
+    relation = closed.container_iteration_cleanup
+    if relation is None or not _is_list_membership(opened, closed):
+        return False
+    if _norm(opened.root) != _norm(relation.container_root):
+        return False
+    member = _norm(opened.value)
+    field = re.escape(_norm(relation.member_field))
+    return re.search(rf"(?:->|\.){field}$", member) is not None
 
 
 def effect_protected_by(effect: MetadataEffect, protection: MetadataEffect) -> bool:

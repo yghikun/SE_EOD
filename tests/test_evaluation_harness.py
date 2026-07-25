@@ -36,7 +36,7 @@ int work(struct inode *inode, long nr)
         json.dumps(
             [
                 {
-                    "bug_id": 99,
+                    "bug_id": 16,
                     "fs": "btrfs",
                     "function": "work",
                     "type": "metadata residual",
@@ -64,8 +64,20 @@ int work(struct inode *inode, long nr)
     assert result.summary == summary
     assert summary["functions_analyzed"] == 2
     assert summary["candidate_count"] == 1
+    assert summary["review_count"] == 0
     assert summary["confirmed_bug_records"] == 1
     assert summary["confirmed_bug_functions_in_source"] == ["work"]
+    assert summary["confirmed_bug_functions_reported"] == ["work"]
+    assert summary["confirmed_bug_candidate_functions"] == ["work"]
+    assert summary["confirmed_bug_unknown_functions"] == []
+    assert summary["confirmed_bug_review_functions"] == []
+    assert summary["confirmed_bug_alignment_level"] == "function_only"
+    assert summary["confirmed_in_scope_bug_records"] == 1
+    assert summary["confirmed_in_scope_bug_functions_in_source"] == ["work"]
+    assert summary["confirmed_in_scope_bug_functions_reported"] == ["work"]
+    assert summary["confirmed_in_scope_bug_candidate_functions"] == ["work"]
+    assert summary["zero_residual_finding_count"] == 0
+    assert summary["residual_effect_evidence_counts"] == {"DIRECT_SOURCE": 1}
     assert summary["scope_id"] == "metadata_residual.metadata_scope"
     assert summary["target_filesystems"] == ["ext4", "xfs", "btrfs", "f2fs"]
     assert summary["metadata_domain_ids"][0] == "replay_recovery"
@@ -162,6 +174,9 @@ out:
     result = run_evaluation(source, out_dir)
 
     assert result.summary["unknown_count"] == 1
+    assert result.summary["unknown_diagnostic_slices"] == 1
+    assert result.summary["unknown_diagnostic_slices_with_residual"] == 1
+    assert result.summary["unknown_diagnostic_slices_without_residual"] == 0
     assert result.summary["unknown_cause_counts"] == {
         "unresolved_metadata_helper_on_error_path": 1,
     }
@@ -399,3 +414,24 @@ def test_confirmed_bug_markdown_mapping_is_loaded(tmp_path: Path):
     assert records[0].bug_id == 7
     assert records[0].filesystem == "btrfs"
     assert records[0].function == "btrfs_recover_relocation()"
+
+
+def test_confirmed_bug_mapping_deduplicates_repeated_bug_tables(tmp_path: Path):
+    mapping = tmp_path / "confirmed_bugs.md"
+    mapping.write_text(
+        """
+| # | FS | Function | Bug type | Status | Evidence |
+|---:|---|---|---|---|---|
+| 7 | btrfs | `btrfs_recover_relocation()` | residual | confirmed | summary |
+
+| # | FS | Function | Bug type | Status | Evidence |
+|---:|---|---|---|---|---|
+| 7 | btrfs | `btrfs_recover_relocation()` | residual | confirmed | detail |
+""",
+        encoding="utf-8",
+    )
+
+    records = load_confirmed_bug_mapping(mapping)
+
+    assert len(records) == 1
+    assert records[0].bug_id == 7

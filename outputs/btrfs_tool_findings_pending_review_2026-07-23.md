@@ -26,11 +26,14 @@ again before reporting or submitting patches.
 |---|---|---|---|---|
 | P1 | `btrfs_reconfigure()` | Direct candidate | In-scope runtime metadata/state residual | Present |
 | P2 | `btrfs_init_dev_replace_tgtdev()` | Direct candidate | Real resource-lifetime leak; outside the core metadata claim | Present |
-| P3 | `btrfs_dev_replace_start()` after `mark_block_group_to_copy()` | UNKNOWN surfaced by the analyzer, manually confirmed through the callee/caller chain | In-scope device topology and accounting residual | Present |
+| P3 | `btrfs_dev_replace_start()` after `mark_block_group_to_copy()` | Earlier UNKNOWN; direct Candidate BTRFS-027 in the M32d full review | In-scope device topology and accounting residual | Present |
 
 The analyzer did not automatically prove these bugs. It identified the failure
 points and residual state. The final classifications below are source-level
-manual conclusions and still need targeted reproduction.
+manual conclusions and still need targeted reproduction.  P3 was UNKNOWN in
+the run used to create this note, but the 2026-07-24 M32d full Candidate review
+records the same failure as direct Candidate `BTRFS-027`; this is a report-state
+migration, not new bug evidence.
 
 ## P1: `BTRFS_FS_STATE_REMOUNTING` remains set after validation failure
 

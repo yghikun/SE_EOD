@@ -2,7 +2,7 @@ from pathlib import Path
 
 from src.function_extractor import extract_functions
 from src.function_summary import build_project_summaries, build_same_file_summaries
-from src.metadata_residual import ResidualState
+from src.metadata_residual import MetadataDelta, ResidualState
 from src.parser import parse_c_file
 from src.residual_slicer import slice_function_residuals
 
@@ -191,7 +191,63 @@ out:
 
     assert residual_slice.state is ResidualState.CLOSED
     assert residual_slice.residuals == ()
-    assert residual_slice.cancellations[0].site.expression == "inode->i_blocks -= nr"
+    assert residual_slice.cancellations[0].site.expression.endswith(
+        "inode->i_blocks -= nr"
+    )
+
+
+def test_conditional_error_cleanup_is_not_treated_as_must_cancellation(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct inode *inode, long nr, int cleanup)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    if (cleanup)
+        inode->i_blocks -= nr;
+    return ret;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.UNKNOWN
+    assert residual_slice.residuals[0].key == "i_blocks"
+    assert "conditional error-path cancellation" in residual_slice.rationale
+
+
+def test_unrelated_conditional_cleanup_does_not_block_direct_residual(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct inode *inode, struct root *root, long nr, int cleanup)
+{
+    int ret;
+
+    root->reloc_root = root;
+    ret = fail_metadata();
+    if (ret) {
+        if (cleanup)
+            inode->i_blocks -= nr;
+        return ret;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.residuals[0].key == "reloc_root"
 
 
 def test_transaction_protect_with_explicit_binding_protects_residual(tmp_path: Path):
@@ -217,6 +273,90 @@ int work(struct trans *trans, struct root *root)
     assert residual_slice.state is ResidualState.PROTECTED
     assert residual_slice.residuals == ()
     assert len(residual_slice.protections) == 1
+
+
+def test_error_path_transaction_abort_protects_transaction_bound_effect(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct trans *trans, struct root *root)
+{
+    int ret;
+
+    root->last_trans = trans->transid;
+    ret = fail_metadata();
+    if (ret) {
+        btrfs_abort_transaction(trans, ret);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.PROTECTED
+    assert residual_slice.residuals == ()
+    assert any(
+        "btrfs_abort_transaction" in effect.site.expression
+        for effect in residual_slice.protections
+    )
+
+
+def test_conditional_error_path_protection_is_not_treated_as_must_protection(
+    tmp_path: Path,
+):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct trans *trans, struct root *root, int abort)
+{
+    int ret;
+
+    root->last_trans = trans->transid;
+    ret = fail_metadata();
+    if (ret) {
+        if (abort)
+            btrfs_abort_transaction(trans, ret);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.UNKNOWN
+    assert residual_slice.residuals[0].key == "last_trans"
+    assert "conditional error-path cancellation/protection" in residual_slice.rationale
+    assert residual_slice.protections == ()
+
+
+def test_error_path_transaction_abort_does_not_protect_unbound_effect(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct trans *trans, struct inode *inode)
+{
+    int ret;
+
+    inode->i_blocks++;
+    ret = fail_metadata();
+    if (ret) {
+        btrfs_abort_transaction(trans, ret);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert len(residual_slice.residuals) == 1
 
 
 def test_unknown_helper_on_error_path_yields_unknown(tmp_path: Path):
@@ -245,6 +385,91 @@ out:
     assert residual_slice.state is ResidualState.UNKNOWN
     assert "unresolved metadata helper" in residual_slice.rationale
     assert result.unknown_causes
+
+
+def test_unknown_error_path_helper_with_different_argument_remains_conservative(
+    tmp_path: Path,
+):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct inode *inode, struct root *root, long nr)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    btrfs_unknown_root_cleanup(root);
+    return ret;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.UNKNOWN
+    assert "btrfs_unknown_root_cleanup" in residual_slice.rationale
+
+
+def test_reaching_unknown_cannot_cancel_later_direct_effect(tmp_path: Path):
+    helper, work = _functions(
+        tmp_path,
+        """
+static void prepare_async(struct root *root, void (*callback)(void *))
+{
+    callback(root);
+}
+
+int work(struct root *root, void (*callback)(void *))
+{
+    int ret;
+
+    prepare_async(root, callback);
+    root->reloc_root = root;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.residuals[0].key == "reloc_root"
+
+
+def test_failure_value_prunes_success_only_unknown_cleanup(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+int work(struct root *root)
+{
+    int ret;
+
+    root->reloc_root = root;
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    if (ret == 0)
+        btrfs_unknown_root_cleanup(root);
+    return ret;
+}
+""",
+    )[0]
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.residuals[0].key == "reloc_root"
 
 
 def test_known_error_path_effect_call_does_not_also_yield_unknown(tmp_path: Path):
@@ -399,8 +624,60 @@ out:
     residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
 
     assert residual_slice.state is ResidualState.CLOSED
-    assert residual_slice.reaching_effects[0].site.expression == "inode->i_blocks += nr"
-    assert residual_slice.cancellations[0].site.expression == "inode->i_blocks -= nr"
+    assert residual_slice.reaching_effects[0].site.expression.endswith(
+        "inode->i_blocks += nr"
+    )
+    assert residual_slice.cancellations[0].site.expression.endswith(
+        "inode->i_blocks -= nr"
+    )
+
+
+def test_exhaustive_container_cleanup_survives_summary_call_site_projection(
+    tmp_path: Path,
+):
+    drain, work = _functions(
+        tmp_path,
+        """
+static void drain(struct fs_devices *fs_devices)
+{
+    struct device *curr;
+    struct device *next;
+
+    list_for_each_entry_safe(curr, next, &fs_devices->devices, dev_list) {
+        list_del(&curr->dev_list);
+        kfree(curr);
+    }
+}
+
+int work(struct fs_devices *fs_devices, struct device *first, struct device *second)
+{
+    int ret;
+
+    list_add(&first->dev_list, &fs_devices->devices);
+    list_add(&second->dev_list, &fs_devices->devices);
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    drain(fs_devices);
+    return ret;
+}
+""",
+    )
+    summaries = build_same_file_summaries((drain, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert len(residual_slice.reaching_effects) == 2
+    cleanup = next(
+        effect
+        for effect in residual_slice.cancellations
+        if effect.container_iteration_cleanup is not None
+    )
+    assert cleanup.root == "fs_devices->devices"
+    assert cleanup.container_iteration_cleanup.container_root == "fs_devices->devices"
 
 
 def test_summary_effect_on_caller_stack_output_is_out_of_scope(tmp_path: Path):
@@ -466,7 +743,7 @@ out:
     residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
 
     assert residual_slice.state is ResidualState.CLOSED
-    assert residual_slice.reaching_effects[0].site.expression == "dev->ready = 1"
+    assert residual_slice.reaching_effects[0].site.expression.endswith("dev->ready = 1")
     assert residual_slice.cancellations[0].site.expression == "dev->ready = 0"
 
 
@@ -541,7 +818,7 @@ int work(struct inode *inode, long nr)
     residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
 
     assert residual_slice.state is ResidualState.EXPOSED
-    assert residual_slice.residuals[0].site.expression == "inode->i_blocks += nr"
+    assert residual_slice.residuals[0].site.expression.endswith("inode->i_blocks += nr")
 
 
 def test_failure_summary_does_not_apply_may_cleanup(tmp_path: Path):
@@ -581,7 +858,7 @@ int work(struct inode *inode, long nr, int cleanup)
     residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
 
     assert residual_slice.state is ResidualState.EXPOSED
-    assert residual_slice.residuals[0].site.expression == "inode->i_blocks += nr"
+    assert residual_slice.residuals[0].site.expression.endswith("inode->i_blocks += nr")
     assert residual_slice.cancellations == ()
 
 
@@ -725,3 +1002,233 @@ int work(struct inode *inode, long nr, void (*callback)(void *))
 
     assert residual_slice.state is ResidualState.UNKNOWN
     assert "function_pointer_parameter_call: callback" in residual_slice.rationale
+
+
+def test_aggregate_snapshot_restore_cancels_macro_aliased_field_set(tmp_path: Path):
+    (function,) = _functions(
+        tmp_path,
+        """
+#define OPTION(state) ((state)->mount_opt)
+struct mount_opts { int alloc_mode; int other; };
+struct state { struct mount_opts mount_opt; };
+int work(struct state *state)
+{
+    struct mount_opts saved;
+    int ret;
+
+    saved = state->mount_opt;
+    OPTION(state).alloc_mode = 1;
+    OPTION(state).alloc_mode = 2;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+""",
+    )
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert residual_slice.residuals == ()
+    restores = [
+        effect
+        for effect in residual_slice.cancellations
+        if effect.delta is MetadataDelta.RESTORE
+    ]
+    assert len(restores) == 1
+    restore = restores[0]
+    assert restore.snapshot_relation is not None
+    assert restore.snapshot_relation.snapshot_root == "saved"
+    assert restore.snapshot_relation.owner_root == "state"
+    assert restore.snapshot_relation.aggregate_key == "mount_opt"
+    assert restore.snapshot_relation.source_identity == "state->mount_opt"
+
+
+def test_aggregate_snapshot_restore_rejects_mutated_target_field(tmp_path: Path):
+    (function,) = _functions(
+        tmp_path,
+        """
+struct mount_opts { int alloc_mode; };
+struct state { struct mount_opts mount_opt; };
+int work(struct state *state)
+{
+    struct mount_opts saved;
+    int ret;
+
+    saved = state->mount_opt;
+    state->mount_opt.alloc_mode = 1;
+    saved.alloc_mode = 2;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+""",
+    )
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert not any(effect.delta is MetadataDelta.RESTORE for effect in residual_slice.cancellations)
+
+
+def test_aggregate_snapshot_restore_rejects_conditional_restore_and_snapshot_escape(tmp_path: Path):
+    conditional, escaped = _functions(
+        tmp_path,
+        """
+struct mount_opts { int alloc_mode; };
+struct state { struct mount_opts mount_opt; };
+int conditional(struct state *state, int choose)
+{
+    struct mount_opts saved;
+    int ret;
+
+    saved = state->mount_opt;
+    state->mount_opt.alloc_mode = 1;
+    ret = fail_metadata();
+    if (ret && choose)
+        goto restore;
+    if (ret)
+        return ret;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+
+int escaped(struct state *state)
+{
+    struct mount_opts saved;
+    struct mount_opts *alias;
+    int ret;
+
+    saved = state->mount_opt;
+    state->mount_opt.alloc_mode = 1;
+    alias = &saved;
+    inspect(alias);
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+""",
+    )
+
+    for function in (conditional, escaped):
+        residual_slice = slice_function_residuals(function).slices[0]
+        assert residual_slice.residuals
+        assert not any(
+            effect.delta is MetadataDelta.RESTORE
+            for effect in residual_slice.cancellations
+        )
+
+
+def test_aggregate_snapshot_restore_rejects_late_capture_different_owner_and_partial_restore(
+    tmp_path: Path,
+):
+    late_capture, different_owner, partial_restore = _functions(
+        tmp_path,
+        """
+struct mount_opts { int alloc_mode; };
+struct state { struct mount_opts mount_opt; };
+int late_capture(struct state *state)
+{
+    struct mount_opts saved;
+    int ret;
+
+    state->mount_opt.alloc_mode = 1;
+    saved = state->mount_opt;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+
+int different_owner(struct state *left, struct state *right)
+{
+    struct mount_opts saved;
+    int ret;
+
+    saved = left->mount_opt;
+    left->mount_opt.alloc_mode = 1;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    right->mount_opt = saved;
+    return ret;
+}
+
+int partial_restore(struct state *state)
+{
+    struct mount_opts saved;
+    int ret;
+
+    saved = state->mount_opt;
+    state->mount_opt.alloc_mode = 1;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt.alloc_mode = saved.alloc_mode;
+    return ret;
+}
+""",
+    )
+
+    for function in (late_capture, different_owner, partial_restore):
+        residual_slice = slice_function_residuals(function).slices[0]
+        assert residual_slice.residuals
+        assert not any(
+            effect.delta is MetadataDelta.RESTORE
+            for effect in residual_slice.cancellations
+        )
+
+
+def test_aggregate_snapshot_restore_requires_capture_to_dominate_mutation(tmp_path: Path):
+    (function,) = _functions(
+        tmp_path,
+        """
+struct mount_opts { int alloc_mode; };
+struct state { struct mount_opts mount_opt; };
+int work(struct state *state, int capture)
+{
+    struct mount_opts saved;
+    int ret;
+
+    if (capture)
+        saved = state->mount_opt;
+    state->mount_opt.alloc_mode = 1;
+    ret = fail_metadata();
+    if (ret)
+        goto restore;
+    return 0;
+restore:
+    state->mount_opt = saved;
+    return ret;
+}
+""",
+    )
+
+    residual_slice = slice_function_residuals(function).slices[0]
+
+    assert residual_slice.residuals
+    assert not any(
+        effect.delta is MetadataDelta.RESTORE
+        for effect in residual_slice.cancellations
+    )

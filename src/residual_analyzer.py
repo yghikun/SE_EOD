@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from .function_summary import FunctionSummary, build_same_file_summaries
+from .failure_domain import refine_static_callee_containment
 from .frontend.model import FunctionIR
 from .metadata_residual import (
     MetadataResidualReport,
@@ -17,6 +18,7 @@ from .metadata_residual import (
 )
 from .residual_report import ResidualWitnessReport
 from .residual_slicer import ResidualSlicingResult, slice_function_residuals
+from .transient_provenance import TransientArgumentProvenance
 
 
 DEFAULT_SCOPE_RATIONALE = (
@@ -63,13 +65,36 @@ def analyze_function_residuals(
     include_all: bool = False,
     scope_rationale: str = DEFAULT_SCOPE_RATIONALE,
     mdr_evidence: str = "",
+    transient_provenance: dict[str, tuple[TransientArgumentProvenance, ...]] | None = None,
 ) -> ResidualAnalysisResult:
     """Run slicing and emit M6 witness reports for one function."""
 
     source_version = source_version_for(function)
     if summaries is None and all_functions is not None:
         summaries = build_same_file_summaries(all_functions)
-    slicing = slice_function_residuals(function, summaries=summaries or {})
+    slicing = slice_function_residuals(
+        function,
+        summaries=summaries or {},
+        transient_provenance=(transient_provenance or {}).get(function.function_id, ()),
+    )
+    return _analysis_from_slicing(
+        function,
+        slicing,
+        include_all=include_all,
+        scope_rationale=scope_rationale,
+        mdr_evidence=mdr_evidence,
+    )
+
+
+def _analysis_from_slicing(
+    function: FunctionIR,
+    slicing: ResidualSlicingResult,
+    *,
+    include_all: bool,
+    scope_rationale: str,
+    mdr_evidence: str = "",
+) -> ResidualAnalysisResult:
+    source_version = source_version_for(function)
     reports: list[ResidualWitnessReport] = []
 
     for residual_slice in slicing.slices:
@@ -102,6 +127,7 @@ def analyze_functions(
     inherited_summaries: dict[str, FunctionSummary] | None = None,
     include_all: bool = False,
     scope_rationale: str = DEFAULT_SCOPE_RATIONALE,
+    transient_provenance: dict[str, tuple[TransientArgumentProvenance, ...]] | None = None,
 ) -> tuple[ResidualAnalysisResult, ...]:
     """Analyze a set of functions using same-file static helper summaries."""
 
@@ -114,11 +140,23 @@ def analyze_functions(
             inherited_summaries=inherited,
         ),
     }
-    return tuple(
-        analyze_function_residuals(
+    slicings = {
+        function.function_id: slice_function_residuals(
             function,
-            all_functions=function_tuple,
             summaries=summaries,
+            transient_provenance=(transient_provenance or {}).get(function.function_id, ()),
+        )
+        for function in function_tuple
+    }
+    slicings = refine_static_callee_containment(
+        function_tuple,
+        slicings,
+        summaries,
+    )
+    return tuple(
+        _analysis_from_slicing(
+            function,
+            slicings[function.function_id],
             include_all=include_all,
             scope_rationale=scope_rationale,
         )
@@ -138,7 +176,9 @@ def _should_emit(
 ) -> bool:
     if report.kind in {
         ReportKind.UNCLOSED_METADATA_RESIDUAL,
+        ReportKind.CONTAINED_METADATA_RESIDUAL,
         ReportKind.METADATA_RESIDUAL_UNKNOWN,
+        ReportKind.METADATA_RESIDUAL_REVIEW,
     }:
         return True
     return include_all
@@ -150,6 +190,11 @@ def _scope_rationale_for(
 ) -> str:
     if residual_slice.state in {ResidualState.CLOSED, ResidualState.PROTECTED}:
         return "no in-scope filesystem metadata residual remains after normalization"
+    if residual_slice.state is ResidualState.CONTAINED:
+        return (
+            "a source-visible residual remains, but source-proven teardown or a "
+            "terminal failure domain prevents ordinary live continuation"
+        )
     return default
 
 

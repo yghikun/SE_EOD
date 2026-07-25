@@ -9,7 +9,7 @@ from typing import Iterable
 from .metadata_residual import MetadataResidualReport, ReportKind, SourceSite
 
 
-RESIDUAL_WITNESS_SCHEMA_VERSION = 1
+RESIDUAL_WITNESS_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -66,6 +66,13 @@ def report_to_markdown(report: ResidualWitnessReport) -> str:
         lines.append(f"- Rationale: {residual_slice.rationale}")
     if report.unknown_causes:
         lines.append(f"- Unknown causes: {'; '.join(report.unknown_causes)}")
+    for proof in residual_slice.containment_proofs:
+        lines.append(
+            f"- Containment: `{proof.kind.value}` via "
+            f"{_site_text(proof.site)}"
+            + (f" in `{proof.via_function}`" if proof.via_function else "")
+            + (f"; {proof.evidence}" if proof.evidence else "")
+        )
     if data.mdr_evidence:
         lines.append(f"- MDR evidence: {data.mdr_evidence}")
 

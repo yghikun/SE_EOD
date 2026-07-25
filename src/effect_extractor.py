@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Iterable
 
 from .frontend.model import FrontendNode, FunctionIR
+from .failure_domain_primitives import failure_domain_key, failure_domain_kind
 from .metadata_residual import (
+    EffectEvidence,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
@@ -68,6 +70,7 @@ RECOVERY_TERMS = {
     "transaction",
 }
 STRUCTURAL_TERMS = {
+    "bdev",
     "block_group",
     "chunk",
     "dev",
@@ -104,6 +107,7 @@ OUT_OF_SCOPE_ROOTS = {
 TRANSIENT_CONTEXT_SUFFIXES = {
     "arg",
     "args",
+    "cache",
     "check",
     "context",
     "control",
@@ -129,6 +133,15 @@ VFS_WIRING_FIELDS = {
     "i_mapping",
     "i_op",
 }
+CONTROL_STATUS_FIELDS = {
+    "err",
+    "error",
+    "result",
+    "retval",
+}
+TRANSIENT_RUNTIME_STATUS_SUFFIXES = (
+    "_in_progress",
+)
 RECOVERY_CONTEXT_TERMS = {
     "commit",
     "delayed",
@@ -324,6 +337,101 @@ def effect_targets_transient_object(
     return root in scope.automatic_objects or root in scope.context_roots
 
 
+def write_only_output_parameters(function: FunctionIR) -> frozenset[str]:
+    """Return pointer parameters source-proven as result aggregates.
+
+    A single direct field store is not enough evidence: ordinary shared
+    metadata owners have the same syntax.  Require construction of multiple
+    direct fields and reject value reads, nested-owner writes, compound
+    updates, and call inputs.
+    """
+
+    if function.body_node is None or function.ast_node is None:
+        return frozenset()
+    candidates = _pointer_parameter_symbols(function)
+    if not candidates:
+        return frozenset()
+    assignment_ranges: dict[str, list[tuple[int, int]]] = {
+        parameter: [] for parameter in candidates
+    }
+    assigned_fields: dict[str, set[str]] = {parameter: set() for parameter in candidates}
+    invalidated: set[str] = set()
+    assignment_nodes = sorted(
+        (
+            node
+            for node in function.body_node.walk()
+            if node.type == "assignment_expression"
+        ),
+        key=lambda node: node.start_byte,
+    )
+    for node in assignment_nodes:
+        target = node.child_by_field_name("left")
+        value = node.child_by_field_name("right")
+        operator = node.children[1].text if len(node.children) > 1 else ""
+        if target is None:
+            continue
+        root = _leading_symbol(_normalized_path(target.text))
+        if root in assignment_ranges:
+            field = _direct_output_field(target.text, root)
+            if (
+                compact_ws(operator) != "="
+                or field is None
+                or (value is not None and _reads_parameter_as_value(value.text, root))
+                or (
+                    value is not None
+                    and any(
+                        read_field not in assigned_fields[root]
+                        for read_field in _parameter_field_reads(value.text, root)
+                    )
+                )
+            ):
+                invalidated.add(root)
+                continue
+            assignment_ranges[root].append((node.start_byte, node.end_byte))
+            assigned_fields[root].add(field)
+    result: set[str] = set()
+    for parameter, ranges in assignment_ranges.items():
+        if (
+            parameter in invalidated
+            or len(assigned_fields[parameter]) < 2
+            or _parameter_is_call_input(function, parameter)
+        ):
+            continue
+        if all(
+            any(start <= node.start_byte and node.end_byte <= end for start, end in ranges)
+            for node in function.body_node.walk()
+            if node.type == "identifier" and compact_ws(node.text) == parameter
+        ):
+            result.add(parameter)
+    return frozenset(result)
+
+
+def _direct_output_field(target: str, parameter: str) -> str | None:
+    normalized = _normalized_path(target).replace(" ", "")
+    match = re.fullmatch(
+        rf"{re.escape(parameter)}->([A-Za-z_]\w*)(?:\[[^\]]+\])?",
+        normalized,
+    )
+    return match.group(1) if match else None
+
+
+def _reads_parameter_as_value(expression: str, parameter: str) -> bool:
+    return re.search(
+        rf"\b{re.escape(parameter)}\b(?!\s*(?:->|\.|\[))",
+        compact_ws(expression),
+    ) is not None
+
+
+def _parameter_field_reads(expression: str, parameter: str) -> tuple[str, ...]:
+    return tuple(
+        match.group(1)
+        for match in re.finditer(
+            rf"\b{re.escape(parameter)}\s*(?:->|\.)\s*([A-Za-z_]\w*)",
+            compact_ws(expression),
+        )
+    )
+
+
 def looks_like_metadata_reader(name: str) -> bool:
     """Recognize metadata-named accessors that do not mutate state."""
 
@@ -470,6 +578,7 @@ def _effects_from_call(
                 plane=_plane_for_text(" ".join([name, *args])) or MetadataPlane.STRUCTURAL,
                 delta=MetadataDelta.ADD,
                 value=_normalized_path(args[0], aliases),
+                evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
             ),
         )
     if name in LIST_REMOVE_CALLS and args:
@@ -482,6 +591,7 @@ def _effects_from_call(
                 plane=_plane_for_text(" ".join([name, *args])) or MetadataPlane.STRUCTURAL,
                 delta=MetadataDelta.REMOVE,
                 value=_list_owner(args[0], aliases),
+                evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
             ),
         )
 
@@ -495,6 +605,7 @@ def _effects_from_call(
                 plane=_plane_for_text(" ".join([name, *args])) or MetadataPlane.STRUCTURAL,
                 delta=MetadataDelta.SET,
                 value=compact_ws(args[0]),
+                evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
             ),
         )
     if name in BIT_CLEAR_CALLS and len(args) >= 2:
@@ -507,6 +618,7 @@ def _effects_from_call(
                 plane=_plane_for_text(" ".join([name, *args])) or MetadataPlane.STRUCTURAL,
                 delta=MetadataDelta.CLEAR,
                 value=compact_ws(args[0]),
+                evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
             ),
         )
 
@@ -521,10 +633,35 @@ def _effects_from_call(
     quota = _quota_effect(function, node, name, args, aliases)
     if quota is not None:
         return (quota,)
+    failure_domain = _failure_domain_effect(function, node, name, args, aliases)
+    if failure_domain is not None:
+        return (failure_domain,)
     transaction = _transaction_effect(function, node, name, args, aliases)
     if transaction is not None:
         return (transaction,)
     return ()
+
+
+def _failure_domain_effect(
+    function: FunctionIR,
+    node: FrontendNode,
+    name: str,
+    args: list[str],
+    aliases: dict[str, str],
+) -> MetadataEffect | None:
+    kind = failure_domain_kind(name)
+    if kind is None:
+        return None
+    return _effect(
+        function,
+        node,
+        root=_normalized_path(args[0], aliases) if args else name,
+        key=failure_domain_key(kind),
+        plane=MetadataPlane.RECOVERY,
+        delta=MetadataDelta.PROTECT,
+        value=kind.value,
+        evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
+    )
 
 
 def _tree_effect(
@@ -552,6 +689,7 @@ def _tree_effect(
         plane=_plane_for_text(" ".join([name, *args])) or MetadataPlane.STRUCTURAL,
         delta=delta,
         value=value,
+        evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
     )
 
 
@@ -579,6 +717,7 @@ def _reservation_effect(
         plane=MetadataPlane.ACCOUNTING,
         delta=delta,
         value=_value_args(args[1:], aliases),
+        evidence=EffectEvidence.NAME_INFERRED,
     )
 
 
@@ -606,6 +745,7 @@ def _quota_effect(
         plane=MetadataPlane.ACCOUNTING,
         delta=delta,
         value=_value_args(args[1:], aliases),
+        evidence=EffectEvidence.NAME_INFERRED,
     )
 
 
@@ -635,6 +775,7 @@ def _transaction_effect(
         plane=MetadataPlane.RECOVERY,
         delta=delta,
         value=_value_args(args[1:], aliases),
+        evidence=EffectEvidence.NAME_INFERRED,
     )
 
 
@@ -665,7 +806,15 @@ class _TransientFieldScope:
         return False
 
     def excludes_call_root(self, root: str) -> bool:
-        return root in self.context_roots or root in self.ephemeral_roots
+        leading = _leading_symbol(root)
+        if not leading:
+            return False
+        pointer_hops = root.count("->")
+        if leading in self.automatic_objects:
+            return pointer_hops == 0
+        if leading in self.context_roots or leading in self.ephemeral_roots:
+            return pointer_hops <= 1
+        return False
 
 
 def _path_parts(text: str, aliases: dict[str, str] | None = None) -> _PathParts:
@@ -686,7 +835,12 @@ def _out_of_scope_root(root: str) -> bool:
 def _out_of_scope_path(path: _PathParts) -> bool:
     """Exclude generic VFS operation-table wiring from metadata residual scope."""
 
-    return _out_of_scope_root(path.root) or path.key in VFS_WIRING_FIELDS
+    return (
+        _out_of_scope_root(path.root)
+        or path.key in VFS_WIRING_FIELDS
+        or path.key.lower() in CONTROL_STATUS_FIELDS
+        or path.key.lower().endswith(TRANSIENT_RUNTIME_STATUS_SUFFIXES)
+    )
 
 
 def _transient_field_scope(function: FunctionIR) -> _TransientFieldScope:
@@ -698,6 +852,35 @@ def _transient_field_scope(function: FunctionIR) -> _TransientFieldScope:
         ),
         ephemeral_roots=frozenset(_explicitly_ephemeral_aggregate_symbols(function)),
     )
+
+
+def _pointer_parameter_symbols(function: FunctionIR) -> set[str]:
+    symbols: set[str] = set()
+    if function.ast_node is None:
+        return symbols
+    for node in function.ast_node.walk():
+        if node.type not in {"parameter_declaration", "optional_parameter_declaration"}:
+            continue
+        declarator = node.child_by_field_name("declarator")
+        if declarator is None or not _contains_node_type(declarator, "pointer_declarator"):
+            continue
+        name = _declarator_name(declarator)
+        if name:
+            symbols.add(name)
+    return symbols
+
+
+def _parameter_is_call_input(function: FunctionIR, parameter: str) -> bool:
+    if function.body_node is None:
+        return True
+    token = re.compile(rf"\b{re.escape(parameter)}\b")
+    for node in function.body_node.walk():
+        if node.type != "call_expression":
+            continue
+        _, args = call_name_and_args(compact_ws(node.text))
+        if any(token.search(argument) for argument in args):
+            return True
+    return False
 
 
 def _automatic_object_symbols(function: FunctionIR) -> set[str]:
@@ -1034,6 +1217,7 @@ def _effect(
     plane: MetadataPlane,
     delta: MetadataDelta,
     value: str,
+    evidence: EffectEvidence = EffectEvidence.DIRECT_SOURCE,
 ) -> MetadataEffect:
     return MetadataEffect(
         root=root,
@@ -1042,6 +1226,7 @@ def _effect(
         delta=delta,
         value=compact_ws(value),
         site=SourceSite(function.file.as_posix(), node.start_line, compact_ws(node.text)),
+        evidence=evidence,
     )
 
 

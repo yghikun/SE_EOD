@@ -3,9 +3,10 @@ from pathlib import Path
 from src.effect_extractor import (
     extract_metadata_effects,
     extract_metadata_effects_with_skips,
+    write_only_output_parameters,
 )
 from src.function_extractor import extract_functions
-from src.metadata_residual import MetadataDelta, MetadataPlane
+from src.metadata_residual import EffectEvidence, MetadataDelta, MetadataPlane
 from src.parser import parse_c_file
 
 
@@ -78,6 +79,8 @@ int work(struct dev *dev, struct trans *trans)
     assert removed.plane is MetadataPlane.RECOVERY
     assert removed.delta is MetadataDelta.REMOVE
     assert removed.root == "dev->post_commit_list"
+    assert added.evidence is EffectEvidence.EXPLICIT_PRIMITIVE
+    assert removed.evidence is EffectEvidence.EXPLICIT_PRIMITIVE
 
 
 def test_extracts_recovery_pointer_set_and_clear(tmp_path: Path):
@@ -488,6 +491,149 @@ def test_helper_effect_rooted_in_transient_context_is_out_of_scope(tmp_path: Pat
 int work(struct send_ctx *sctx, u64 ino)
 {
     return orphanize_inode(sctx, ino);
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_list_effect_inside_transient_cache_context_is_out_of_scope(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct btrfs_backref_cache *cache, struct edge *edge)
+{
+    list_add_tail(&edge->list, &cache->pending_edge);
+    return 0;
+}
+""",
+    )
+
+
+def test_write_only_result_buffer_is_source_proven_output_state(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int statfs(struct kstatfs *buf)
+{
+    int ret;
+
+    buf->f_blocks = 10;
+    buf->f_bfree = buf->f_blocks;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset({"buf"})
+
+
+def test_result_buffer_used_as_call_input_is_not_output_proven(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct inode *inode)
+{
+    inode->i_blocks = read_blocks(inode);
+    return fail_metadata();
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset()
+
+
+def test_single_shared_field_store_is_not_output_proven(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct root *root, struct trans *trans)
+{
+    root->last_trans = trans->transid;
+    return fail_metadata();
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset()
+
+
+def test_self_referential_owner_store_is_not_output_proven(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct root *root)
+{
+    root->reloc_root = root;
+    root->root_state = 1;
+    return fail_metadata();
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset()
+
+
+def test_compound_update_invalidates_output_aggregate_proof(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct kstatfs *buf)
+{
+    buf->f_blocks = 10;
+    buf->f_bfree += 1;
+    buf->f_bavail = 5;
+    return fail_metadata();
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset()
+
+
+def test_reading_preexisting_field_invalidates_output_aggregate_proof(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct root *root)
+{
+    root->generation = root->generation + 1;
+    root->last_trans = 10;
+    return fail_metadata();
+}
+""",
+    )
+
+    assert write_only_output_parameters(function) == frozenset()
+
+
+def test_control_error_field_is_not_metadata_effect(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct pending_snapshot *pending, int ret)
+{
+    pending->error = ret;
+    return ret;
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_runtime_in_progress_field_is_not_metadata_effect(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct root *root)
+{
+    root->send_in_progress++;
+    return 0;
 }
 """,
     )

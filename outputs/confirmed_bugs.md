@@ -674,11 +674,14 @@ The following candidates should not be presented as confirmed bugs yet:
   `err` branch, and the patch was withdrawn on 2026-07-21.  Review:
   `https://lore.kernel.org/linux-f2fs-devel/b3a3d74c-338d-422f-b2c7-84ad00a9187d@kernel.org/`.
 
-- `fs/btrfs/zoned.c::btrfs_load_block_group_zone_info`: likely true from local
-  cleanup structure, but still needs a reachability check for the zoned/RST
-  condition after `active`, `zone_info`, and `map` allocation.
-- `fs/btrfs/space-info.c::create_space_info`: strong memory-leak candidate, but
-  still needs confirmation that `btrfs_sysfs_add_space_info_type()` does not
-  take ownership on failure.
+- `fs/btrfs/zoned.c::btrfs_load_block_group_zone_info`: the full M32d Candidate
+  review resolved this as a false positive.  On error it frees `physical_map`,
+  `active`, and `zone_info`; `read_one_block_group()` then drops the unpublished
+  block-group cache.
+- `fs/btrfs/space-info.c::create_space_info`: the full M32d Candidate review
+  resolved the suspected leak as a false positive.  On sysfs failure,
+  `btrfs_sysfs_add_space_info_type()` calls `kobject_put()`, and
+  `space_info_release()` frees the containing allocation.  Earlier successful
+  space-info types belong to the failed mount and are removed by teardown.
 - `fs/btrfs/ctree.c::btrfs_next_old_leaf`: uncertain / likely false positive
   after path-state review; do not count as confirmed.
