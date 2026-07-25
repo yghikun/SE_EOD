@@ -296,12 +296,9 @@ int work(struct trans *trans, struct root *root)
 
     residual_slice = slice_function_residuals(function).slices[0]
 
-    assert residual_slice.state is ResidualState.PROTECTED
-    assert residual_slice.residuals == ()
-    assert any(
-        "btrfs_abort_transaction" in effect.site.expression
-        for effect in residual_slice.protections
-    )
+    assert residual_slice.state is ResidualState.CONTAINED
+    assert residual_slice.residuals
+    assert residual_slice.containment_proofs
 
 
 def test_conditional_error_path_protection_is_not_treated_as_must_protection(
@@ -1589,4 +1586,289 @@ restore:
     assert not any(
         effect.delta is MetadataDelta.RESTORE
         for effect in residual_slice.cancellations
+    )
+
+
+def test_exact_error_partition_selects_only_terminal_eio_exit(tmp_path: Path):
+    helper, eio_caller, enomem_caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    return -ENOMEM;
+}
+
+int eio_caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret == -EIO)
+        return ret;
+    return 0;
+}
+
+int enomem_caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret == -ENOMEM)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, eio_caller, enomem_caller))
+
+    eio_slice = slice_function_residuals(eio_caller, summaries=summaries).slices[0]
+    enomem_slice = slice_function_residuals(enomem_caller, summaries=summaries).slices[0]
+
+    assert eio_slice.state is ResidualState.CONTAINED
+    assert any(effect.key.startswith("failure_domain:") for effect in eio_slice.protections)
+    assert enomem_slice.state is not ResidualState.CONTAINED
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in enomem_slice.protections
+    )
+
+
+def test_exact_return_code_uncontained_residual_stays_unknown(tmp_path: Path):
+    (caller,) = _functions(
+        tmp_path,
+        """
+int caller(struct fs *fs)
+{
+    int ret;
+
+    fs->dirty = 1;
+    ret = fail_metadata();
+    if (ret == -EIO)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    residual_slice = slice_function_residuals(caller).slices[0]
+
+    assert residual_slice.state is ResidualState.UNKNOWN
+    assert residual_slice.residuals
+    assert "exact_return_code_residual_identity_unproven" in residual_slice.rationale
+
+
+def test_exact_ptr_err_partition_selects_err_ptr_exit(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static struct page *helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return ERR_PTR(-EIO);
+    }
+    return ERR_PTR(-ENOMEM);
+}
+
+int caller(struct fs *fs, int which)
+{
+    struct page *page = helper(fs, which);
+
+    if (PTR_ERR(page) == -EIO)
+        return -EIO;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CONTAINED
+
+
+def test_exact_switch_case_selects_one_error_partition(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    return -ENOMEM;
+}
+
+int caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    switch (ret) {
+    case -EIO:
+        return ret;
+    default:
+        return 0;
+    }
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CONTAINED
+
+
+def test_symbolic_error_partition_prevents_exact_selection(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    int ret;
+
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    ret = fallback_error();
+    if (ret)
+        return ret;
+    return 0;
+}
+
+int caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret == -EIO)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is not ResidualState.CONTAINED
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in residual_slice.protections
+    )
+
+
+def test_duplicate_matching_error_partitions_prevent_exact_selection(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    return -EIO;
+}
+
+int caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret == -EIO)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is not ResidualState.CONTAINED
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in residual_slice.protections
+    )
+
+
+def test_not_equal_with_multiple_matching_partitions_preserves_must_projection(
+    tmp_path: Path,
+):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which > 0) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    if (which < 0)
+        return -ENOMEM;
+    return -EAGAIN;
+}
+
+int caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret != -EAGAIN)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is not ResidualState.CONTAINED
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in residual_slice.protections
+    )
+
+
+def test_nonexact_failure_check_keeps_existing_common_must_effect(tmp_path: Path):
+    helper, caller = _functions(
+        tmp_path,
+        """
+static int helper(struct fs *fs, int which)
+{
+    fs->dirty = 1;
+    if (which) {
+        f2fs_stop_checkpoint(fs, false, REASON);
+        return -EIO;
+    }
+    return -ENOMEM;
+}
+
+int caller(struct fs *fs, int which)
+{
+    int ret = helper(fs, which);
+
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((helper, caller))
+
+    residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
+
+    assert residual_slice.state is not ResidualState.CONTAINED
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in residual_slice.protections
     )

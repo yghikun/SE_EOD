@@ -1,5 +1,7 @@
 from src.metadata_residual import (
     EffectEvidence,
+    FailureDomainKind,
+    FailureDomainProof,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
@@ -164,3 +166,52 @@ def test_name_inferred_residual_is_review_not_candidate():
         is ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL_REVIEW
     )
     assert report.confidence == "review"
+
+
+def test_exposed_report_ignores_contained_effect_when_selecting_review_kind():
+    site = SourceSite("fs/btrfs/example.c", 10, "ret = fail_metadata()")
+    transaction_effect = MetadataEffect(
+        root="trans",
+        key="bytes_reserved",
+        plane=MetadataPlane.ACCOUNTING,
+        delta=MetadataDelta.INC,
+        value="nr",
+        site=site,
+    )
+    inferred_effect = MetadataEffect(
+        root="root",
+        key="btrfs_update_cache",
+        plane=MetadataPlane.RECOVERY,
+        delta=MetadataDelta.SET,
+        value="",
+        site=site,
+        evidence=EffectEvidence.NAME_INFERRED,
+    )
+    residual_slice = ResidualSlice(
+        failure_site=site,
+        reaching_effects=(transaction_effect, inferred_effect),
+        cancellations=(),
+        protections=(),
+        residuals=(transaction_effect, inferred_effect),
+        state=ResidualState.EXPOSED,
+        containment_proofs=(
+            FailureDomainProof(
+                kind=FailureDomainKind.TRANSACTION_ABORT,
+                site=site,
+                owner="trans",
+                covered_effects=(transaction_effect,),
+            ),
+        ),
+    )
+
+    report = residual_report(
+        function="work",
+        residual_slice=residual_slice,
+        scope_rationale="mixed effect-scoped containment",
+    )
+
+    assert report.kind is ReportKind.METADATA_RESIDUAL_REVIEW
+    assert (
+        report.classification
+        is ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL_REVIEW
+    )

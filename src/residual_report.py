@@ -72,6 +72,7 @@ def report_to_markdown(report: ResidualWitnessReport) -> str:
             f"- Containment: `{proof.kind.value}` via "
             f"{_site_text(proof.site)}"
             + (f" in `{proof.via_function}`" if proof.via_function else "")
+            + f"; covers {len(proof.covered_effects)} residual effect(s)"
             + (f"; {proof.evidence}" if proof.evidence else "")
         )
     for teardown in residual_slice.owner_teardown_proofs:

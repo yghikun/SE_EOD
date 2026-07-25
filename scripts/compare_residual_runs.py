@@ -21,12 +21,21 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.unknown_triage import unknown_cause_category, unknown_cause_taxonomy
+from src.unknown_triage import (
+    unknown_cause_category,
+    unknown_cause_proof_gap,
+    unknown_cause_taxonomy,
+)
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 KNOWN_CLASSES = ("CANDIDATE", "UNKNOWN", "REVIEW")
-TERMINAL_CLASSES = ("CLOSED", "PROTECTED", "OUT_OF_SCOPE")
+TERMINAL_CLASSES = (
+    "CLOSED",
+    "PROTECTED",
+    "CONTAINED_METADATA_RESIDUAL",
+    "OUT_OF_SCOPE",
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,10 +81,43 @@ def compare_runs(baseline_path: Path, current_path: Path) -> dict[str, object]:
 
     baseline = _load_witnesses(baseline_path)
     current = _load_witnesses(current_path)
+    current_slice_states = _load_slice_states(current_path)
     current_by_key = {witness["stable_key"]: witness for witness in current}
+    current_by_effect_identity: dict[str, dict[str, Any]] = {}
+    for witness in current:
+        for key in _witness_effect_identity_keys(witness):
+            current_by_effect_identity.setdefault(key, witness)
+    current_by_slice_identity: dict[str, list[dict[str, Any]]] = {}
+    for witness in current:
+        current_by_slice_identity.setdefault(_witness_slice_identity_key(witness), []).append(
+            witness
+        )
     baseline_by_key = {witness["stable_key"]: witness for witness in baseline}
+    baseline_effect_identities = {
+        key for witness in baseline for key in _witness_effect_identity_keys(witness)
+    }
+    baseline_by_slice_identity: dict[str, list[dict[str, Any]]] = {}
+    for witness in baseline:
+        baseline_by_slice_identity.setdefault(_witness_slice_identity_key(witness), []).append(
+            witness
+        )
     transitions = [
-        _transition(baseline_witness, current_by_key.get(baseline_witness["stable_key"]))
+        _transition(
+            baseline_witness,
+            current_by_key.get(baseline_witness["stable_key"])
+            or _matching_current_witness(
+                baseline_witness,
+                current_by_effect_identity,
+            )
+            or _same_slice_retention_witness(
+                baseline_witness,
+                current_by_slice_identity,
+            )
+            or _slice_state_retention_witness(
+                baseline_witness,
+                current_slice_states,
+            ),
+        )
         for baseline_witness in baseline
     ]
     new_candidates = [
@@ -83,6 +125,11 @@ def compare_runs(baseline_path: Path, current_path: Path) -> dict[str, object]:
         for witness in current
         if witness["classification"] == "CANDIDATE"
         and witness["stable_key"] not in baseline_by_key
+        and not any(
+            key in baseline_effect_identities
+            for key in _witness_effect_identity_keys(witness)
+        )
+        and not _candidate_known_in_baseline_slice(witness, baseline_by_slice_identity)
     ]
     lost_known_witnesses = [
         item
@@ -111,7 +158,8 @@ def compare_runs(baseline_path: Path, current_path: Path) -> dict[str, object]:
             "OUT_OF_SCOPE. CLOSED and PROTECTED require an exact current "
             "failure/effect witness from a full evaluation artifact. An effect "
             "still present only in reaching_effects is RETAINED_REACHING, not "
-            "resolved."
+            "resolved. A disappeared effect witness whose failure/exit slice "
+            "is still visible is RETAINED_SLICE, not resolved or unmatched."
         ),
     }
     return {
@@ -165,6 +213,33 @@ def _load_witnesses(path: Path) -> list[dict[str, Any]]:
         ]
         return _dedupe_witnesses(witnesses)
     return _dedupe_witnesses(_witnesses_from_reports(_load_reports(_reports_path(path))))
+
+
+def _load_slice_states(path: Path) -> dict[str, dict[str, Any]]:
+    evaluations = _evaluation_paths(path)
+    if not evaluations:
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for evaluation_path in evaluations:
+        payload = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        for analysis in payload.get("analyses", ()):
+            function = str(analysis.get("function", ""))
+            for residual_slice in (analysis.get("slicing_result") or {}).get("slices", ()):
+                if not isinstance(residual_slice, dict):
+                    continue
+                key = _slice_identity_key(
+                    filesystem=_filesystem_for_site(residual_slice.get("failure_site") or {}),
+                    function=function,
+                    failure_site=_site(residual_slice.get("failure_site")),
+                    exit_site=_site(residual_slice.get("exit_site")),
+                )
+                result[key] = {
+                    "classification": _classification_from_slice_state(residual_slice),
+                    "kind": _kind_from_slice_state(residual_slice),
+                    "slice_state": str(residual_slice.get("state", "")),
+                    "rationale": str(residual_slice.get("rationale", "")),
+                }
+    return result
 
 
 def _evaluation_paths(path: Path) -> tuple[Path, ...]:
@@ -248,6 +323,12 @@ def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iter
         for proof in residual_slice.get("owner_teardown_proofs", ())
         for effect in (proof.get("closed_effects") or ())
     }
+    containment_covered_keys = {
+        _effect_key(effect)
+        for proof in residual_slice.get("containment_proofs", ())
+        for effect in (proof.get("covered_effects") or ())
+    }
+    containment_proofs = tuple(residual_slice.get("containment_proofs", ()))
     out_of_scope_keys = {_effect_key(effect) for effect in out_of_scope}
     for effect in effects:
         if _effect_key(effect) in out_of_scope_keys:
@@ -262,6 +343,7 @@ def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iter
                 slice_kind=slice_kind,
                 slice_causes=_slice_unknown_causes(residual_slice),
                 teardown_closed_keys=teardown_closed_keys,
+                containment_covered_keys=containment_covered_keys,
             )
         if classification is None:
             continue
@@ -277,6 +359,7 @@ def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iter
             "unknown_causes": causes,
             "cancellations": [_effect(item) for item in cancellations],
             "protections": [_effect(item) for item in protections],
+            "containment_proofs": list(containment_proofs),
             "rationale": str(residual_slice.get("rationale", "")),
             "out_of_scope_evidence": (
                 list(effect.get("transient_provenance") or ())
@@ -307,15 +390,20 @@ def _effect_classification(
     slice_kind: str,
     slice_causes: list[str],
     teardown_closed_keys: set[str],
+    containment_covered_keys: set[str],
 ) -> tuple[str | None, str, list[str]]:
     if _effect_key(effect) in teardown_closed_keys:
         return "CLOSED", "OUT_OF_SCOPE", []
     if _effect_key(effect) in residual_keys:
+        if _effect_key(effect) in containment_covered_keys:
+            return "CONTAINED_METADATA_RESIDUAL", "CONTAINED_METADATA_RESIDUAL", []
         return slice_classification, slice_kind, slice_causes
     if any(_cancellation_covers(effect, candidate) for candidate in cancellations):
         return "CLOSED", "OUT_OF_SCOPE", []
     if any(_protection_covers(effect, candidate) for candidate in protections):
         return "PROTECTED", "OUT_OF_SCOPE", []
+    if _effect_key(effect) in containment_covered_keys:
+        return "CONTAINED_METADATA_RESIDUAL", "CONTAINED_METADATA_RESIDUAL", []
     if slice_classification in {"CLOSED", "PROTECTED", "OUT_OF_SCOPE"}:
         return slice_classification, slice_kind, []
     # The effect still exists in the full slice, but the residual projection
@@ -366,6 +454,215 @@ def _effect_key(effect: dict[str, Any]) -> str:
     return json.dumps(_effect(effect), sort_keys=True, separators=(",", ":"))
 
 
+def _matching_current_witness(
+    baseline_witness: dict[str, Any],
+    current_by_effect_identity: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    for key in _witness_effect_identity_keys(baseline_witness):
+        match = current_by_effect_identity.get(key)
+        if match is not None:
+            return match
+    return None
+
+
+def _same_slice_retention_witness(
+    baseline_witness: dict[str, Any],
+    current_by_slice_identity: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any] | None:
+    matches = current_by_slice_identity.get(_witness_slice_identity_key(baseline_witness), [])
+    if not matches:
+        return None
+    visible = [witness for witness in matches if witness.get("classification") in KNOWN_CLASSES]
+    if not visible:
+        return None
+    return {
+        **visible[0],
+        "classification": "RETAINED_SLICE",
+        "kind": "OUT_OF_SCOPE",
+        "slice_retention_evidence": {
+            "classification": visible[0].get("classification"),
+            "kind": visible[0].get("kind"),
+            "effect": visible[0].get("effect"),
+        },
+    }
+
+
+def _slice_state_retention_witness(
+    baseline_witness: dict[str, Any],
+    current_slice_states: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if _effect(baseline_witness.get("effect")).get("evidence") != "NAME_INFERRED":
+        return None
+    state = current_slice_states.get(_witness_slice_identity_key(baseline_witness))
+    if state is None:
+        return None
+    classification = str(state.get("classification") or "RETAINED_SLICE")
+    if classification == "CANDIDATE":
+        classification = "RETAINED_SLICE"
+    return {
+        **baseline_witness,
+        "classification": classification,
+        "kind": str(state.get("kind") or "OUT_OF_SCOPE"),
+        "slice_state": str(state.get("slice_state") or ""),
+        "unknown_causes": (
+            [str(state.get("rationale"))]
+            if classification == "UNKNOWN" and state.get("rationale")
+            else []
+        ),
+        "cancellations": [],
+        "protections": [],
+        "containment_proofs": [],
+        "out_of_scope_evidence": [],
+        "slice_retention_evidence": state,
+    }
+
+
+def _candidate_known_in_baseline_slice(
+    witness: dict[str, Any],
+    baseline_by_slice_identity: dict[str, list[dict[str, Any]]],
+) -> bool:
+    baseline_slice = [
+        item
+        for item in baseline_by_slice_identity.get(_witness_slice_identity_key(witness), [])
+        if item.get("classification") == "CANDIDATE"
+    ]
+    if not baseline_slice:
+        return False
+    effect = _effect(witness.get("effect"))
+    if effect.get("evidence") == "NAME_INFERRED":
+        return True
+    return any(_compatible_effect_projection(effect, _effect(item.get("effect"))) for item in baseline_slice)
+
+
+def _compatible_effect_projection(left: dict[str, object], right: dict[str, object]) -> bool:
+    left_site = _site(left.get("site"))
+    right_site = _site(right.get("site"))
+    return (
+        left.get("key") == right.get("key")
+        and left.get("plane") == right.get("plane")
+        and left.get("delta") == right.get("delta")
+        and left_site.get("file") == right_site.get("file")
+        and left_site.get("line") == right_site.get("line")
+    )
+
+
+def _witness_effect_identity_keys(witness: dict[str, Any]) -> tuple[str, ...]:
+    effect = _effect(witness.get("effect"))
+    site = _site(effect.get("site"))
+    keys = [
+        json.dumps(
+            [
+                witness.get("filesystem", ""),
+                witness.get("function", ""),
+                effect.get("root", ""),
+                effect.get("key", ""),
+                effect.get("plane", ""),
+                effect.get("delta", ""),
+                site.get("file", ""),
+                site.get("line", ""),
+            ],
+            separators=(",", ":"),
+        )
+    ]
+    semantic = _transaction_alloc_bookkeeping_identity(witness, effect, site)
+    if semantic is not None:
+        keys.append(semantic)
+    source_projection = _source_projection_identity(witness, effect, site)
+    if source_projection is not None:
+        keys.append(source_projection)
+    return tuple(keys)
+
+
+def _source_projection_identity(
+    witness: dict[str, Any],
+    effect: dict[str, object],
+    site: dict[str, object],
+) -> str | None:
+    if not site.get("file") or not site.get("line"):
+        return None
+    failure = _site(witness.get("failure_site"))
+    exit_site = _site(witness.get("exit_site"))
+    return json.dumps(
+        [
+            witness.get("filesystem", ""),
+            witness.get("function", ""),
+            "source_projection",
+            effect.get("key", ""),
+            effect.get("plane", ""),
+            effect.get("delta", ""),
+            site.get("file", ""),
+            site.get("line", ""),
+            failure.get("file", ""),
+            failure.get("line", ""),
+            exit_site.get("file", ""),
+            exit_site.get("line", ""),
+        ],
+        separators=(",", ":"),
+    )
+
+
+def _witness_slice_identity_key(witness: dict[str, Any]) -> str:
+    failure = _site(witness.get("failure_site"))
+    exit_site = _site(witness.get("exit_site"))
+    return _slice_identity_key(
+        filesystem=str(witness.get("filesystem", "")),
+        function=str(witness.get("function", "")),
+        failure_site=failure,
+        exit_site=exit_site,
+    )
+
+
+def _slice_identity_key(
+    *,
+    filesystem: str,
+    function: str,
+    failure_site: dict[str, object],
+    exit_site: dict[str, object],
+) -> str:
+    return json.dumps(
+        [
+            filesystem,
+            function,
+            failure_site.get("file", ""),
+            failure_site.get("line", ""),
+            exit_site.get("file", ""),
+            exit_site.get("line", ""),
+        ],
+        separators=(",", ":"),
+    )
+
+
+def _transaction_alloc_bookkeeping_identity(
+    witness: dict[str, Any],
+    effect: dict[str, object],
+    site: dict[str, object],
+) -> str | None:
+    if witness.get("filesystem") != "xfs":
+        return None
+    if effect.get("key") not in {
+        "xfs_trans_alloc",
+        "xfs_trans_set_context",
+        "xfs_trans_reserve",
+    }:
+        return None
+    failure = _site(witness.get("failure_site"))
+    exit_site = _site(witness.get("exit_site"))
+    return json.dumps(
+        [
+            witness.get("filesystem", ""),
+            witness.get("function", ""),
+            "xfs_trans_alloc_bookkeeping",
+            site.get("file", ""),
+            site.get("line", ""),
+            failure.get("file", ""),
+            failure.get("line", ""),
+            exit_site.get("file", ""),
+            exit_site.get("line", ""),
+        ],
+        separators=(",", ":"),
+    )
+
+
 _CLEAR_VALUES = {"", "0", "0L", "0UL", "NULL", "false", "FALSE"}
 
 
@@ -381,6 +678,8 @@ def _slice_classification(
         return "CLOSED", "OUT_OF_SCOPE"
     if state == "PROTECTED":
         return "PROTECTED", "OUT_OF_SCOPE"
+    if state == "CONTAINED" and residuals:
+        return "CONTAINED_METADATA_RESIDUAL", "CONTAINED_METADATA_RESIDUAL"
     if state == "UNKNOWN":
         return (
             ("UNKNOWN", "METADATA_RESIDUAL_UNKNOWN")
@@ -388,10 +687,36 @@ def _slice_classification(
             else ("DIAGNOSTIC_UNKNOWN", "OUT_OF_SCOPE")
         )
     if state == "EXPOSED" and residuals:
-        if all(item.get("evidence") == "NAME_INFERRED" for item in residuals):
+        containment_covered_keys = {
+            _effect_key(effect)
+            for proof in residual_slice.get("containment_proofs", ())
+            for effect in (proof.get("covered_effects") or ())
+        }
+        uncontained = tuple(
+            effect
+            for effect in residuals
+            if _effect_key(effect) not in containment_covered_keys
+        )
+        if all(item.get("evidence") == "NAME_INFERRED" for item in uncontained):
             return "REVIEW", "METADATA_RESIDUAL_REVIEW"
         return "CANDIDATE", "UNCLOSED_METADATA_RESIDUAL"
     return "OUT_OF_SCOPE", "OUT_OF_SCOPE"
+
+
+def _classification_from_slice_state(residual_slice: dict[str, Any]) -> str:
+    residuals = tuple(residual_slice.get("residuals") or ())
+    classification, _ = _slice_classification(residual_slice, residuals)
+    if classification == "DIAGNOSTIC_UNKNOWN":
+        return "RETAINED_SLICE"
+    if classification == "OUT_OF_SCOPE":
+        return "RETAINED_SLICE"
+    return classification
+
+
+def _kind_from_slice_state(residual_slice: dict[str, Any]) -> str:
+    residuals = tuple(residual_slice.get("residuals") or ())
+    classification, kind = _slice_classification(residual_slice, residuals)
+    return "OUT_OF_SCOPE" if classification == "DIAGNOSTIC_UNKNOWN" else kind
 
 
 def _classification_from_kind(kind: str) -> str:
@@ -399,6 +724,7 @@ def _classification_from_kind(kind: str) -> str:
         "UNCLOSED_METADATA_RESIDUAL": "CANDIDATE",
         "METADATA_RESIDUAL_UNKNOWN": "UNKNOWN",
         "METADATA_RESIDUAL_REVIEW": "REVIEW",
+        "CONTAINED_METADATA_RESIDUAL": "CONTAINED_METADATA_RESIDUAL",
     }.get(kind, "OUT_OF_SCOPE")
 
 
@@ -435,8 +761,23 @@ def _transition(
             if new is not None
             else []
         ),
+        "new_containment_evidence": (
+            [
+                proof
+                for proof in new.get("containment_proofs", [])
+                if any(
+                    _effect_key(effect) == _effect_key(old["effect"])
+                    for effect in (proof.get("covered_effects") or ())
+                )
+            ]
+            if new is not None
+            else []
+        ),
         "new_out_of_scope_evidence": (
             new.get("out_of_scope_evidence", []) if new is not None else []
+        ),
+        "new_slice_retention_evidence": (
+            new.get("slice_retention_evidence", {}) if new is not None else {}
         ),
     }
     return record
@@ -460,8 +801,12 @@ def _resolution_reason(old: dict[str, Any], new: dict[str, Any] | None) -> list[
             if new["protections"]
             else "protected_state_without_effect_witness"
         )
+    elif new["classification"] == "CONTAINED_METADATA_RESIDUAL":
+        reasons.append("effect_scoped_failure_domain_proof")
     elif new["classification"] == "OUT_OF_SCOPE":
         reasons.append("source_classified_out_of_scope")
+    elif new["classification"] == "RETAINED_SLICE":
+        reasons.append("same_failure_exit_slice_still_visible")
     removed_causes = sorted(set(old["unknown_causes"]) - set(new["unknown_causes"]))
     if removed_causes:
         reasons.append("unknown_causes_removed")
@@ -477,6 +822,9 @@ def _unknown_resolution_compatibility(
     taxonomy_rows: dict[str, dict[str, int]] = defaultdict(
         lambda: {"to_candidate": 0, "to_unknown": 0, "to_out_of_scope_or_removed": 0}
     )
+    proof_gap_rows: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"to_candidate": 0, "to_unknown": 0, "to_out_of_scope_or_removed": 0}
+    )
     for transition in transitions:
         if transition["old_state"] != "UNKNOWN":
             continue
@@ -487,15 +835,26 @@ def _unknown_resolution_compatibility(
         for cause in transition["old_unknown_causes"] or ("uncategorized",):
             reason = unknown_cause_category(str(cause))
             taxonomy = unknown_cause_taxonomy(str(cause))
+            proof_gap = unknown_cause_proof_gap(str(cause))
             rows[reason][bucket] += 1
             taxonomy_rows[taxonomy][bucket] += 1
+            proof_gap_rows[proof_gap][bucket] += 1
     return {
         "unknown_taxonomy_resolution": [
             {"taxonomy": taxonomy, **counts}
             for taxonomy, counts in sorted(taxonomy_rows.items())
         ],
+        "unknown_proof_gap_resolution": [
+            {"proof_gap": proof_gap, **counts}
+            for proof_gap, counts in sorted(proof_gap_rows.items())
+        ],
         "unknown_resolution_matrix": [
-            {"taxonomy": unknown_cause_taxonomy(reason), "reason": reason, **counts}
+            {
+                "taxonomy": unknown_cause_taxonomy(reason),
+                "proof_gap": unknown_cause_proof_gap(reason),
+                "reason": reason,
+                **counts,
+            }
             for reason, counts in sorted(rows.items())
         ],
     }

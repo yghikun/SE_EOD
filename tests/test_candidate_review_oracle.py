@@ -24,7 +24,14 @@ def _effect(line: int = 5) -> dict[str, object]:
     }
 
 
-def _slice(state: str, *, residuals=None, reaching=None, out_of_scope=None):
+def _slice(
+    state: str,
+    *,
+    residuals=None,
+    reaching=None,
+    out_of_scope=None,
+    containment_proofs=None,
+):
     return {
         "failure_site": {
             "file": "linux-sources/linux-v6.14-fs/fs/btrfs/example.c",
@@ -40,6 +47,7 @@ def _slice(state: str, *, residuals=None, reaching=None, out_of_scope=None):
         "residuals": residuals or [],
         "reaching_effects": reaching or [],
         "out_of_scope_effects": out_of_scope or [],
+        "containment_proofs": containment_proofs or [],
     }
 
 
@@ -163,3 +171,36 @@ def test_oracle_audit_accepts_unknown_when_manual_review_is_uncertain(tmp_path: 
     audit = audit_oracle([oracle], tmp_path / "current")
     assert audit["transitions"][0]["status"] == "EXPECTED_STATE_REACHED"
     assert audit["summary"]["safety_regression_count"] == 0
+
+
+def test_oracle_audit_reads_effect_scoped_containment_in_mixed_slice(tmp_path: Path):
+    effect = _effect()
+    unrelated = _effect(line=6)
+    unrelated["key"] = "unrelated_state"
+    review = _review(
+        report_validity="TRUE_RESIDUAL",
+        source_verdict="CONTAINED_NOT_BUG",
+        root_cause_family="TRANSACTION_OR_FATAL_CONTAINMENT",
+    )
+    oracle = build_oracle_record(review, _report(effect), baseline_run="m32d")
+    _write_evaluation(
+        tmp_path / "current",
+        _slice(
+            "EXPOSED",
+            residuals=[effect, unrelated],
+            reaching=[effect, unrelated],
+            containment_proofs=[
+                {
+                    "kind": "TRANSACTION_ABORT",
+                    "covered_effects": [effect],
+                }
+            ],
+        ),
+    )
+
+    audit = audit_oracle([oracle], tmp_path / "current")
+
+    assert audit["transitions"][0]["effect_states"] == [
+        "CONTAINED_METADATA_RESIDUAL"
+    ]
+    assert audit["summary"]["manual_contained_residuals_recognized"] == 1

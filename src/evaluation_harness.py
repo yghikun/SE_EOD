@@ -22,14 +22,18 @@ from .residual_report import (
     reports_to_json,
     reports_to_markdown,
 )
-from .unknown_triage import unknown_cause_category, unknown_cause_taxonomy
+from .unknown_triage import (
+    unknown_cause_category,
+    unknown_cause_proof_gap,
+    unknown_cause_taxonomy,
+)
 from .transient_provenance import (
     TransientArgumentProvenance,
     infer_transient_argument_provenance,
 )
 
 
-EVALUATION_SCHEMA_VERSION = 3
+EVALUATION_SCHEMA_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -85,6 +89,11 @@ class EvaluationResult:
             for report in self.reports
             for cause in report.unknown_causes
         )
+        unknown_proof_gap_counts = Counter(
+            unknown_cause_proof_gap(cause)
+            for report in self.reports
+            for cause in report.unknown_causes
+        )
         unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
             self.reports
         )
@@ -127,6 +136,7 @@ class EvaluationResult:
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
+            "unknown_proof_gap_counts": dict(sorted(unknown_proof_gap_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "configuration_note": (
@@ -191,6 +201,11 @@ class BatchEvaluationResult:
             for report in self.reports
             for cause in report.unknown_causes
         )
+        unknown_proof_gap_counts = Counter(
+            unknown_cause_proof_gap(cause)
+            for report in self.reports
+            for cause in report.unknown_causes
+        )
         unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
             self.reports
         )
@@ -232,6 +247,7 @@ class BatchEvaluationResult:
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
+            "unknown_proof_gap_counts": dict(sorted(unknown_proof_gap_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "configuration_note": (

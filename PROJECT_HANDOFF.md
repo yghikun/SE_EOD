@@ -52,6 +52,18 @@ An UNKNOWN slice is emitted as a finding only when `R_f` is non-empty. Missing
 helper or identity semantics with an empty residual remain in diagnostic
 metrics and must not be presented as metadata-residual findings.
 
+Current implementation snapshot:
+
+```text
+implementation milestone: M36b-M36g
+evaluation schema: 4
+UNKNOWN triage schema: 2
+semantic blocker impact schema: 1
+oracle records: 539
+unit tests: 297
+M35f regression gate: 34 / 34
+```
+
 ## 2. Scope Contract
 
 The filesystem metadata scope gate exists to prevent drift into general cleanup
@@ -118,6 +130,7 @@ src/metadata_scope.py
 src/evaluation_harness.py
 src/candidate_triage.py
 src/unknown_triage.py
+src/semantic_blocker_impact.py
 ```
 
 Active scripts:
@@ -129,6 +142,8 @@ scripts/summarize_candidates.py
 scripts/summarize_unknowns.py
 scripts/compare_residual_runs.py
 scripts/audit_candidate_review_oracle.py
+scripts/check_m35_regression_gate.py
+scripts/profile_semantic_blockers.py
 scripts/download_linux_fs.py
 scripts/fetch_kernel_source_file.py
 ```
@@ -167,7 +182,7 @@ Current unit-test status:
 
 ```text
 python -m pytest -q -p no:cacheprovider
-239 passed
+260 passed
 ```
 
 Runtime dependencies include `z3-solver>=4.13,<5`. If Z3 is unavailable or an
@@ -737,8 +752,17 @@ than treating those directories as persistent project files.
 Recommended next milestone:
 
 ```text
-M32d: remaining structural UNKNOWN relations plus exact recall oracles
+M36b: demand-driven summary body closure, beginning with one source-visible
+      sole-blocker helper and retaining the complete M35f gate
 ```
+
+This recommendation supersedes the historical M32 plan below. M36a shows that
+broad summary loading is not justified: 478 is a cause-mention count, only 272
+UNKNOWN reports contain that gap, only 200 have it as their sole proof gap, and
+only 129 of those have an exact source body in the current snapshot. Start with
+`xchk_trans_cancel` (20 sole-gap reports, body in the XFS analysis root), then
+accept expansion only after report/effect transitions and the four-filesystem
+gate show useful, non-regressive behavior.
 
 M32.0: report-level state-transition audit (implemented).
 
@@ -1533,3 +1557,505 @@ constraint is therefore M35c transaction abort, fatal shutdown, mount-failure
 teardown, and recovery-abort containment. Do not broaden the deallocator set or
 infer destruction from helper names to reduce the remaining 418 pending manual
 false positives.
+
+## 18. M35c Effect-Scoped Failure-Domain Foundation (2026-07-25)
+
+M35c first fixes a soundness flaw in the existing failure-domain model. A
+terminal action previously proved only that some containment action existed;
+it did not identify which residual effects that action covered:
+
+```text
+one terminal action exists
+  -> whole residual slice marked CONTAINED
+  -> transaction abort could hide transaction-external effects
+```
+
+`FailureDomainProof` now serializes `covered_effects`. A residual slice is
+`CONTAINED` only when every current residual is covered by at least one proof.
+A mixed slice remains `EXPOSED` or `UNKNOWN`, while each covered effect remains
+visible as effect-level containment evidence. Report, oracle, Markdown, static
+caller containment, and run comparison consumers all use this scope.
+
+The new explicit primitive contract is deliberately narrow:
+
+```text
+btrfs_abort_transaction(arg0) -> TRANSACTION_ABORT
+
+arg0 must normalize to one exact bare symbol
+effect.root / effect.key / effect.value must contain that exact token
+effect.site.expression is never identity evidence
+the abort must execute on the must-error path
+conditional abort of a matching effect remains UNKNOWN
+transaction-external peer effects remain EXPOSED
+```
+
+The same coverage rule is applied when composing exact M34 error-exit
+partitions. A transaction terminal action removes only transaction-bound
+partition residuals; it no longer erases unrelated callee effects. Existing
+accepted M33 contracts are preserved: direct `xfs_force_shutdown`, direct
+`f2fs_stop_checkpoint`, and dirty `xfs_trans_cancel` still cover their current
+residual set. Recovery/runtime scoping for those primitives remains a separate
+soundness task.
+
+Mixed-slice reporting also changed. Candidate versus Review is selected from
+the uncontained residual subset, so a covered direct effect cannot promote an
+uncovered name-inferred peer from Review to Candidate. The oracle and comparator
+make the same effect-level distinction. Comparator schema 3 and oracle audit
+schema 2 record exact containment evidence.
+
+M35b -> M35c full Linux v6.14 result:
+
+| Filesystem | Boundary | Contained | UNKNOWN | Review |
+|---|---:|---:|---:|---:|
+| Btrfs | 233 -> 233 | 0 -> 23 | 152 -> 161 | 92 -> 92 |
+| ext4 | 80 -> 80 | 0 -> 0 | 117 -> 117 | 166 -> 166 |
+| XFS | 182 -> 182 | 9 -> 9 | 146 -> 146 | 188 -> 188 |
+| F2FS | 38 -> 38 | 0 -> 0 | 55 -> 55 | 36 -> 36 |
+
+The 23 Btrfs contained reports and 9 additional Btrfs UNKNOWN reports were
+previously suppressed as transaction-protected slices. M35c retains their
+function-boundary residuals and distinguishes fully proven from conditional or
+partial containment. At effect granularity, 232 prior Btrfs PROTECTED witnesses
+move to `CONTAINED_METADATA_RESIDUAL`; the remaining 128 stay PROTECTED.
+
+Final gates:
+
+```text
+249 unit tests passed
+539 / 539 reviewed report locations matched
+0 reviewed effect witnesses unmatched
+6 / 6 manual live or likely residuals remain visible
+4 manual false-positive reports remain correctly CLOSED
+0 new safety regressions
+0 new Candidate witnesses in every filesystem comparison
+0 lost baseline witnesses in every filesystem comparison
+all four runs: zero_residual_finding_count = 0
+```
+
+The pre-existing `XFS-186` Candidate-to-UNKNOWN transition remains the only
+safety issue. All nine M33 XFS contained slices, P1, P3, #7, #16-#18,
+`btrfs_create_uuid_tree`, and ext4 `make_indexed_dir` remain visible. The real
+#16 exact-recall limitation is unchanged.
+
+This foundation does not complete the original 106-report manual containment
+target: the oracle currently recognizes 1 and retains 105 for later semantic
+work. Direct transaction-token matching is sufficient evidence, but it is not
+the same as proving that an inode, pending snapshot, log, block group, or quota
+effect belongs to the transaction. Btrfs abort also sets the filesystem
+read-only, but that fact cannot automatically contain recovery-visible state,
+published device topology, or external ownership.
+
+The next TOC constraint is therefore a source-derived relation between an
+effect and its failure domain:
+
+```text
+transaction ownership / publication escape
+fatal runtime-only scope versus recovery-visible state
+exact M34 error-partition consumption in the caller (M35d)
+```
+
+Do not expand `btrfs_abort_transaction` to all peer residuals, infer ownership
+from a helper name, or treat filesystem shutdown as proof that recovery-visible
+effects are harmless. F2FS-021 remains the canonical cross-function checkpoint
+witness for M35d.
+
+## 19. M35d-M35f Owner Binding, UNKNOWN Proof Gaps, and Real Gates (2026-07-25)
+
+M35d fixes the earliest remaining cross-function identity break. The canonical
+real witness was `XFS-186` in `xfs_trans_alloc`:
+
+```text
+xfs_trans_cancel(tp)
+  -> callee local mp = tp->t_mountp
+  -> xfs_force_shutdown(mp, ...)
+  -> old summary dropped mp as unbound
+  -> caller lost the terminal action owner
+  -> reviewed report moved from Candidate to UNKNOWN
+```
+
+The summary contract now serializes source-derived `OwnerIdentityBinding`
+records with these relation kinds:
+
+```text
+PARAM
+FIELD
+RETURN
+OUT_PARAM
+FRESH
+```
+
+Each record retains the callee local only as audit provenance. The semantic
+identity is a parameterized relation such as `arg0->t_mountp`, `__return__`,
+`__output1__`, or a call-site-scoped fresh identity. Call-site instantiation
+preserves the binding through lifecycle facts, effects, exact error-exit
+partitions, and terminal actions.
+
+The direct relation recognizer accepts only one source-visible assignment and
+rejects rebound or ambiguous locals. It does not use local names. A critical
+scope correction was made during real evaluation: direct owner relations are
+owner-only evidence. They may bind terminal actions and owner facts, but do
+not rewrite unrelated metadata effect identities. Applying them as a general
+effect alias produced 61 new Candidate witnesses and 122 unmatched baseline
+witnesses across the four filesystems; that experiment was rejected. Keep this
+owner-only boundary.
+
+With the corrected scope, `mp = tp->t_mountp` binds the shutdown action in
+`xfs_trans_cancel`. `XFS-186` moves from `METADATA_RESIDUAL_UNKNOWN` to
+effect-scoped `CONTAINED_METADATA_RESIDUAL`; the oracle now records it as a
+resolved pre-existing safety issue, not as a Candidate-to-UNKNOWN migration.
+
+M35e keeps the old compatibility taxonomy (`structural`, `missing_summary`,
+`other`) and adds an actionable proof-gap projection:
+
+```text
+OWNER_BINDING_UNPROVEN
+OUTPUT_BINDING_UNPROVEN
+RETURN_BINDING_UNPROVEN
+CALLSITE_ARGUMENT_BINDING_UNPROVEN
+ERROR_PARTITION_SELECTION_UNPROVEN
+CONDITIONAL_CONTAINMENT_NOT_MUST
+TRANSACTION_OWNERSHIP_UNPROVEN
+FATAL_SCOPE_UNPROVEN
+SUMMARY_BODY_UNAVAILABLE
+INDIRECT_TARGET_SET_UNPROVEN
+OTHER_PROOF_GAP
+```
+
+UNKNOWN triage schema is now 2 and evaluation schema is 4. Evaluation summaries,
+triage JSON, Markdown, and run comparisons expose proof-gap counts/resolution.
+The current four-filesystem UNKNOWN cause mentions are:
+
+| Proof gap | Mentions |
+|---|---:|
+| SUMMARY_BODY_UNAVAILABLE | 478 |
+| OWNER_BINDING_UNPROVEN | 179 |
+| ERROR_PARTITION_SELECTION_UNPROVEN | 125 |
+| INDIRECT_TARGET_SET_UNPROVEN | 109 |
+| CONDITIONAL_CONTAINMENT_NOT_MUST | 17 |
+| OTHER_PROOF_GAP | 12 |
+| TRANSACTION_OWNERSHIP_UNPROVEN | 7 |
+
+M35f adds `scripts/check_m35_regression_gate.py`. It consumes only structured
+JSON and exits nonzero for a missing filesystem, schema mismatch, a new
+Candidate, an unmatched baseline witness, a new oracle safety regression, loss
+of any of the six manual live residuals, a nonzero zero-residual finding count,
+loss of high-value Btrfs/ext4 functions, or loss of any exact M33 XFS contained
+slice. The XFS containment check compares stable function/failure/exit
+identities against `linux-v6.14-fs-xfs-m33f-schema2`; it does not accept an
+aggregate count as a substitute.
+
+M35c -> M35d-M35f full Linux v6.14 result:
+
+| Filesystem | Boundary | Contained | UNKNOWN | Review | New Candidate | UNMATCHED |
+|---|---:|---:|---:|---:|---:|---:|
+| Btrfs | 233 | 23 | 161 | 92 | 0 | 0 |
+| ext4 | 80 | 0 | 117 | 166 | 0 | 0 |
+| XFS | 182 | 10 | 145 | 188 | 0 | 0 |
+| F2FS | 38 | 0 | 55 | 36 | 0 | 0 |
+
+Final verification:
+
+```text
+254 unit tests passed
+539 / 539 reviewed report locations matched
+0 reviewed effect witnesses unmatched
+6 / 6 manual live or likely residuals retained
+0 new safety regressions
+XFS-186 resolved
+0 new Candidate witnesses in every filesystem comparison
+0 lost baseline witnesses in every filesystem comparison
+9 / 9 M33 XFS contained slices retained
+all four runs: zero_residual_finding_count = 0
+M35f regression gate: 34 / 34 checks passed
+```
+
+Artifacts:
+
+```text
+outputs/residual-evaluation-batch/linux-v6.14-fs-*-m35def-owner-reasons-gate
+outputs/residual-evaluation-batch/m35def-comparisons/*
+outputs/residual-evaluation-batch/m35def-oracle-audit.json
+outputs/residual-evaluation-batch/m35def-regression-gate.json
+```
+
+The next TOC constraint is no longer the XFS owner-binding break. The largest
+remaining actionable gap is `SUMMARY_BODY_UNAVAILABLE`, followed by the
+remaining source-unproven owner relations and exact error-partition selection.
+Address those demand-first using residual-bearing reports where the gap is the
+only blocker. Do not broaden direct owner aliases into general effect aliases,
+infer helper semantics from names, or relax the M35f gate to improve counts.
+
+## 20. M36a Semantic Blocker Impact Profile (2026-07-25)
+
+M36a is measurement-only. It adds `src/semantic_blocker_impact.py` and
+`scripts/profile_semantic_blockers.py`, but does not participate in analysis,
+classification, suppression, effect identity, or oracle verdicts. The emitted
+artifact states this non-interference contract explicitly.
+
+The profiler fixes the decision-unit mismatch left after M35e:
+
+```text
+UNKNOWN cause mention
+  != UNKNOWN report
+  != sole proof-gap report
+  != source-resolvable report
+
+oracle pending report
+  != UNKNOWN report
+  != permission to merge the two populations
+```
+
+The four M35d-M35f runs produce:
+
+```text
+UNKNOWN reports: 478
+UNKNOWN cause mentions: 927
+single-cause reports: 289
+sole proof-gap reports: 389
+multi-gap reports: 89
+  two gaps: 82
+  three gaps: 7
+
+oracle records: 539
+expected state reached: 6
+retained for later milestone: 533
+new safety regressions: 0
+```
+
+The unified decision surface keeps oracle and UNKNOWN populations distinct:
+
+| Constraint | Reports | Sole blocker | Source available |
+|---|---:|---:|---:|
+| oracle: awaiting owner or scope semantics | 418 | 418 | n/a |
+| oracle: awaiting failure-domain semantics | 105 | 105 | n/a |
+| oracle: live residual remains visible | 6 | 6 | n/a |
+| oracle: manual uncertainty remains visible | 4 | 4 | n/a |
+| UNKNOWN: summary body unavailable | 272 | 200 | 173 |
+| UNKNOWN: error-partition selection unproven | 98 | 70 | 0 |
+| UNKNOWN: owner binding unproven | 129 | 69 | 0 |
+| UNKNOWN: indirect target set unproven | 46 | 40 | 0 |
+| UNKNOWN: other proof gap | 12 | 8 | 0 |
+| UNKNOWN: conditional containment not must | 10 | 2 | 0 |
+| UNKNOWN: transaction ownership unproven | 7 | 0 | 0 |
+
+`SUMMARY_BODY_UNAVAILABLE = 478` is therefore 478 mentions across 272 reports,
+not 478 reports and not 478 safely resolvable cases. Of its 200 sole-gap
+reports, 129 have at least one exact source body available in the snapshot.
+The exact body-state breakdown below counts distinct report/blocker pairs, so
+repeated mentions in one report cannot inflate priority:
+
+| Body state | Report/blocker pairs |
+|---|---:|
+| BODY_IN_ANALYSIS_ROOT | 150 |
+| BODY_OUTSIDE_ANALYSIS_ROOT | 72 |
+| HEADER_INLINE_NOT_LOADED | 60 |
+| BODY_IN_CALLER_TRANSLATION_UNIT | 7 |
+| NO_EXACT_DEFINITION | 91 |
+| MACRO_OR_CONDITIONAL_BODY | 60 |
+| MULTIPLE_DEFINITIONS | 23 |
+
+The source index contains 13,611 definitions for 13,353 function names and
+2,243 exact function-like macro names, with zero parse failures. It records
+locations only; it never infers cleanup, shutdown, ownership, or helper
+semantics from names.
+
+The highest-impact source-visible sole summary blocker is
+`xchk_trans_cancel`: 20 XFS reports, all with a body inside the analysis root.
+Other large rows are `make_bad_inode` (19 sole-gap reports, body outside the
+filesystem analysis root), `unlock_new_inode` (15), `xfs_inodegc_flush` (11),
+and `evict_inodes` (10). Cross-filesystem reuse is not the dominant signal in
+the current data: the only cross-filesystem summary helper row is
+`init_special_inode`, with two sole-gap reports. M36b should therefore begin
+with a bounded `xchk_trans_cancel` experiment and earn expansion through actual
+state transitions, not helper frequency or naming.
+
+Each report row retains its causes, distinct proof gaps, sole-cause/sole-gap
+flags, exact failure/exit location, source-body state and definitions, oracle
+linkage, expected destination, manual class, root-cause family, and known
+witness involvement. Each blocker row adds distinct report count, raw mention
+count, filesystem reuse, functions, oracle destinations, definition locations,
+and known-witness count.
+
+The 539 oracle records contain 12 duplicate-location groups and only 527 unique
+location keys. The profiler therefore never stores a single oracle per
+location. It retains all location candidates, collapses exact duplicate stable
+reports, and uses complete residual-effect identity to distinguish genuinely
+different reports at the same failure/exit pair. A zero-overlap or tied match
+is emitted as `AMBIGUOUS_LOCATION`, not guessed. The current UNKNOWN population
+has zero oracle-covered and zero oracle-ambiguous reports.
+
+Verification:
+
+```text
+260 unit tests passed
+M35f regression gate: 34 / 34 checks passed
+0 new Candidate witnesses
+0 unmatched baseline witnesses
+6 / 6 manual live residuals retained
+9 / 9 M33 XFS contained slices retained
+all four runs: zero_residual_finding_count = 0
+```
+
+Generated artifacts:
+
+```text
+outputs/residual-evaluation-batch/m36a-semantic-blocker-impact/
+  semantic_blocker_impact.json
+  semantic_blocker_impact.md
+outputs/residual-evaluation-batch/m36a-m35-regression-gate.json
+```
+
+The TOC conclusion has two levels. Across the reviewed Boundary population,
+owner/scope semantics (418) remains the largest validated constraint, followed
+by failure-domain semantics (105). Within UNKNOWN reduction, demand-driven
+summary closure is the largest actionable sole-gap pool, but only 129 reports
+currently satisfy both sole-gap and source-availability preconditions. Do not
+add broad `fs/*.c` summary inputs, infer behavior from helper names, or treat a
+body's existence as proof that the summary will change a final report state.
+
+## 21. M36b-M36g Semantic Precision and Real Gate Closure (2026-07-25)
+
+M36b-M36g continued the M36a decision order, but the real bottleneck changed
+while testing. The original temptation was to keep expanding summary closure.
+The actual TOC constraint became stricter:
+
+```text
+Can every count movement be explained by source-visible semantics and retained
+oracle evidence, without weakening the M35f regression gate?
+```
+
+The answer required four semantic fixes and one comparison-layer fix.
+
+First, several old Candidate/UNKNOWN witnesses were not caused by "cross
+function" in the broad sense. Cross-function propagation merely exposed where
+identity and helper semantics were incomplete. The concrete causal chains were:
+
+```text
+helper name contains quota/recover/trans
+  -> NAME_INFERRED effect is created even for accessor/translator/getter helpers
+  -> a low-evidence shadow residual enters the same failure slice as real effects
+  -> Candidate or UNKNOWN count looks worse than the source semantics justify
+
+helper constructs return_object->field from *out_param and returns object
+  -> caller cannot bind returned field identity back to caller local
+  -> transaction ownership proof cannot connect owner effect to transaction cancel
+  -> contained XFS transaction failure looks like an exposed residual
+
+transaction ownership primitive is stored as a protection effect
+  -> containment proof only reads reaching effects
+  -> xfs_trans_cancel cannot see the owner relation
+  -> covered metadata mutation remains uncontained
+
+zero-residual/protected slice intentionally emits no report
+  -> old comparison sees missing effect witness
+  -> gate reports UNMATCHED even though structure-level slice state is CLOSED,
+     PROTECTED, or retained
+```
+
+This means the answer to "are Candidate and UNKNOWN caused by cross-function?"
+is: sometimes the symptom appears at a cross-function boundary, but the root
+causes are more specific. They are missing source identity, unresolved helper
+bodies, exact error-partition uncertainty, owner binding gaps, indirect target
+sets, conditional containment, and low-evidence name-inferred shadow effects.
+Cross-function is the transport layer, not the explanation.
+
+Implemented semantics:
+
+```text
+effect extractor:
+  - treats readonly quota helpers ending in _quota_inode / _quota_on as readers
+  - treats readonly transaction getters/reservation calculators such as _iget,
+    _iget_handle, and _recover_resv as readers
+  - uses tokenized transaction-helper matching so "translate" no longer matches
+    "trans"
+  - records xfs_trans_ijoin(tp, ip, ...) as transaction ownership evidence
+
+function summary:
+  - maps return_object->field = *out_param followed by return return_object
+    into a caller-visible transfer identity
+  - this binds xfs_bui_recover_work's returned work->bi_owner back to ip
+
+residual slicer:
+  - removes NAME_INFERRED local call shadows when the same call site has a
+    source-visible summary application
+  - lets transaction-cancel containment read ownership relations carried by
+    protection effects, not only ordinary reaching effects
+
+comparison/gate:
+  - adds RETAINED_SLICE for a disappeared effect witness whose failure/exit
+    slice is still visible; this is not counted as a fix
+  - uses current CLOSED/PROTECTED/CONTAINED slice state for removed
+    NAME_INFERRED witnesses only
+  - matches source-projection identity when the same source mutation keeps
+    function, failure/exit, key, plane, delta, file, and line, but owner root is
+    refined by stronger identity binding
+  - keeps DIRECT_SOURCE disappearing without source-projection evidence as
+    UNMATCHED
+  - lets the M33 XFS contained-slice check read structured CLOSED, PROTECTED,
+    and CONTAINED states, because zero-residual slices should not continue to
+    emit contained reports only to satisfy a historical report projection
+```
+
+The XFS spot-checks that drove the final gate were:
+
+```text
+xfs_bmap_recover_work:
+  old root work->bi_owner is now bound to ip through return-field/out-param
+  identity; xfs_trans_ijoin(tp, ip, 0) plus xfs_trans_cancel(tp) contains
+  ip->i_delayed_blks.
+
+xfs_dax_notify_dev_failure:
+  xfs_dax_translate_range is no longer misread as a transaction helper merely
+  because "translate" contains "trans".
+
+xfs_dquot_disk_alloc:
+  xfs_quota_inode and xfs_this_quota_on are accessors/validators, not quota
+  mutation effects.
+
+xlog_recover_iget / xlog_recover_resv:
+  recovery inode getter/reservation helper names no longer create metadata ADD
+  residuals by themselves.
+```
+
+M35d-M35f -> M36b-M36g full Linux v6.14 result:
+
+| Filesystem | Boundary | Contained | UNKNOWN | Review | Reports | Witnesses | New Candidate | UNMATCHED |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Btrfs | 231 | 27 | 175 | 71 | 504 | 2226 | 0 | 0 |
+| ext4 | 75 | 0 | 135 | 155 | 365 | 1255 | 0 | 0 |
+| XFS | 187 | 6 | 121 | 148 | 462 | 1679 | 0 | 0 |
+| F2FS | 37 | 1 | 53 | 35 | 126 | 612 | 0 | 0 |
+
+Verification:
+
+```text
+297 unit tests passed
+M35f regression gate: 34 / 34 checks passed
+0 new Candidate witnesses in every filesystem comparison
+0 unmatched baseline witnesses in every filesystem comparison
+6 / 6 manual live residuals retained
+9 / 9 M33 XFS contained slices retained
+all four runs: zero_residual_finding_count = 0
+```
+
+Generated artifacts:
+
+```text
+outputs/residual-evaluation-batch/linux-v6.14-fs-*-m36b-m36g
+outputs/residual-evaluation-batch/m36b-m36g-comparisons/*
+outputs/residual-evaluation-batch/m36b-m36g-regression-gate.json
+```
+
+Next constraint:
+
+```text
+Do not expand effect extraction to chase count reductions.
+```
+
+The next useful work is demand-first semantic closure on residual-bearing
+UNKNOWNs, but only when the blocker is sole, source-visible, and has a clear
+oracle-preserving transition path. Remaining large classes are still
+summary-body unavailability, exact error-partition selection, owner binding,
+indirect target sets, and conditional containment. Treat `RETAINED_SLICE` as an
+audit state: it preserves visibility across projection changes; it is not a
+claim that the old effect was fixed.

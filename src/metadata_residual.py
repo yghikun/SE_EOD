@@ -93,6 +93,7 @@ class FailureDomainProof:
     owner: str = ""
     via_function: str = ""
     evidence: str = ""
+    covered_effects: tuple["MetadataEffect", ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -101,6 +102,7 @@ class FailureDomainProof:
             "owner": self.owner,
             "via_function": self.via_function,
             "evidence": self.evidence,
+            "covered_effects": [item.to_dict() for item in self.covered_effects],
         }
 
 
@@ -163,6 +165,48 @@ class ContainerIterationCleanup:
 
 
 @dataclass(frozen=True)
+class ExistentialMemberIdentity:
+    """Opaque identity for some source-visible aggregate member at one call site."""
+
+    placeholder: str
+    origin_expression: str
+    destination_container: str
+    member_field: str
+    binding_site: SourceSite
+    source_identity: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "placeholder": self.placeholder,
+            "origin_expression": self.origin_expression,
+            "destination_container": self.destination_container,
+            "member_field": self.member_field,
+            "binding_site": self.binding_site.to_dict(),
+            "source_identity": self.source_identity,
+        }
+
+
+@dataclass(frozen=True)
+class TransactionOwnershipRelation:
+    """Source proof that one metadata owner is registered with a transaction."""
+
+    transaction_root: str
+    owned_root: str
+    primitive: str
+    site: SourceSite
+    source_identity: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "transaction_root": self.transaction_root,
+            "owned_root": self.owned_root,
+            "primitive": self.primitive,
+            "site": self.site.to_dict(),
+            "source_identity": self.source_identity,
+        }
+
+
+@dataclass(frozen=True)
 class PerCpuSlotRelation:
     """Source proof that a local denotes one slot of a parameter percpu field."""
 
@@ -195,6 +239,8 @@ class MetadataEffect:
     evidence: EffectEvidence = EffectEvidence.DIRECT_SOURCE
     snapshot_relation: AggregateSnapshotRelation | None = None
     container_iteration_cleanup: ContainerIterationCleanup | None = None
+    existential_member_identity: ExistentialMemberIdentity | None = None
+    transaction_ownership: TransactionOwnershipRelation | None = None
     percpu_slot_relation: PerCpuSlotRelation | None = None
     transient_provenance: tuple["TransientArgumentProvenance", ...] = ()
 
@@ -220,6 +266,12 @@ class MetadataEffect:
             data["container_iteration_cleanup"] = (
                 self.container_iteration_cleanup.to_dict()
             )
+        if self.existential_member_identity is not None:
+            data["existential_member_identity"] = (
+                self.existential_member_identity.to_dict()
+            )
+        if self.transaction_ownership is not None:
+            data["transaction_ownership"] = self.transaction_ownership.to_dict()
         if self.percpu_slot_relation is not None:
             data["percpu_slot_relation"] = self.percpu_slot_relation.to_dict()
         if self.transient_provenance:
@@ -327,11 +379,12 @@ def residual_report(
     elif residual_slice.residuals and residual_slice.state is ResidualState.CONTAINED:
         kind = ReportKind.CONTAINED_METADATA_RESIDUAL
     elif residual_slice.residuals and residual_slice.state is ResidualState.EXPOSED:
+        uncontained = _uncontained_residuals(residual_slice)
         kind = (
             ReportKind.UNCLOSED_METADATA_RESIDUAL
             if any(
                 effect.evidence is not EffectEvidence.NAME_INFERRED
-                for effect in residual_slice.residuals
+                for effect in uncontained
             )
             else ReportKind.METADATA_RESIDUAL_REVIEW
         )
@@ -346,6 +399,19 @@ def residual_report(
         scope_rationale=scope_rationale,
         mdr_evidence=mdr_evidence,
         confidence=confidence,
+    )
+
+
+def _uncontained_residuals(
+    residual_slice: ResidualSlice,
+) -> tuple[MetadataEffect, ...]:
+    covered = {
+        effect
+        for proof in residual_slice.containment_proofs
+        for effect in proof.covered_effects
+    }
+    return tuple(
+        effect for effect in residual_slice.residuals if effect not in covered
     )
 
 

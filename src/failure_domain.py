@@ -74,7 +74,15 @@ def refine_static_callee_containment(
                     "static function boundary, but every source-visible failure "
                     "caller contains the propagated effects"
                 ),
-                containment_proofs=tuple(dict.fromkeys(item.containment_proofs + proofs)),
+                containment_proofs=tuple(
+                    dict.fromkeys(
+                        item.containment_proofs
+                        + tuple(
+                            replace(proof, covered_effects=item.residuals)
+                            for proof in proofs
+                        )
+                    )
+                ),
             )
             if item.state is ResidualState.EXPOSED and item.residuals
             else item
@@ -146,6 +154,11 @@ def _context_is_contained(
     context: _CallContext,
     externally_contained: set[str],
 ) -> bool:
+    proof_covered = tuple(
+        effect
+        for proof in context.residual_slice.containment_proofs
+        for effect in proof.covered_effects
+    )
     if context.residual_slice.state in {
         ResidualState.CLOSED,
         ResidualState.PROTECTED,
@@ -153,9 +166,15 @@ def _context_is_contained(
     }:
         return all(
             not _effect_reaches(effect, context.residual_slice.residuals)
-            or context.residual_slice.state is ResidualState.CONTAINED
+            or _effect_reaches(effect, proof_covered)
             for effect in context.propagated_effects
         )
+    if context.residual_slice.state is ResidualState.EXPOSED and all(
+        not _effect_reaches(effect, context.residual_slice.residuals)
+        or _effect_reaches(effect, proof_covered)
+        for effect in context.propagated_effects
+    ):
+        return True
     return (
         context.residual_slice.state is ResidualState.EXPOSED
         and context.caller.name in externally_contained
@@ -163,7 +182,14 @@ def _context_is_contained(
 
 
 def _proof_for_context(context: _CallContext) -> FailureDomainProof:
-    inherited = context.residual_slice.containment_proofs
+    inherited = tuple(
+        proof
+        for proof in context.residual_slice.containment_proofs
+        if any(
+            _effect_reaches(effect, proof.covered_effects)
+            for effect in context.propagated_effects
+        )
+    )
     kind = (
         inherited[0].kind
         if inherited

@@ -11,7 +11,7 @@ from typing import Any, Iterable
 
 
 ORACLE_SCHEMA_VERSION = 1
-AUDIT_SCHEMA_VERSION = 1
+AUDIT_SCHEMA_VERSION = 2
 
 FUNCTION_BOUNDARY = "FUNCTION_BOUNDARY_RESIDUAL"
 LIVE = "LIVE_METADATA_RESIDUAL"
@@ -235,6 +235,11 @@ def _effect_state(effect: dict[str, Any], residual_slice: dict[str, Any]) -> str
         for proof in residual_slice.get("owner_teardown_proofs", ())
         for item in _mapping(proof).get("closed_effects", ())
     }
+    containment_covered = {
+        _canonical_json(_effect_identity(item))
+        for proof in residual_slice.get("containment_proofs", ())
+        for item in _mapping(proof).get("covered_effects", ())
+    }
     out_of_scope = {
         _canonical_json(_effect_identity(item))
         for item in residual_slice.get("out_of_scope_effects", ())
@@ -251,6 +256,8 @@ def _effect_state(effect: dict[str, Any], residual_slice: dict[str, Any]) -> str
         return CLOSED
     if key in out_of_scope:
         return OUT_OF_SCOPE
+    if key in containment_covered:
+        return CONTAINED
     if key in residuals:
         return _slice_classification(residual_slice)
     if key in reaching:
@@ -427,7 +434,20 @@ def _slice_classification(residual_slice: dict[str, Any]) -> str:
     if residuals and state == "CONTAINED":
         return CONTAINED
     if residuals and state == "EXPOSED":
-        if all(str(item.get("evidence", "")) == "NAME_INFERRED" for item in residuals):
+        covered = {
+            _canonical_json(_effect_identity(item))
+            for proof in residual_slice.get("containment_proofs", ())
+            for item in _mapping(proof).get("covered_effects", ())
+        }
+        uncontained = [
+            item
+            for item in residuals
+            if _canonical_json(_effect_identity(item)) not in covered
+        ]
+        if all(
+            str(item.get("evidence", "")) == "NAME_INFERRED"
+            for item in uncontained
+        ):
             return "FUNCTION_BOUNDARY_RESIDUAL_REVIEW"
         return FUNCTION_BOUNDARY
     if residual_slice.get("out_of_scope_effects"):

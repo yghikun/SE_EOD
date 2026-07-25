@@ -9,13 +9,18 @@ from pathlib import Path
 from typing import Iterable
 
 from .frontend.model import FrontendNode, FunctionIR
-from .failure_domain_primitives import failure_domain_key, failure_domain_kind
+from .failure_domain_primitives import (
+    failure_domain_key,
+    failure_domain_kind,
+    transaction_cancel_owner_index,
+)
 from .metadata_residual import (
     EffectEvidence,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
     SourceSite,
+    TransactionOwnershipRelation,
 )
 from .parser import call_name_and_args, compact_ws
 
@@ -184,6 +189,25 @@ METADATA_READER_SUFFIXES = (
     "_type",
     "_uid",
 )
+READONLY_QUOTA_HELPER_SUFFIXES = (
+    "_quota_inode",
+    "_quota_on",
+)
+READONLY_TRANSACTION_HELPER_SUFFIXES = (
+    "_iget",
+    "_iget_handle",
+    "_recover_resv",
+)
+TRANSACTION_HELPER_TOKENS = {
+    "delayed",
+    "journal",
+    "orphan",
+    "recover",
+    "recovery",
+    "replay",
+    "trans",
+    "transaction",
+}
 NON_METADATA_OBSERVER_PREFIXES = (
     "trace_",
 )
@@ -191,6 +215,16 @@ NON_METADATA_OBSERVER_SUFFIXES = (
     "_lock",
     "_unlock",
 )
+TRANSACTION_OWNERSHIP_PRIMITIVES = {
+    # primitive: (transaction argument, owned metadata argument)
+    "btrfs_record_root_in_trans": (0, 1),
+    "xfs_trans_ijoin": (0, 1),
+    "xfs_trans_log_inode": (0, 1),
+}
+TRANSACTION_OUTPARAM_OWNERSHIP_PRIMITIVES = {
+    # primitive: (owned metadata argument, transaction output argument)
+    "xfs_trans_alloc_dir": (0, 1),
+}
 ACCESSOR_VALIDATOR_TOKENS = {
     "can",
     "check",
@@ -447,6 +481,10 @@ def looks_like_metadata_reader(name: str) -> bool:
     tokens = set(part for part in lowered.split("_") if part)
     if tokens & MUTATING_HELPER_TOKENS:
         return False
+    if lowered.endswith(READONLY_QUOTA_HELPER_SUFFIXES):
+        return True
+    if lowered.endswith(READONLY_TRANSACTION_HELPER_SUFFIXES):
+        return True
     return lowered.endswith(METADATA_READER_SUFFIXES)
 
 
@@ -469,10 +507,12 @@ def extract_metadata_effects_with_skips(function: FunctionIR) -> EffectExtractio
                 effects.append(effect)
         elif node.type == "call_expression":
             call_effects = _effects_from_call(function, node, aliases)
+            call_name = _call_name(node)
             call_effects = tuple(
                 effect
                 for effect in call_effects
                 if not transient_fields.excludes_call_root(effect.root)
+                or transaction_cancel_owner_index(call_name) is not None
             )
             if call_effects:
                 effects.extend(call_effects)
@@ -568,6 +608,20 @@ def _effects_from_call(
     name, args = call_name_and_args(compact_ws(node.text))
     if looks_like_metadata_reader(name):
         return ()
+    cancel_owner_index = transaction_cancel_owner_index(name)
+    if cancel_owner_index is not None and cancel_owner_index < len(args):
+        return (
+            _effect(
+                function,
+                node,
+                root=_normalized_path(args[cancel_owner_index], aliases),
+                key=name,
+                plane=MetadataPlane.RECOVERY,
+                delta=MetadataDelta.CLOSE,
+                value="",
+                evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
+            ),
+        )
     if name in LIST_ADD_CALLS and args:
         return (
             _effect(
@@ -759,7 +813,7 @@ def _transaction_effect(
     lowered = name.lower()
     if looks_like_metadata_reader(name):
         return None
-    if not any(term in lowered for term in ("trans", "transaction", "journal", "orphan", "recovery", "replay", "delayed")):
+    if not (set(_tokens(lowered)) & TRANSACTION_HELPER_TOKENS):
         return None
     if any(term in lowered for term in ("cancel", "abort", "stop", "end", "release", "forget", "del")):
         delta = MetadataDelta.CLOSE
@@ -767,7 +821,7 @@ def _transaction_effect(
         delta = MetadataDelta.PROTECT
     else:
         delta = MetadataDelta.ADD
-    return _effect(
+    effect = _effect(
         function,
         node,
         root=_normalized_path(args[0], aliases) if args else name,
@@ -776,6 +830,63 @@ def _transaction_effect(
         delta=delta,
         value=_value_args(args[1:], aliases),
         evidence=EffectEvidence.NAME_INFERRED,
+    )
+    relation = _transaction_ownership_relation(function, node, name, args, aliases)
+    return (
+        effect
+        if relation is None
+        else MetadataEffect(
+            root=effect.root,
+            key=effect.key,
+            plane=effect.plane,
+            delta=effect.delta,
+            value=effect.value,
+            site=effect.site,
+            evidence=effect.evidence,
+            snapshot_relation=effect.snapshot_relation,
+            container_iteration_cleanup=effect.container_iteration_cleanup,
+            existential_member_identity=effect.existential_member_identity,
+            transaction_ownership=relation,
+            percpu_slot_relation=effect.percpu_slot_relation,
+            transient_provenance=effect.transient_provenance,
+        )
+    )
+
+
+def _transaction_ownership_relation(
+    function: FunctionIR,
+    node: FrontendNode,
+    name: str,
+    args: list[str],
+    aliases: dict[str, str],
+) -> TransactionOwnershipRelation | None:
+    indexes = TRANSACTION_OWNERSHIP_PRIMITIVES.get(name)
+    if indexes is not None:
+        transaction_index, owned_index = indexes
+        if transaction_index >= len(args) or owned_index >= len(args):
+            return None
+        transaction = _normalized_path(args[transaction_index], aliases)
+        owned = _normalized_path(args[owned_index], aliases)
+    else:
+        out_indexes = TRANSACTION_OUTPARAM_OWNERSHIP_PRIMITIVES.get(name)
+        if out_indexes is None:
+            return None
+        owned_index, transaction_index = out_indexes
+        if transaction_index >= len(args) or owned_index >= len(args):
+            return None
+        transaction = _normalized_path(args[transaction_index], aliases)
+        owned = _normalized_path(args[owned_index], aliases)
+    transaction = transaction.lstrip("&")
+    owned = owned.lstrip("&")
+    if not _source_identity_path(transaction) or not _source_identity_path(owned):
+        return None
+    site = SourceSite(function.file.as_posix(), node.start_line, compact_ws(node.text))
+    return TransactionOwnershipRelation(
+        transaction_root=transaction,
+        owned_root=owned,
+        primitive=name,
+        site=site,
+        source_identity=f"{name}:{transaction}->{owned}",
     )
 
 
@@ -1043,6 +1154,13 @@ def _normalized_path(text: str, aliases: dict[str, str] | None = None) -> str:
         value = value[1:].strip()
     value = _replace_aliases(value, aliases or {})
     return compact_ws(value)
+
+
+def _source_identity_path(text: str) -> bool:
+    return re.fullmatch(
+        r"[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*",
+        compact_ws(text),
+    ) is not None
 
 
 def _list_owner(text: str, aliases: dict[str, str] | None = None) -> str:

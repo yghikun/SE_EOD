@@ -7,6 +7,7 @@ from src.function_summary import (
     ExposureKind,
     LifecycleEvent,
     LifecycleExit,
+    OwnerIdentityKind,
     SummarySource,
     apply_same_file_summary,
     build_function_summary,
@@ -189,6 +190,12 @@ static int attach_device(struct fs_devices *fs_devices)
         and fact.target == "arg0->devices"
         for fact in summary.exposure_facts
     )
+    assert any(
+        binding.kind is OwnerIdentityKind.FRESH
+        and binding.summary_identity == "__fresh0__"
+        and binding.bound_identity.startswith("__fresh0__")
+        for binding in summary.owner_bindings
+    )
 
 
 def test_summary_binds_fresh_local_to_caller_owned_field(tmp_path: Path):
@@ -343,6 +350,42 @@ static int init_device(struct fs_devices *fs_devices, struct device **device_out
         fact.kind is ExposureKind.OUTPUT_BOUND
         and fact.target == "tgt_device"
         for fact in application.exposure_facts
+    )
+    assert any(
+        binding.kind is OwnerIdentityKind.OUT_PARAM
+        and binding.summary_identity == "__output1__"
+        and binding.bound_identity == "tgt_device"
+        for binding in application.owner_bindings
+    )
+
+
+def test_summary_binds_return_field_to_output_parameter_identity(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static struct work *recover_work(struct mount *mp, struct inode **ipp)
+{
+    struct work *work = kzalloc(sizeof(*work), GFP_KERNEL);
+
+    work->owner = *ipp;
+    work->owner->i_delayed_blks++;
+    return work;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+    application = instantiate_summary(
+        summary,
+        "work = recover_work(mp, &ip)",
+        return_lvalue="work",
+    )
+
+    assert any(
+        effect.root == "ip"
+        and effect.key == "i_delayed_blks"
+        and effect.delta is MetadataDelta.INC
+        for effect in application.opens
     )
 
 
@@ -664,6 +707,71 @@ static struct dev *make_dev(void)
     assert not application.unknown
     assert application.returns == ("dev",)
     assert (application.opens[0].root, application.opens[0].key) == ("dev", "ready")
+    assert any(
+        binding.kind is OwnerIdentityKind.RETURN
+        and binding.summary_identity == "__return__"
+        and binding.bound_identity == "dev"
+        for binding in application.owner_bindings
+    )
+
+
+def test_summary_binds_unique_direct_parameter_and_field_owner_aliases(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int stop_transaction(struct transaction *tp, int failed)
+{
+    struct transaction *same = tp;
+    struct mount *mp = tp->t_mountp;
+
+    same->t_log_count = 1;
+    if (failed) {
+        xfs_force_shutdown(mp, SHUTDOWN_CORRUPT_INCORE);
+        return -EIO;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+    application = instantiate_summary(summary, "stop_transaction(trans, failed)")
+
+    assert summary.unknown_causes == ()
+    bindings = {binding.local_identity: binding for binding in summary.owner_bindings}
+    assert (bindings["same"].kind, bindings["same"].summary_identity) == (
+        OwnerIdentityKind.PARAM,
+        "arg0",
+    )
+    assert (bindings["mp"].kind, bindings["mp"].summary_identity) == (
+        OwnerIdentityKind.FIELD,
+        "arg0->t_mountp",
+    )
+    assert any(
+        effect.root == "trans->t_mountp"
+        for partition in application.error_exit_partitions
+        for effect in partition.terminal_actions
+    )
+
+
+def test_summary_rejects_rebound_direct_field_owner_alias(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static void ambiguous_shutdown(struct transaction *tp, struct mount *other)
+{
+    struct mount *mp = tp->t_mountp;
+
+    mp = other;
+    xfs_force_shutdown(mp, SHUTDOWN_CORRUPT_INCORE);
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert not any(binding.local_identity == "mp" for binding in summary.owner_bindings)
+    assert summary.unknown_causes == ("unbound_callee_local_identity",)
 
 
 def test_summary_marks_unresolved_metadata_helper_as_unknown_escape(tmp_path: Path):
@@ -687,6 +795,39 @@ static struct dev *open_seed(void)
     assert summary.unknown_causes == (
         "return_bound_unresolved_helper: clone_fs_devices",
     )
+
+
+def test_project_summary_exports_exact_transaction_cancel_wrapper(tmp_path: Path):
+    functions = _functions(
+        tmp_path,
+        """
+void xfs_trans_cancel(struct xfs_trans *tp)
+{
+}
+
+void xchk_trans_cancel(struct xfs_scrub *sc)
+{
+    xfs_trans_cancel(sc->tp);
+    sc->tp = 0;
+}
+
+int work(struct xfs_scrub *sc)
+{
+    xchk_trans_cancel(sc);
+    return 0;
+}
+""",
+    )
+
+    summaries = build_project_summaries(functions)
+    summary = summaries["xchk_trans_cancel"]
+    application = instantiate_summary(summary, "xchk_trans_cancel(ctx)")
+
+    assert summary.source is SummarySource.AUTO_INTERPROCEDURAL
+    assert summary.opens == ()
+    assert len(summary.cancels) == 1
+    assert application.cancels[0].root == "ctx->tp"
+    assert application.cancels[0].key == "xfs_trans_cancel"
 
 
 def test_scalar_status_return_does_not_create_return_bound_unknown(tmp_path: Path):
@@ -935,7 +1076,7 @@ static void insert_into_bitmap(struct ctl *ctl, struct info *info)
     assert summaries["insert_into_bitmap"].unknown_causes == ()
 
 
-def test_static_ops_table_multiple_targets_stays_unknown(tmp_path: Path):
+def test_static_ops_table_multiple_noop_targets_clear_unknown(tmp_path: Path):
     use_bitmap_a, use_bitmap_b, worker = _functions(
         tmp_path,
         """
@@ -951,6 +1092,46 @@ static bool use_bitmap_a(struct ctl *ctl, struct info *info)
 static bool use_bitmap_b(struct ctl *ctl, struct info *info)
 {
     return false;
+}
+
+static const struct free_space_op free_space_op_a = {
+    .use_bitmap = use_bitmap_a,
+};
+
+static const struct free_space_op free_space_op_b = {
+    .use_bitmap = use_bitmap_b,
+};
+
+static void insert_into_bitmap(struct ctl *ctl, struct info *info)
+{
+    if (!ctl->op->use_bitmap(ctl, info))
+        return;
+}
+""",
+    )
+
+    summaries = build_same_file_summaries((use_bitmap_a, use_bitmap_b, worker))
+
+    assert summaries["insert_into_bitmap"].unknown_causes == ()
+
+
+def test_static_ops_table_mixed_targets_stays_unknown(tmp_path: Path):
+    use_bitmap_a, use_bitmap_b, worker = _functions(
+        tmp_path,
+        """
+struct free_space_op {
+    bool (*use_bitmap)(struct ctl *ctl, struct info *info);
+};
+
+static bool use_bitmap_a(struct ctl *ctl, struct info *info)
+{
+    return false;
+}
+
+static bool use_bitmap_b(struct ctl *ctl, struct info *info)
+{
+    info->bytes_used++;
+    return true;
 }
 
 static const struct free_space_op free_space_op_a = {
@@ -1232,6 +1413,187 @@ int outer(
         and "post_commit_list" in effect.value
         for effect in init_summary.error_opens
     )
+
+
+def test_project_summary_composes_shared_pointer_error_outcome_and_guard(tmp_path: Path):
+    retry, wrapper, change = _functions(
+        tmp_path,
+        """
+struct page *retry_page(struct fs *fs)
+{
+    struct page *page;
+    int count = 0;
+
+retry:
+    page = read_page(fs);
+    if (IS_ERR(page)) {
+        if (PTR_ERR(page) == -EIO && ++count < 3)
+            goto retry;
+        f2fs_stop_checkpoint(fs, false, REASON);
+    }
+    return page;
+}
+
+struct page *wrapped_page(struct fs *fs)
+{
+    if (f2fs_cp_error(fs))
+        return ERR_PTR(-EIO);
+    return retry_page(fs);
+}
+
+int change_state(struct fs *fs)
+{
+    struct page *page = wrapped_page(fs);
+
+    if (IS_ERR(page))
+        return PTR_ERR(page);
+    return 0;
+}
+""",
+    )
+
+    summaries = build_project_summaries((retry, wrapper, change))
+
+    assert set(summaries) >= {"retry_page", "wrapped_page", "change_state"}
+    retry_summary = summaries["retry_page"]
+    assert retry_summary.error_partitions_exhaustive
+    assert len(retry_summary.error_exit_partitions) == 1
+    assert retry_summary.error_exit_partitions[0].return_constraint == "IS_ERR"
+    wrapped_summary = summaries["wrapped_page"]
+    assert wrapped_summary.error_partitions_exhaustive
+    assert {item.return_constraint for item in wrapped_summary.error_exit_partitions} == {
+        "EXACT:-EIO",
+        "IS_ERR",
+    }
+    change_summary = summaries["change_state"]
+    assert change_summary.failure_effects_complete
+    assert all(
+        partition.return_constraint == "NEGATIVE"
+        and partition.terminal_actions
+        for partition in change_summary.error_exit_partitions
+    )
+
+
+def test_similarly_named_failure_guard_has_no_semantics(tmp_path: Path):
+    function, caller = _functions(
+        tmp_path,
+        """
+struct page *wrapped_page(struct fs *fs)
+{
+    if (arbitrary_cp_error(fs))
+        return ERR_PTR(-EIO);
+    return read_page(fs);
+}
+
+void caller(struct trans *trans,
+            struct trans *other,
+            struct device_info *devices,
+            struct map *map,
+            int i,
+            int s)
+{
+    attach_selected_device(trans, devices, map, i, s);
+    attach_selected_device(other, devices, map, i, s);
+}
+""",
+    )
+
+    summary = build_function_summary(function)
+
+    partition = summary.error_exit_partitions[0]
+    assert partition.return_constraint == "EXACT:-EIO"
+    assert partition.terminal_actions == ()
+
+
+def test_existential_member_identity_survives_unique_aggregate_store_load(
+    tmp_path: Path,
+):
+    function, caller = _functions(
+        tmp_path,
+        """
+void attach_selected_device(struct trans *trans,
+                            struct device_info *devices_info,
+                            struct map *map,
+                            int i,
+                            int s)
+{
+    struct device *dev;
+
+    map->stripes[s].dev = devices_info[i].dev;
+    dev = map->stripes[i].dev;
+    list_add_tail(&dev->post_commit_list,
+                  &trans->transaction->dev_update_list);
+}
+
+void attach_twice(struct trans *trans,
+                  struct device_info *devices_info,
+                  struct map *map,
+                  int i,
+                  int s)
+{
+    attach_selected_device(trans, devices_info, map, i, s);
+    attach_selected_device(trans, devices_info, map, i, s);
+}
+""",
+    )
+
+    summary = build_function_summary(function)
+    membership = next(effect for effect in summary.opens if effect.key == "list_membership")
+
+    assert membership.root == "arg0->transaction->dev_update_list"
+    assert membership.value == "__exists_member0__->post_commit_list"
+    relation = membership.existential_member_identity
+    assert relation is not None
+    assert relation.origin_expression == "devices_info[*].dev"
+    assert relation.member_field == "post_commit_list"
+
+    calls = [
+        node
+        for node in caller.body_node.walk()
+        if node.type == "call_expression"
+    ]
+    first = instantiate_summary(summary, calls[0])
+    second = instantiate_summary(summary, calls[1])
+    first_membership = next(
+        effect for effect in first.opens if effect.key == "list_membership"
+    )
+    second_membership = next(
+        effect for effect in second.opens if effect.key == "list_membership"
+    )
+    assert first_membership.value != second_membership.value
+    assert first_membership.value.startswith("__exists_member_attach_selected_device_")
+    assert "devices_info[" not in first_membership.value
+    assert "map->stripes[" not in first_membership.value
+
+
+def test_existential_member_identity_rejects_multiple_aggregate_sources(tmp_path: Path):
+    (function,) = _functions(
+        tmp_path,
+        """
+void ambiguous_device(struct trans *trans,
+                      struct device_info *left,
+                      struct device_info *right,
+                      struct map *map,
+                      int i)
+{
+    struct device *dev;
+
+    map->stripes[i].dev = left[i].dev;
+    map->stripes[i].dev = right[i].dev;
+    dev = map->stripes[i].dev;
+    list_add_tail(&dev->post_commit_list,
+                  &trans->transaction->dev_update_list);
+}
+""",
+    )
+
+    summary = build_function_summary(function)
+
+    assert not any(
+        effect.existential_member_identity is not None
+        for effect in summary.opens
+    )
+    assert any(effect.key == "list_membership" for effect in summary.opens)
 
 
 def test_summary_binds_exhaustive_safe_list_cleanup_to_parameter_container(

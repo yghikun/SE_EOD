@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -173,6 +174,76 @@ def find_failure_points(
             )
         )
 
+    for switch_node in _nodes_of_type(function.body_node, "switch_statement"):
+        condition_node = switch_node.child_by_field_name("condition")
+        if condition_node is None:
+            continue
+        result_symbol = _condition_symbol(_unwrap_expression(condition_node))
+        if result_symbol is None:
+            continue
+        binding = _latest_binding_before(
+            bindings_by_symbol.get(result_symbol, ()),
+            switch_node.start_byte,
+        )
+        if binding is None:
+            continue
+        dispatch = next(
+            (
+                block
+                for block in cfg.blocks.values()
+                if block.kind == "switch_dispatch"
+                and compact_ws(block.text).strip("()") == result_symbol
+            ),
+            None,
+        )
+        if dispatch is None:
+            continue
+        for cfg_edge in cfg.successors(dispatch.id):
+            if cfg_edge.kind != "switch_case":
+                continue
+            match = re.fullmatch(
+                rf"{re.escape(result_symbol)}\s*==\s*(.+)",
+                compact_ws(cfg_edge.condition),
+            )
+            if match is None:
+                continue
+            value = _constant_value_text(match.group(1))
+            if value is None:
+                continue
+            condition = _ConditionFailure(
+                result_symbol=result_symbol,
+                check_kind=f"eq:{value}",
+                error_when_true=True,
+            )
+            error_edge = _verified_error_edge(
+                function,
+                cfg,
+                cfg_edge,
+                condition,
+                include_outcome_success=include_outcome_success,
+            )
+            if error_edge is None:
+                continue
+            key = (
+                binding.call_node.start_byte,
+                switch_node.start_byte,
+                result_symbol,
+                error_edge.exit_expression,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            points.append(
+                FailurePoint(
+                    call_site=_site(function, binding.call_node),
+                    check_site=_site(function, switch_node, condition_node.text),
+                    error_edge=error_edge,
+                    result_symbol=result_symbol,
+                    callee=binding.callee,
+                    check_kind=condition.check_kind,
+                )
+            )
+
     points.sort(
         key=lambda point: (
             point.call_site.line,
@@ -205,7 +276,7 @@ def _call_bindings(body: FrontendNode) -> list[_CallBinding]:
         elif node.type == "init_declarator":
             if len(node.children) < 3:
                 continue
-            result_symbol = compact_ws(node.children[0].text)
+            result_symbol = _declarator_symbol(node.children[0])
             rhs = node.children[-1]
             call = _first_fallible_call(rhs)
             if result_symbol and call is not None:
@@ -224,6 +295,12 @@ def _enclosing_statement(node: FrontendNode) -> FrontendNode | None:
     # FrontendNode is parentless, so statement_node currently falls back to the
     # nearest binding node.  The field is kept for later same-file summary logic.
     return None
+
+
+def _declarator_symbol(node: FrontendNode) -> str:
+    text = compact_ws(node.text)
+    match = re.search(r"[A-Za-z_]\w*$", text)
+    return match.group(0) if match is not None else text
 
 
 def _condition_failure(
@@ -271,6 +348,41 @@ def _binary_condition_failure(
     op = compact_ws(expr.children[1].text)
     right = _unwrap_expression(expr.children[2])
 
+    left_symbol = _condition_symbol(left)
+    right_symbol = _condition_symbol(right)
+    right_constant = _constant_value(right)
+    left_constant = _constant_value(left)
+    if left_symbol is not None and right_constant is not None:
+        if op == "==":
+            return _ConditionFailure(
+                left_symbol,
+                f"eq:{right_constant}",
+                right_constant != "0",
+                _direct_call_binding(left, if_node, left_symbol),
+            )
+        if op == "!=":
+            return _ConditionFailure(
+                left_symbol,
+                f"ne:{right_constant}",
+                True,
+                _direct_call_binding(left, if_node, left_symbol),
+            )
+    if right_symbol is not None and left_constant is not None:
+        if op == "==":
+            return _ConditionFailure(
+                right_symbol,
+                f"eq:{left_constant}",
+                left_constant != "0",
+                _direct_call_binding(right, if_node, right_symbol),
+            )
+        if op == "!=":
+            return _ConditionFailure(
+                right_symbol,
+                f"ne:{left_constant}",
+                True,
+                _direct_call_binding(right, if_node, right_symbol),
+            )
+
     left_zero = _is_zero(right)
     right_zero = _is_zero(left)
     if op in {"<", "<=", "!=", "=="} and left_zero:
@@ -303,7 +415,9 @@ def _condition_symbol(node: FrontendNode) -> str | None:
     if node.type == "identifier":
         return compact_ws(node.text)
     if node.type == "call_expression":
-        name = _call_name(node)
+        name, args = call_name_and_args(compact_ws(node.text))
+        if name == "PTR_ERR" and args:
+            return compact_ws(args[0])
         if name not in NON_FAILURE_CALLS:
             return compact_ws(node.text)
     return None
@@ -397,6 +511,24 @@ def _verified_error_edge(
     *,
     include_outcome_success: bool,
 ) -> ErrorEdge | None:
+    if condition.check_kind.startswith(("eq:", "ne:")) and _block_reachable(
+        cfg,
+        edge.target,
+        edge.source,
+    ):
+        # A retry/recheck loop can overwrite the result before the eventual
+        # return, so the original constant predicate no longer identifies it.
+        return None
+    if condition.check_kind.startswith(("eq:", "ne:")) and _path_overwrites_result(
+        cfg,
+        edge.target,
+        condition.result_symbol,
+    ):
+        # Exact-value checks are only source-stable while the checked value is
+        # still the value returned at the exit.  Patterns such as
+        # ``if (error == -ENOSPC) error = 0; return error;`` are normalization,
+        # not metadata failure exits.
+        return None
     for block in _reachable_return_blocks(cfg, edge.target):
         expr = compact_ws(extract_return_expr(block.text) or "")
         outcome_extension = expr == "0" and include_outcome_success
@@ -411,6 +543,55 @@ def _verified_error_edge(
                 outcome_extension=outcome_extension,
             )
     return None
+
+
+def _block_reachable(
+    cfg: ControlFlowGraphIR,
+    start_block: int,
+    target_block: int,
+) -> bool:
+    pending = [start_block]
+    seen: set[int] = set()
+    while pending:
+        block_id = pending.pop()
+        if block_id == target_block:
+            return True
+        if block_id in seen:
+            continue
+        seen.add(block_id)
+        pending.extend(edge.target for edge in cfg.successors(block_id))
+    return False
+
+
+def _path_overwrites_result(
+    cfg: ControlFlowGraphIR,
+    start_block: int,
+    result_symbol: str,
+) -> bool:
+    if not re.fullmatch(r"[A-Za-z_]\w*", result_symbol):
+        return False
+    pending = [start_block]
+    seen: set[int] = set()
+    while pending:
+        block_id = pending.pop()
+        if block_id in seen or block_id == cfg.exit:
+            continue
+        seen.add(block_id)
+        block = cfg.blocks[block_id]
+        if block.kind != "return_statement" and _text_overwrites_symbol(
+            block.text,
+            result_symbol,
+        ):
+            return True
+        pending.extend(edge.target for edge in cfg.successors(block_id))
+    return False
+
+
+def _text_overwrites_symbol(text: str, symbol: str) -> bool:
+    escaped = re.escape(symbol)
+    assignment = rf"\b{escaped}\b\s*(?:\+\+|--|(?:<<|>>|[+\-*/%&|^])?=(?!=))"
+    prefix_update = rf"(?:\+\+|--)\s*\b{escaped}\b"
+    return re.search(rf"(?:{assignment}|{prefix_update})", text) is not None
 
 
 def _reachable_return_blocks(
@@ -482,6 +663,17 @@ def _unwrap_boolean_wrapper(node: FrontendNode) -> FrontendNode:
 
 def _is_zero(node: FrontendNode) -> bool:
     return compact_ws(node.text) in {"0", "0L", "0UL", "NULL"}
+
+
+def _constant_value(node: FrontendNode) -> str | None:
+    return _constant_value_text(compact_ws(node.text))
+
+
+def _constant_value_text(text: str) -> str | None:
+    value = compact_ws(text).strip("()")
+    if value in {"0L", "0UL", "NULL"}:
+        return "0"
+    return value if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", value) else None
 
 
 def _if_condition(if_node: FrontendNode) -> FrontendNode | None:

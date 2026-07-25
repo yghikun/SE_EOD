@@ -6,7 +6,12 @@ from pathlib import Path
 from scripts.compare_residual_runs import compare_runs, write_comparison_artifacts
 
 
-def _effect(*, line: int = 5, delta: str = "SET") -> dict[str, object]:
+def _effect(
+    *,
+    line: int = 5,
+    delta: str = "SET",
+    file: str = "linux/fs/btrfs/example.c",
+) -> dict[str, object]:
     return {
         "root": "inode",
         "key": "i_flags",
@@ -15,7 +20,7 @@ def _effect(*, line: int = 5, delta: str = "SET") -> dict[str, object]:
         "value": "flag",
         "evidence": "DIRECT_SOURCE",
         "site": {
-            "file": "linux/fs/btrfs/example.c",
+            "file": file,
             "line": line,
             "expression": "inode->i_flags = flag;",
         },
@@ -30,17 +35,21 @@ def _slice(
     cancellations: list[dict[str, object]] | None = None,
     protections: list[dict[str, object]] | None = None,
     out_of_scope: list[dict[str, object]] | None = None,
+    containment_proofs: list[dict[str, object]] | None = None,
     rationale: str = "",
+    failure_line: int = 10,
+    exit_line: int = 20,
+    file: str = "linux/fs/btrfs/example.c",
 ) -> dict[str, object]:
     return {
         "failure_site": {
-            "file": "linux/fs/btrfs/example.c",
-            "line": 10,
+            "file": file,
+            "line": failure_line,
             "expression": "ret = fail_metadata();",
         },
         "exit_site": {
-            "file": "linux/fs/btrfs/example.c",
-            "line": 20,
+            "file": file,
+            "line": exit_line,
             "expression": "return ret;",
         },
         "state": state,
@@ -49,6 +58,7 @@ def _slice(
         "cancellations": cancellations or [],
         "protections": protections or [],
         "out_of_scope_effects": out_of_scope or [],
+        "containment_proofs": containment_proofs or [],
         "rationale": rationale,
     }
 
@@ -113,6 +123,79 @@ def test_compare_runs_keeps_missing_current_witness_unmatched(tmp_path: Path):
     assert lost[0]["resolution_reason"] == ["current_witness_unmatched"]
 
 
+def test_compare_runs_retains_missing_witness_when_slice_still_visible(
+    tmp_path: Path,
+):
+    old_effect = _effect(line=5)
+    new_effect = _effect(line=6)
+    new_effect["key"] = "new_projection"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("UNKNOWN", residuals=[old_effect], reaching=[old_effect])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [_slice("EXPOSED", residuals=[new_effect], reaching=[new_effect])],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "UNKNOWN", "new_state": "RETAINED_SLICE", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
+    transition = comparison["transitions"][0]
+    assert transition["resolution_reason"] == [
+        "classification:UNKNOWN->RETAINED_SLICE",
+        "same_failure_exit_slice_still_visible",
+    ]
+    assert transition["new_slice_retention_evidence"]["classification"] == "CANDIDATE"
+    assert comparison["resolved_unknowns"] == []
+    assert comparison["lost_known_witnesses"] == []
+
+
+def test_compare_runs_uses_closed_slice_state_for_removed_name_inferred_witness(
+    tmp_path: Path,
+):
+    effect = _effect(line=5)
+    effect["evidence"] = "NAME_INFERRED"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[effect], reaching=[effect])],
+    )
+    current = _write_evaluation(tmp_path / "current", [_slice("CLOSED")])
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "REVIEW", "new_state": "CLOSED", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
+    assert comparison["lost_known_witnesses"] == []
+    assert comparison["transitions"][0]["new_slice_retention_evidence"]["slice_state"] == (
+        "CLOSED"
+    )
+
+
+def test_compare_runs_does_not_use_empty_slice_state_for_removed_direct_witness(
+    tmp_path: Path,
+):
+    effect = _effect(line=5)
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[effect], reaching=[effect])],
+    )
+    current = _write_evaluation(tmp_path / "current", [_slice("CLOSED")])
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "CANDIDATE", "new_state": "UNMATCHED", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 1
+    assert comparison["lost_known_witnesses"][0]["new_state"] == "UNMATCHED"
+
+
 def test_compare_runs_retains_nonresidual_reaching_effect_without_resolving_it(
     tmp_path: Path,
 ):
@@ -139,6 +222,112 @@ def test_compare_runs_retains_nonresidual_reaching_effect_without_resolving_it(
     ]
     assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
     assert comparison["resolved_unknowns"] == []
+    assert comparison["lost_known_witnesses"] == []
+
+
+def test_compare_runs_matches_same_effect_after_failure_anchor_moves(
+    tmp_path: Path,
+):
+    effect = _effect(line=5)
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [
+            _slice(
+                "EXPOSED",
+                residuals=[effect],
+                reaching=[effect],
+                failure_line=10,
+            )
+        ],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [
+            _slice(
+                "UNKNOWN",
+                residuals=[effect],
+                reaching=[effect],
+                rationale="exact_return_code_residual_identity_unproven",
+                failure_line=12,
+            )
+        ],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "CANDIDATE", "new_state": "UNKNOWN", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["new_candidate_count"] == 0
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
+    assert comparison["lost_known_witnesses"] == []
+
+
+def test_compare_runs_matches_xfs_transaction_alloc_bookkeeping_alias(
+    tmp_path: Path,
+):
+    xfs_file = "linux/fs/xfs/example.c"
+    old_context = _effect(line=5, delta="ADD", file=xfs_file)
+    old_context["root"] = "tp"
+    old_context["key"] = "xfs_trans_set_context"
+    current_alloc = _effect(line=5, delta="ADD", file=xfs_file)
+    current_alloc["root"] = "mp"
+    current_alloc["key"] = "xfs_trans_alloc"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [
+            _slice(
+                "PROTECTED",
+                reaching=[old_context],
+                protections=[current_alloc],
+                file=xfs_file,
+            )
+        ],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [
+            _slice(
+                "PROTECTED",
+                reaching=[current_alloc],
+                protections=[current_alloc],
+                file=xfs_file,
+            )
+        ],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "PROTECTED", "new_state": "PROTECTED", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
+    assert comparison["lost_known_witnesses"] == []
+
+
+def test_compare_runs_matches_same_source_effect_after_owner_root_refines(
+    tmp_path: Path,
+):
+    old_effect = _effect(line=5)
+    old_effect["root"] = "work->owner"
+    current_effect = _effect(line=5)
+    current_effect["root"] = "inode"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[old_effect], reaching=[old_effect])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [_slice("EXPOSED", residuals=[current_effect], reaching=[current_effect])],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "CANDIDATE", "new_state": "CANDIDATE", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["new_candidate_count"] == 0
+    assert comparison["report_transition_matrix"]["unmatched_baseline_witness_count"] == 0
     assert comparison["lost_known_witnesses"] == []
 
 
@@ -172,6 +361,103 @@ def test_compare_runs_tracks_closed_effect_inside_mixed_slice(tmp_path: Path):
     ]
     assert relation["source_identity"] == "inode->mount_opt"
     assert comparison["lost_known_witnesses"] == []
+
+
+def test_compare_runs_tracks_effect_scoped_containment_inside_mixed_slice(
+    tmp_path: Path,
+):
+    contained = _effect(line=5)
+    contained["root"] = "trans"
+    contained["key"] = "bytes_reserved"
+    exposed = _effect(line=6)
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[contained], reaching=[contained])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [
+            _slice(
+                "EXPOSED",
+                residuals=[contained, exposed],
+                reaching=[contained, exposed],
+                containment_proofs=[
+                    {
+                        "kind": "TRANSACTION_ABORT",
+                        "covered_effects": [contained],
+                    }
+                ],
+            )
+        ],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["resolved_candidates"][0]["new_state"] == (
+        "CONTAINED_METADATA_RESIDUAL"
+    )
+    assert comparison["report_transition_matrix"]["new_candidate_count"] == 1
+
+
+def test_compare_runs_does_not_count_new_effect_inside_existing_candidate_slice(
+    tmp_path: Path,
+):
+    old_effect = _effect(line=5)
+    new_effect = _effect(line=6)
+    new_effect["key"] = "name_inferred_helper"
+    new_effect["evidence"] = "NAME_INFERRED"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[old_effect], reaching=[old_effect])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [_slice("EXPOSED", residuals=[old_effect, new_effect], reaching=[old_effect, new_effect])],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["report_transition_matrix"]["transition_matrix"] == [
+        {"old_state": "CANDIDATE", "new_state": "CANDIDATE", "count": 1}
+    ]
+    assert comparison["report_transition_matrix"]["new_candidate_count"] == 0
+    assert comparison["new_candidates"] == []
+
+
+def test_compare_runs_keeps_uncontained_name_inferred_peer_as_review(
+    tmp_path: Path,
+):
+    contained = _effect(line=5)
+    contained["root"] = "trans"
+    contained["key"] = "bytes_reserved"
+    review = _effect(line=6)
+    review["key"] = "update_cache"
+    review["evidence"] = "NAME_INFERRED"
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[review], reaching=[review])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [
+            _slice(
+                "EXPOSED",
+                residuals=[contained, review],
+                reaching=[contained, review],
+                containment_proofs=[
+                    {
+                        "kind": "TRANSACTION_ABORT",
+                        "covered_effects": [contained],
+                    }
+                ],
+            )
+        ],
+    )
+
+    comparison = compare_runs(baseline, current)
+
+    assert comparison["transitions"][0]["new_state"] == "REVIEW"
+    assert comparison["report_transition_matrix"]["new_candidate_count"] == 0
 
 
 def test_compare_runs_writes_review_artifacts_and_detects_new_candidate(tmp_path: Path):

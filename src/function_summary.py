@@ -9,18 +9,27 @@ from typing import Iterable
 
 from .cancellation import normalize_residuals
 from .effect_extractor import extract_metadata_effects, looks_like_metadata_reader
-from .failure_domain_primitives import is_failure_domain_key
+from .failure_domain_primitives import (
+    covered_effects_for_action,
+    failure_domain_guard,
+    failure_domain_key,
+    failure_domain_kind,
+    is_failure_domain_key,
+)
 from .cfg import build_cfg
 from .failure_points import find_failure_points
 from .frontend.model import BasicBlockIR, FrontendNode, FunctionIR
 from .metadata_residual import (
     ContainerIterationCleanup,
+    EffectEvidence,
+    ExistentialMemberIdentity,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
     OwnerTeardown,
     PerCpuSlotRelation,
     SourceSite,
+    TransactionOwnershipRelation,
 )
 from .parser import call_name_and_args, compact_ws, extract_return_expr, split_args
 
@@ -58,6 +67,16 @@ class ExposureKind(str, Enum):
     MEMBER_OF_CONTAINER = "MEMBER_OF_CONTAINER"
 
 
+class OwnerIdentityKind(str, Enum):
+    """Source form that makes a callee-local owner caller-bindable."""
+
+    PARAM = "PARAM"
+    FIELD = "FIELD"
+    RETURN = "RETURN"
+    OUT_PARAM = "OUT_PARAM"
+    FRESH = "FRESH"
+
+
 @dataclass(frozen=True)
 class LifecycleFact:
     subject: str
@@ -93,6 +112,26 @@ class ExposureFact:
             "summary_identity": self.summary_identity,
             "kind": self.kind.value,
             "target": self.target,
+            "site": self.site.to_dict(),
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class OwnerIdentityBinding:
+    local_identity: str
+    kind: OwnerIdentityKind
+    summary_identity: str
+    bound_identity: str
+    site: SourceSite
+    evidence: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "local_identity": self.local_identity,
+            "kind": self.kind.value,
+            "summary_identity": self.summary_identity,
+            "bound_identity": self.bound_identity,
             "site": self.site.to_dict(),
             "evidence": self.evidence,
         }
@@ -160,6 +199,7 @@ class ErrorExitPartition:
 
     exit_site: SourceSite
     return_expression: str
+    return_constraint: str = ""
     opens: tuple[MetadataEffect, ...] = ()
     cancels: tuple[MetadataEffect, ...] = ()
     protects: tuple[MetadataEffect, ...] = ()
@@ -174,6 +214,7 @@ class ErrorExitPartition:
         return {
             "exit_site": self.exit_site.to_dict(),
             "return_expression": self.return_expression,
+            "return_constraint": self.return_constraint,
             "opens": [item.to_dict() for item in self.opens],
             "cancels": [item.to_dict() for item in self.cancels],
             "protects": [item.to_dict() for item in self.protects],
@@ -264,12 +305,14 @@ class FunctionSummary:
     escaping_parameters: tuple[int, ...] = ()
     exit_effects: ExitSensitiveEffects = ExitSensitiveEffects()
     error_exit_partitions: tuple[ErrorExitPartition, ...] = ()
+    error_partitions_exhaustive: bool = False
     unresolved_calls: tuple[str, ...] = ()
     source_file: str = ""
     may_fail: bool = False
     unknown_escape: bool = False
     unknown_causes: tuple[str, ...] = ()
     source: SummarySource = SummarySource.UNKNOWN
+    owner_bindings: tuple[OwnerIdentityBinding, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -298,12 +341,14 @@ class FunctionSummary:
             "error_exit_partitions": [
                 item.to_dict() for item in self.error_exit_partitions
             ],
+            "error_partitions_exhaustive": self.error_partitions_exhaustive,
             "unresolved_calls": list(self.unresolved_calls),
             "source_file": self.source_file,
             "may_fail": self.may_fail,
             "unknown_escape": self.unknown_escape,
             "unknown_causes": list(self.unknown_causes),
             "source": self.source.value,
+            "owner_bindings": [item.to_dict() for item in self.owner_bindings],
         }
 
 
@@ -324,9 +369,11 @@ class SummaryApplication:
     owner_teardowns: tuple[OwnerTeardown, ...] = ()
     exit_effects: ExitSensitiveEffects = ExitSensitiveEffects()
     error_exit_partitions: tuple[ErrorExitPartition, ...] = ()
+    error_partitions_exhaustive: bool = False
     returns: tuple[str, ...] = ()
     unresolved_identities: tuple[str, ...] = ()
     ownership_transfer_roots: tuple[str, ...] = ()
+    owner_bindings: tuple[OwnerIdentityBinding, ...] = ()
 
     @property
     def unknown(self) -> bool:
@@ -351,9 +398,11 @@ class SummaryApplication:
             "error_exit_partitions": [
                 item.to_dict() for item in self.error_exit_partitions
             ],
+            "error_partitions_exhaustive": self.error_partitions_exhaustive,
             "returns": list(self.returns),
             "unresolved_identities": list(self.unresolved_identities),
             "ownership_transfer_roots": list(self.ownership_transfer_roots),
+            "owner_bindings": [item.to_dict() for item in self.owner_bindings],
             "unknown": self.unknown,
         }
 
@@ -373,6 +422,12 @@ def build_function_summary(
         parameters,
         pointer_locals,
     )
+    direct_owner_aliases = _direct_owner_identity_aliases(
+        function,
+        parameters,
+        pointer_locals,
+        owner_aliases,
+    )
     return_symbols = _success_return_symbols(function, pointer_locals)
     raw_effects = _bind_percpu_slot_effects(
         function,
@@ -385,6 +440,11 @@ def build_function_summary(
         function,
         raw_effects,
         parameters,
+        pointer_locals,
+    )
+    raw_effects = _bind_existential_member_identities(
+        function,
+        raw_effects,
         pointer_locals,
     )
     fresh_allocation_lines = _direct_fresh_allocation_lines(
@@ -406,8 +466,28 @@ def build_function_summary(
         pointer_locals,
         fresh_allocation_lines,
     )
-    transfer_mapping = {**transfer_mapping, **output_mapping}
+    return_field_output_mapping = _return_field_output_mapping(
+        function,
+        parameters,
+        return_symbols,
+    )
+    transfer_mapping = {
+        **transfer_mapping,
+        **output_mapping,
+        **return_field_output_mapping,
+    }
     symbol_mapping = {**owner_aliases, **transfer_mapping}
+    owner_symbol_mapping = {
+        **owner_aliases,
+        **direct_owner_aliases,
+        **transfer_mapping,
+    }
+    owner_bindings = _build_owner_identity_bindings(
+        function,
+        owner_symbol_mapping,
+        return_symbols,
+        fresh_allocation_lines,
+    )
     exposure_facts = _build_exposure_facts(
         function,
         raw_effects,
@@ -423,7 +503,11 @@ def build_function_summary(
             effect,
             parameters,
             return_symbols,
-            symbol_mapping,
+            (
+                owner_symbol_mapping
+                if is_failure_domain_key(effect.key)
+                else symbol_mapping
+            ),
         )
         for effect in raw_effects
     )
@@ -451,7 +535,10 @@ def build_function_summary(
     private_fresh_locals = set(fresh_allocation_lines) - set(transfer_mapping)
     dropped_unbound_cancellation = any(
         not _references_only_private_fresh(effect, unbound_local_symbols, private_fresh_locals)
-        and effect.delta in (CANCEL_DELTAS | PROTECT_DELTAS)
+        and (
+            effect.delta in (CANCEL_DELTAS | PROTECT_DELTAS)
+            or is_failure_domain_key(effect.key)
+        )
         for effect in dropped_effects
     )
     has_return_bound_effect = any(
@@ -461,7 +548,12 @@ def build_function_summary(
     unresolved_helper_names = _unresolved_metadata_helper_names(function, raw_effects)
     unknown_causes: list[str] = []
     unknown_causes.extend(_unknown_escape_causes(function))
-    if dropped_unbound_cancellation:
+    if dropped_unbound_cancellation or _has_unbound_failure_domain_owner(
+        function,
+        set(parameters),
+        local_symbols,
+        owner_symbol_mapping,
+    ):
         unknown_causes.append("unbound_callee_local_identity")
     if has_return_bound_effect:
         unknown_causes.extend(
@@ -484,6 +576,10 @@ def build_function_summary(
         function,
         bound_effects,
         lifecycle_facts,
+    )
+    error_partitions_exhaustive = _partitions_cover_error_outcomes(
+        function,
+        error_exit_partitions,
     )
     projected_opens, projected_cancels, projected_protects = (
         _failure_effect_projection(error_exit_partitions, exit_effects)
@@ -529,20 +625,24 @@ def build_function_summary(
         error_opens=projected_opens,
         error_cancels=projected_cancels,
         error_protects=projected_protects,
-        failure_effects_complete=exit_effects.error_complete,
-        error_unknown_causes=exit_effects.unknown_causes,
+        failure_effects_complete=error_partitions_exhaustive,
+        error_unknown_causes=(
+            () if error_partitions_exhaustive else exit_effects.unknown_causes
+        ),
         lifecycle_facts=lifecycle_facts,
         exposure_facts=exposure_facts,
         cleanup_footprints=cleanup_footprints,
         owner_teardowns=owner_teardowns,
         exit_effects=exit_effects,
         error_exit_partitions=error_exit_partitions,
+        error_partitions_exhaustive=error_partitions_exhaustive,
         unresolved_calls=unresolved_helper_names,
         source_file=function.file.as_posix(),
         may_fail=bool(find_failure_points(function)) or _has_error_return(function),
         unknown_escape=bool(unknown_causes),
         unknown_causes=tuple(sorted(set(unknown_causes))),
         source=SummarySource.AUTO_LOCAL,
+        owner_bindings=owner_bindings,
     )
 
 
@@ -663,6 +763,12 @@ def build_project_summaries(
             function_tuple,
             inherited_summaries=summaries,
         )
+        built_summaries = _compose_source_visible_exit_partitions(
+            built_summaries,
+            function_tuple,
+            inherited_summaries=summaries,
+            max_depth=max_depth,
+        )
         next_summaries = {
             name: exported
             for name, summary in built_summaries.items()
@@ -714,7 +820,13 @@ def _compose_function_exit_partitions(
     summary: FunctionSummary,
     summaries: dict[str, FunctionSummary],
 ) -> FunctionSummary:
-    if function is None or function.body_node is None or not summary.error_exit_partitions:
+    if function is None or function.body_node is None:
+        return summary
+    seed_partitions = tuple(dict.fromkeys((
+        *summary.error_exit_partitions,
+        *_return_bound_error_partitions(function, summaries),
+    )))
+    if not seed_partitions:
         return summary
     cfg = build_cfg(function)
     dominators = _dominators(cfg)
@@ -728,7 +840,7 @@ def _compose_function_exit_partitions(
         key=lambda node: (node.start_byte, node.end_byte),
     ))
     composed: list[ErrorExitPartition] = []
-    for partition in summary.error_exit_partitions:
+    for partition in seed_partitions:
         exit_block = _exit_block_for_partition(cfg, partition)
         if exit_block is None:
             composed.append(partition)
@@ -822,11 +934,8 @@ def _compose_function_exit_partitions(
         for partition in partitions
         for cause in partition.unknown_causes
     }))
-    complete = (
-        summary.exit_effects.error_complete
-        and bool(partitions)
-        and all(partition.complete for partition in partitions)
-    )
+    exhaustive = _partitions_cover_error_outcomes(function, partitions)
+    complete = exhaustive and all(partition.complete for partition in partitions)
     return replace(
         summary,
         error_opens=error_opens,
@@ -834,10 +943,82 @@ def _compose_function_exit_partitions(
         error_protects=error_protects,
         failure_effects_complete=complete,
         error_unknown_causes=tuple(sorted(set(
-            summary.error_unknown_causes + partition_causes
+            (() if exhaustive else summary.error_unknown_causes) + partition_causes
         ))),
         error_exit_partitions=partitions,
+        error_partitions_exhaustive=exhaustive,
     )
+
+
+def _return_bound_error_partitions(
+    function: FunctionIR,
+    summaries: dict[str, FunctionSummary],
+) -> tuple[ErrorExitPartition, ...]:
+    if function.body_node is None:
+        return ()
+    parameters = _ordered_parameters(function)
+    result: list[ErrorExitPartition] = []
+    for return_node in function.body_node.walk():
+        if return_node.type != "return_statement":
+            continue
+        expression = compact_ws(_return_expression(return_node))
+        calls = [
+            node
+            for node in return_node.walk()
+            if node.type == "call_expression"
+            and compact_ws(node.text) == expression
+        ]
+        if len(calls) != 1:
+            continue
+        call = calls[0]
+        callee, _ = call_name_and_args(expression)
+        callee_summary = summaries.get(callee)
+        if callee_summary is None or not callee_summary.error_partitions_exhaustive:
+            continue
+        application = instantiate_summary(callee_summary, call)
+        site = SourceSite(
+            function.file.as_posix(),
+            return_node.start_line,
+            expression,
+        )
+        for partition in application.error_exit_partitions:
+            residuals = tuple(
+                _parameterize_effect(
+                    _effect_at_summary_call_site(effect, function, call, callee),
+                    parameters,
+                )
+                for effect in _live_partition_residuals(partition)
+            )
+            actions = tuple(
+                _parameterize_effect(
+                    _effect_at_summary_call_site(effect, function, call, callee),
+                    parameters,
+                )
+                for effect in partition.terminal_actions
+            )
+            result.append(
+                ErrorExitPartition(
+                    exit_site=site,
+                    return_expression=expression,
+                    return_constraint=partition.return_constraint,
+                    opens=tuple(
+                        effect for effect in residuals if effect.delta in OPEN_DELTAS
+                    ),
+                    cancels=tuple(
+                        effect for effect in residuals if effect.delta in CANCEL_DELTAS
+                    ),
+                    protects=tuple(
+                        effect for effect in residuals if effect.delta in PROTECT_DELTAS
+                    ),
+                    residuals=residuals,
+                    terminal_actions=actions,
+                    failed_owner_destructions=partition.failed_owner_destructions,
+                    path=tuple(dict.fromkeys((site, *partition.path))),
+                    complete=partition.complete,
+                    unknown_causes=partition.unknown_causes,
+                )
+            )
+    return tuple(dict.fromkeys(result))
 
 
 def _merge_partition_call_outcome(
@@ -853,8 +1034,12 @@ def _merge_partition_call_outcome(
     complete: bool,
     unknown_causes: tuple[str, ...],
 ) -> ErrorExitPartition:
+    parameters = _ordered_parameters(function)
     projected_effects = tuple(
-        _effect_at_summary_call_site(effect, function, call, callee)
+        _parameterize_effect(
+            _effect_at_summary_call_site(effect, function, call, callee),
+            parameters,
+        )
         for effect in effects
     )
     all_effects = tuple(dict.fromkeys((
@@ -881,7 +1066,10 @@ def _merge_partition_call_outcome(
         terminal_actions=tuple(dict.fromkeys((
             *partition.terminal_actions,
             *(
-                _effect_at_summary_call_site(effect, function, call, callee)
+                _parameterize_effect(
+                    _effect_at_summary_call_site(effect, function, call, callee),
+                    parameters,
+                )
                 for effect in terminal_actions
             ),
         ))),
@@ -1018,6 +1206,12 @@ def instantiate_summary(
         mapping[RETURN_PLACEHOLDER] = compact_ws(return_lvalue)
     for index, placeholder in enumerate(summary.fresh_identities):
         mapping[placeholder] = _fresh_call_identity(summary, call, index)
+    for index, placeholder in enumerate(_existential_summary_tokens(summary)):
+        mapping[placeholder] = _existential_call_identity(
+            summary,
+            call,
+            index,
+        )
     for placeholder in summary.output_identities:
         mapping[placeholder] = _output_call_identity(placeholder, mapping)
     unresolved = _unresolved_parameters(summary, mapping)
@@ -1048,6 +1242,10 @@ def instantiate_summary(
         _instantiate_error_exit_partition(partition, mapping)
         for partition in summary.error_exit_partitions
     )
+    owner_bindings = tuple(
+        _instantiate_owner_identity_binding(binding, mapping)
+        for binding in summary.owner_bindings
+    )
     returns = tuple(_replace_symbols(item, mapping) for item in summary.returns)
     transfer_roots = tuple(
         _replace_symbols(item, mapping)
@@ -1069,9 +1267,11 @@ def instantiate_summary(
         owner_teardowns=owner_teardowns,
         exit_effects=exit_effects,
         error_exit_partitions=error_exit_partitions,
+        error_partitions_exhaustive=summary.error_partitions_exhaustive,
         returns=returns,
         unresolved_identities=unresolved,
         ownership_transfer_roots=transfer_roots,
+        owner_bindings=owner_bindings,
     )
 
 
@@ -1158,6 +1358,25 @@ def _parameterize_effect(
             cleanup,
             container_root=_replace_symbols(cleanup.container_root, mapping),
         )
+    existential = effect.existential_member_identity
+    if existential is not None:
+        existential = replace(
+            existential,
+            destination_container=_replace_symbols(
+                existential.destination_container,
+                mapping,
+            ),
+        )
+    transaction_ownership = effect.transaction_ownership
+    if transaction_ownership is not None:
+        transaction_ownership = replace(
+            transaction_ownership,
+            transaction_root=_replace_symbols(
+                transaction_ownership.transaction_root,
+                mapping,
+            ),
+            owned_root=_replace_symbols(transaction_ownership.owned_root, mapping),
+        )
     percpu = effect.percpu_slot_relation
     if percpu is not None:
         percpu = replace(
@@ -1170,6 +1389,8 @@ def _parameterize_effect(
         key=_replace_symbols(effect.key, key_mapping),
         value=_replace_symbols(effect.value, mapping),
         container_iteration_cleanup=cleanup,
+        existential_member_identity=existential,
+        transaction_ownership=transaction_ownership,
         percpu_slot_relation=percpu,
     )
 
@@ -1184,6 +1405,26 @@ def _instantiate_effect(
             cleanup,
             container_root=_replace_symbols(cleanup.container_root, mapping),
         )
+    existential = effect.existential_member_identity
+    if existential is not None:
+        existential = replace(
+            existential,
+            placeholder=_replace_symbols(existential.placeholder, mapping),
+            destination_container=_replace_symbols(
+                existential.destination_container,
+                mapping,
+            ),
+        )
+    transaction_ownership = effect.transaction_ownership
+    if transaction_ownership is not None:
+        transaction_ownership = replace(
+            transaction_ownership,
+            transaction_root=_replace_symbols(
+                transaction_ownership.transaction_root,
+                mapping,
+            ),
+            owned_root=_replace_symbols(transaction_ownership.owned_root, mapping),
+        )
     percpu = effect.percpu_slot_relation
     if percpu is not None:
         percpu = replace(
@@ -1196,6 +1437,8 @@ def _instantiate_effect(
         key=_replace_symbols(effect.key, mapping),
         value=_replace_symbols(effect.value, mapping),
         container_iteration_cleanup=cleanup,
+        existential_member_identity=existential,
+        transaction_ownership=transaction_ownership,
         percpu_slot_relation=percpu,
     )
 
@@ -1225,6 +1468,16 @@ def _instantiate_exposure_fact(
         target=_replace_symbols(fact.target, mapping),
         site=fact.site,
         evidence=fact.evidence,
+    )
+
+
+def _instantiate_owner_identity_binding(
+    binding: OwnerIdentityBinding,
+    mapping: dict[str, str],
+) -> OwnerIdentityBinding:
+    return replace(
+        binding,
+        bound_identity=_replace_symbols(binding.summary_identity, mapping),
     )
 
 
@@ -1300,6 +1553,7 @@ def _instantiate_error_exit_partition(
     return ErrorExitPartition(
         exit_site=partition.exit_site,
         return_expression=_replace_symbols(partition.return_expression, mapping),
+        return_constraint=partition.return_constraint,
         opens=tuple(_instantiate_effect(item, mapping) for item in partition.opens),
         cancels=tuple(_instantiate_effect(item, mapping) for item in partition.cancels),
         protects=tuple(_instantiate_effect(item, mapping) for item in partition.protects),
@@ -1763,6 +2017,12 @@ def _unresolved_parameters(
 
 def _summary_tokens(effect: MetadataEffect) -> set[str]:
     joined = " ".join([effect.root, effect.key, effect.value])
+    if effect.transaction_ownership is not None:
+        joined = " ".join((
+            joined,
+            effect.transaction_ownership.transaction_root,
+            effect.transaction_ownership.owned_root,
+        ))
     tokens = set(re.findall(r"\barg\d+\b", joined))
     if RETURN_PLACEHOLDER in joined:
         tokens.add(RETURN_PLACEHOLDER)
@@ -1788,6 +2048,7 @@ def _exposure_tokens(fact: ExposureFact) -> set[str]:
         tokens.add(RETURN_PLACEHOLDER)
     tokens.update(re.findall(r"\b__fresh\d+__\b", joined))
     tokens.update(re.findall(r"\b__output\d+__\b", joined))
+    tokens.update(re.findall(r"\b__exists_member\d+__\b", joined))
     return tokens
 
 
@@ -1819,6 +2080,46 @@ def _fresh_call_identity(
             f"{call.start_byte}_{index}__"
         )
     return f"__fresh_{summary.function_name}_{index}__"
+
+
+def _existential_call_identity(
+    summary: FunctionSummary,
+    call: str | FrontendNode,
+    index: int,
+) -> str:
+    if isinstance(call, FrontendNode):
+        return (
+            f"__exists_member_{summary.function_name}_{call.start_line}_"
+            f"{call.start_byte}_{index}__"
+        )
+    return f"__exists_member_{summary.function_name}_{index}__"
+
+
+def _existential_summary_tokens(summary: FunctionSummary) -> tuple[str, ...]:
+    effects = (
+        *summary.opens,
+        *summary.cancels,
+        *summary.protects,
+        *summary.error_opens,
+        *summary.error_cancels,
+        *summary.error_protects,
+        *(
+            effect
+            for partition in summary.error_exit_partitions
+            for effect in (
+                *partition.opens,
+                *partition.cancels,
+                *partition.protects,
+                *partition.residuals,
+                *partition.terminal_actions,
+            )
+        ),
+    )
+    return tuple(sorted({
+        token
+        for effect in effects
+        for token in re.findall(r"__exists_member\d+__", effect.value)
+    }))
 
 
 def _output_call_identity(
@@ -1925,6 +2226,42 @@ def _output_transfer_mapping(
         if parameter is None:
             continue
         mapping[local] = f"{OUTPUT_PLACEHOLDER_PREFIX}{parameter_index[parameter]}__"
+    return mapping
+
+
+def _return_field_output_mapping(
+    function: FunctionIR,
+    parameters: tuple[str, ...],
+    return_symbols: set[str],
+) -> dict[str, str]:
+    if function.body_node is None or not return_symbols:
+        return {}
+    parameter_index = {name: index for index, name in enumerate(parameters)}
+    parameter_set = set(parameters)
+    mapping: dict[str, str] = {}
+    for node in function.body_node.walk():
+        if node.type != "assignment_expression":
+            continue
+        left = node.child_by_field_name("left")
+        right = node.child_by_field_name("right")
+        if left is None or right is None or left.type != "field_expression":
+            continue
+        output_parameter = _output_parameter_symbol(right.text, parameter_set)
+        if output_parameter is None:
+            continue
+        left_text = compact_ws(left.text)
+        match = re.fullmatch(
+            r"([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)+)",
+            left_text,
+        )
+        if not match:
+            continue
+        local = match.group(1)
+        if local not in return_symbols:
+            continue
+        mapping[left_text] = (
+            f"{OUTPUT_PLACEHOLDER_PREFIX}{parameter_index[output_parameter]}__"
+        )
     return mapping
 
 
@@ -2282,6 +2619,10 @@ def _error_exit_partitions(
             )
             continue
         must, _ = _effects_for_exit_blocks(cfg, effects, (block,))
+        must = tuple(dict.fromkeys((
+            *must,
+            *_failure_domain_guard_actions_for_return(function, cfg, block),
+        )))
         terminal_actions = tuple(
             effect for effect in must if is_failure_domain_key(effect.key)
         )
@@ -2302,6 +2643,7 @@ def _error_exit_partitions(
             ErrorExitPartition(
                 exit_site=site,
                 return_expression=expression,
+                return_constraint=_return_constraint(expression),
                 opens=opens,
                 cancels=cancels,
                 protects=protects,
@@ -2312,7 +2654,240 @@ def _error_exit_partitions(
                 complete=True,
             )
         )
+    partitions.extend(
+        _conditional_error_exit_partitions(
+            function,
+            cfg,
+            effects,
+            lifecycle_facts,
+        )
+    )
+    return tuple(dict.fromkeys(partitions))
+
+
+def _conditional_error_exit_partitions(
+    function: FunctionIR,
+    cfg,
+    effects: tuple[MetadataEffect, ...],
+    lifecycle_facts: tuple[LifecycleFact, ...],
+) -> tuple[ErrorExitPartition, ...]:
+    """Split a shared return by a source-visible checked error outcome."""
+
+    partitions: list[ErrorExitPartition] = []
+    for point in find_failure_points(function):
+        if point.check_kind not in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
+            continue
+        exit_block = next(
+            (
+                block
+                for block in cfg.blocks.values()
+                if block.kind == "return_statement"
+                and block.start_line == point.error_edge.exit_site.line
+            ),
+            None,
+        )
+        if exit_block is None:
+            continue
+        reachable = _reachable_blocks_without(
+            cfg,
+            point.error_edge.target_block,
+            forbidden={point.error_edge.source_block},
+        )
+        if exit_block.id not in reachable:
+            continue
+        dominators = _subset_dominators(
+            cfg,
+            point.error_edge.target_block,
+            reachable,
+        )
+        must_effects = tuple(
+            effect
+            for effect in effects
+            if (block_id := _block_for_effect_site(cfg, effect)) is not None
+            and block_id in dominators.get(exit_block.id, set())
+            and effect.site.line >= point.check_site.line
+        )
+        terminal_actions = tuple(
+            effect for effect in must_effects if is_failure_domain_key(effect.key)
+        )
+        if not terminal_actions:
+            continue
+        ordinary = tuple(
+            effect for effect in must_effects if not is_failure_domain_key(effect.key)
+        )
+        opens = tuple(effect for effect in ordinary if effect.delta in OPEN_DELTAS)
+        cancels = tuple(effect for effect in ordinary if effect.delta in CANCEL_DELTAS)
+        protects = tuple(effect for effect in ordinary if effect.delta in PROTECT_DELTAS)
+        normalized = normalize_residuals(opens, cancels, protects)
+        destructions = tuple(
+            fact
+            for fact in lifecycle_facts
+            if fact.event is LifecycleEvent.RELEASED
+            and any(fact.site == effect.site for effect in must_effects)
+        )
+        partitions.append(
+            ErrorExitPartition(
+                exit_site=point.error_edge.exit_site,
+                return_expression=point.error_edge.exit_expression,
+                return_constraint=point.check_kind,
+                opens=opens,
+                cancels=cancels,
+                protects=protects,
+                residuals=normalized.residuals,
+                terminal_actions=terminal_actions,
+                failed_owner_destructions=destructions,
+                path=tuple(dict.fromkeys((
+                    point.check_site,
+                    *(effect.site for effect in terminal_actions),
+                    point.error_edge.exit_site,
+                ))),
+                complete=True,
+            )
+        )
     return tuple(partitions)
+
+
+def _failure_domain_guard_actions_for_return(
+    function: FunctionIR,
+    cfg,
+    return_block: BasicBlockIR,
+) -> tuple[MetadataEffect, ...]:
+    if function.body_node is None:
+        return ()
+    parameter_index = {
+        name: index for index, name in enumerate(_ordered_parameters(function))
+    }
+    actions: list[MetadataEffect] = []
+    for if_node in function.body_node.walk():
+        if if_node.type != "if_statement":
+            continue
+        condition = if_node.child_by_field_name("condition")
+        if condition is None:
+            continue
+        condition_block = next(
+            (
+                block
+                for block in cfg.blocks.values()
+                if block.kind == "condition" and block.start_line == if_node.start_line
+            ),
+            None,
+        )
+        if condition_block is None:
+            continue
+        true_targets = [
+            edge.target for edge in cfg.successors(condition_block.id) if edge.kind == "true"
+        ]
+        false_targets = [
+            edge.target for edge in cfg.successors(condition_block.id) if edge.kind == "false"
+        ]
+        if not true_targets or not false_targets:
+            continue
+        true_reaches = any(
+            _can_reach_block(cfg, target, return_block.id) for target in true_targets
+        )
+        false_reaches = any(
+            _can_reach_block(cfg, target, return_block.id) for target in false_targets
+        )
+        if not true_reaches or false_reaches:
+            continue
+        for call in condition.walk():
+            if call.type != "call_expression":
+                continue
+            name, args = call_name_and_args(compact_ws(call.text))
+            guard = failure_domain_guard(name)
+            if guard is None:
+                continue
+            owner_index, kind = guard
+            if owner_index >= len(args):
+                continue
+            owner = compact_ws(args[owner_index]).strip("() ")
+            if owner not in parameter_index:
+                continue
+            actions.append(
+                MetadataEffect(
+                    root=f"arg{parameter_index[owner]}",
+                    key=failure_domain_key(kind),
+                    plane=MetadataPlane.RECOVERY,
+                    delta=MetadataDelta.PROTECT,
+                    value=kind.value,
+                    site=SourceSite(
+                        function.file.as_posix(),
+                        call.start_line,
+                        compact_ws(call.text),
+                    ),
+                    evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
+                )
+            )
+    return tuple(dict.fromkeys(actions))
+
+
+def _reachable_blocks_without(
+    cfg,
+    start: int,
+    *,
+    forbidden: set[int],
+) -> set[int]:
+    pending = [start]
+    seen: set[int] = set()
+    while pending:
+        block_id = pending.pop()
+        if block_id in seen or block_id in forbidden:
+            continue
+        seen.add(block_id)
+        pending.extend(edge.target for edge in cfg.successors(block_id))
+    return seen
+
+
+def _subset_dominators(cfg, start: int, nodes: set[int]) -> dict[int, set[int]]:
+    dominators = {node: set(nodes) for node in nodes}
+    dominators[start] = {start}
+    changed = True
+    while changed:
+        changed = False
+        for node in sorted(nodes - {start}):
+            predecessors = [
+                edge.source
+                for edge in cfg.predecessors(node)
+                if edge.source in nodes
+            ]
+            new = (
+                set.intersection(*(dominators[item] for item in predecessors))
+                if predecessors
+                else set()
+            )
+            new.add(node)
+            if new != dominators[node]:
+                dominators[node] = new
+                changed = True
+    return dominators
+
+
+def _return_constraint(expression: str) -> str:
+    value = compact_ws(expression).strip()
+    name, args = call_name_and_args(value)
+    if name == "ERR_PTR" and len(args) == 1:
+        inner = compact_ws(args[0]).strip("() ")
+        if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", inner):
+            return f"EXACT:{inner}"
+        return "IS_ERR"
+    if name == "PTR_ERR" and len(args) == 1:
+        return "NEGATIVE"
+    if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", value):
+        return f"EXACT:{value}"
+    return ""
+
+
+def _partitions_cover_error_outcomes(
+    function: FunctionIR,
+    partitions: tuple[ErrorExitPartition, ...],
+) -> bool:
+    if not partitions or not all(partition.complete for partition in partitions):
+        return False
+    covered_lines = {partition.exit_site.line for partition in partitions}
+    return all(
+        kind == "success" or node.start_line in covered_lines
+        for node, kind in _classified_return_nodes(function)
+    )
 
 
 def _failure_effect_projection(
@@ -2361,12 +2936,16 @@ def _failure_effect_projection(
 def _live_partition_residuals(
     partition: ErrorExitPartition,
 ) -> tuple[MetadataEffect, ...]:
-    if partition.terminal_actions:
-        return ()
+    terminally_covered = {
+        effect
+        for action in partition.terminal_actions
+        for effect in covered_effects_for_action(action, partition.residuals)
+    }
     return tuple(
         effect
         for effect in partition.residuals
-        if not any(
+        if effect not in terminally_covered
+        and not any(
             _destruction_covers_effect(destruction, effect)
             for destruction in partition.failed_owner_destructions
         )
@@ -2580,12 +3159,14 @@ def _with_source(
         escaping_parameters=summary.escaping_parameters,
         exit_effects=summary.exit_effects,
         error_exit_partitions=summary.error_exit_partitions,
+        error_partitions_exhaustive=summary.error_partitions_exhaustive,
         unresolved_calls=summary.unresolved_calls,
         source_file=summary.source_file,
         may_fail=summary.may_fail,
         unknown_escape=summary.unknown_escape,
         unknown_causes=summary.unknown_causes,
         source=source,
+        owner_bindings=summary.owner_bindings,
     )
 
 
@@ -2601,6 +3182,8 @@ def _project_export_summary(summary: FunctionSummary) -> FunctionSummary | None:
     if summary.returns_fresh_identity:
         return _fresh_fact_summary(summary)
     if _is_exportable_owner_teardown_summary(summary):
+        return _with_source(summary, SummarySource.AUTO_INTERPROCEDURAL)
+    if _is_exportable_terminal_partition_summary(summary):
         return _with_source(summary, SummarySource.AUTO_INTERPROCEDURAL)
     if _is_exportable_cleanup_summary(summary):
         return _with_source(summary, SummarySource.AUTO_INTERPROCEDURAL)
@@ -2631,6 +3214,29 @@ def _is_exportable_cleanup_summary(summary: FunctionSummary) -> bool:
         and not summary.unknown_causes
         and set(summary.error_unknown_causes) <= {"unclassified_return_exit"}
         and all(_effect_is_parameter_bound(effect) for effect in summary.cancels)
+    )
+
+
+def _is_exportable_terminal_partition_summary(summary: FunctionSummary) -> bool:
+    return (
+        summary.may_fail
+        and summary.error_partitions_exhaustive
+        and bool(summary.error_exit_partitions)
+        and all(partition.complete for partition in summary.error_exit_partitions)
+        and all(
+            partition.terminal_actions
+            and not partition.residuals
+            and not partition.cancels
+            and not partition.protects
+            for partition in summary.error_exit_partitions
+        )
+        and all(
+            _effect_is_parameter_bound(action)
+            for partition in summary.error_exit_partitions
+            for action in partition.terminal_actions
+        )
+        and not summary.unknown_causes
+        and not summary.error_unknown_causes
     )
 
 
@@ -2832,12 +3438,14 @@ def _with_propagated_cleanup_effects(
         escaping_parameters=summary.escaping_parameters,
         exit_effects=exit_effects,
         error_exit_partitions=error_exit_partitions,
+        error_partitions_exhaustive=summary.error_partitions_exhaustive,
         unresolved_calls=unresolved_calls,
         source_file=summary.source_file,
         may_fail=summary.may_fail,
         unknown_escape=bool(unknown_causes),
         unknown_causes=unknown_causes,
         source=summary.source,
+        owner_bindings=summary.owner_bindings,
     )
 
 
@@ -3057,15 +3665,13 @@ def _ops_initializer_targets(
         text = function.file.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ()
-    targets = {
-        item
-        for item in re.findall(
-            rf"\.\s*{re.escape(field)}\s*=\s*&?\s*([A-Za-z_]\w*)",
-            text,
-        )
-        if item in summaries
-    }
-    return tuple(sorted(targets)) if len(targets) == 1 else ()
+    matches = re.findall(
+        rf"\.\s*{re.escape(field)}\s*=\s*&?\s*([A-Za-z_]\w*)",
+        text,
+    )
+    if not matches or any(item not in summaries for item in matches):
+        return ()
+    return tuple(sorted(set(matches)))
 
 
 def _with_unknown_causes(
@@ -3108,12 +3714,14 @@ def _with_unresolved_calls_and_unknown_causes(
         escaping_parameters=summary.escaping_parameters,
         exit_effects=summary.exit_effects,
         error_exit_partitions=summary.error_exit_partitions,
+        error_partitions_exhaustive=summary.error_partitions_exhaustive,
         unresolved_calls=unresolved_calls,
         source_file=summary.source_file,
         may_fail=summary.may_fail,
         unknown_escape=bool(unknown_causes),
         unknown_causes=unknown_causes,
         source=summary.source,
+        owner_bindings=summary.owner_bindings,
     )
 
 
@@ -3154,6 +3762,7 @@ def _fresh_fact_summary(summary: FunctionSummary) -> FunctionSummary:
         unknown_escape=False,
         unknown_causes=(),
         source=SummarySource.AUTO_INTERPROCEDURAL,
+        owner_bindings=summary.owner_bindings,
     )
 
 
@@ -3206,15 +3815,14 @@ def _parameter_derived_owner_aliases(
     """Bind a narrow, source-visible conversion accessor to its parameter.
 
     The ``*_sb`` form captures container/cast accessors such as
-    ``btrfs_sb(sb)``.  It intentionally excludes ordinary helper return
-    values, multi-argument calls, and non-pointer locals: those still require
-    an interprocedural summary before they can establish caller ownership.
+    ``btrfs_sb(sb)``. Direct field relations are kept in a separate owner-only
+    map so they cannot rewrite unrelated metadata effect identities.
     """
 
     if function.body_node is None:
         return {}
     parameter_index = {name: index for index, name in enumerate(parameters)}
-    aliases: dict[str, str] = {}
+    assignments: dict[str, list[str]] = {}
     for node in function.body_node.walk():
         if node.type not in {"assignment_expression", "init_declarator"}:
             continue
@@ -3230,14 +3838,225 @@ def _parameter_derived_owner_aliases(
             expression = compact_ws(value.text) if value is not None else ""
         if local not in pointer_locals:
             continue
-        name, args = call_name_and_args(expression)
-        if not name.endswith("_sb") or len(args) != 1:
-            continue
-        argument = compact_ws(args[0]).strip("()")
-        if argument not in parameter_index:
-            continue
-        aliases[local] = f"arg{parameter_index[argument]}"
+        assignments.setdefault(local, []).append(expression)
+
+    aliases: dict[str, str] = {}
+    pending = {
+        local: values[0]
+        for local, values in assignments.items()
+        if len(values) == 1
+    }
+    for _ in range(len(pending) + 1):
+        changed = False
+        for local, expression in pending.items():
+            if local in aliases:
+                continue
+            identity = _source_owner_identity(
+                expression,
+                parameter_index,
+                aliases,
+                allow_direct=False,
+            )
+            if identity:
+                aliases[local] = identity
+                changed = True
+        if not changed:
+            break
     return aliases
+
+
+def _source_owner_identity(
+    expression: str,
+    parameter_index: dict[str, int],
+    aliases: dict[str, str],
+    *,
+    allow_direct: bool,
+) -> str:
+    text = compact_ws(expression).strip()
+    name, args = call_name_and_args(text)
+    if name.endswith("_sb") and len(args) == 1:
+        argument = compact_ws(args[0]).strip().strip("()")
+        if argument in parameter_index:
+            return f"arg{parameter_index[argument]}"
+
+    if not allow_direct:
+        return ""
+
+    while text.startswith("(") and text.endswith(")"):
+        text = text[1:-1].strip()
+    match = re.fullmatch(
+        r"([A-Za-z_]\w*)((?:(?:->|\.)[A-Za-z_]\w*)*)",
+        text,
+    )
+    if not match:
+        return ""
+    base, suffix = match.groups()
+    if base in parameter_index:
+        return f"arg{parameter_index[base]}{suffix}"
+    if base in aliases:
+        return f"{aliases[base]}{suffix}"
+    return ""
+
+
+def _direct_owner_identity_aliases(
+    function: FunctionIR,
+    parameters: tuple[str, ...],
+    pointer_locals: set[str],
+    base_aliases: dict[str, str],
+) -> dict[str, str]:
+    if function.body_node is None:
+        return {}
+    parameter_index = {name: index for index, name in enumerate(parameters)}
+    assignments: dict[str, list[str]] = {}
+    for node in function.body_node.walk():
+        if node.type not in {"assignment_expression", "init_declarator"}:
+            continue
+        if node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            local = compact_ws(left.text) if left is not None else ""
+            expression = compact_ws(right.text) if right is not None else ""
+        else:
+            declarator = node.child_by_field_name("declarator")
+            value = node.child_by_field_name("value")
+            local = _declarator_name(declarator) or ""
+            expression = compact_ws(value.text) if value is not None else ""
+        if local in pointer_locals:
+            assignments.setdefault(local, []).append(expression)
+
+    aliases = dict(base_aliases)
+    pending = {
+        local: values[0]
+        for local, values in assignments.items()
+        if len(values) == 1 and local not in aliases
+    }
+    for _ in range(len(pending) + 1):
+        changed = False
+        for local, expression in pending.items():
+            if local in aliases:
+                continue
+            identity = _source_owner_identity(
+                expression,
+                parameter_index,
+                aliases,
+                allow_direct=True,
+            )
+            if identity:
+                aliases[local] = identity
+                changed = True
+        if not changed:
+            break
+    return {
+        local: identity
+        for local, identity in aliases.items()
+        if local not in base_aliases
+    }
+
+
+def _has_unbound_failure_domain_owner(
+    function: FunctionIR,
+    parameters: set[str],
+    local_symbols: set[str],
+    symbol_mapping: dict[str, str],
+) -> bool:
+    if function.body_node is None:
+        return False
+    for node in function.body_node.walk():
+        if node.type != "call_expression":
+            continue
+        name, args = call_name_and_args(compact_ws(node.text))
+        if failure_domain_kind(name) is None or not args:
+            continue
+        owner = compact_ws(args[0]).strip().strip("()")
+        if (
+            re.fullmatch(r"[A-Za-z_]\w*", owner)
+            and owner in local_symbols
+            and owner not in parameters
+            and owner not in symbol_mapping
+        ):
+            return True
+    return False
+
+
+def _build_owner_identity_bindings(
+    function: FunctionIR,
+    symbol_mapping: dict[str, str],
+    return_symbols: set[str],
+    allocation_lines: dict[str, int],
+) -> tuple[OwnerIdentityBinding, ...]:
+    mappings = dict(symbol_mapping)
+    mappings.update({local: RETURN_PLACEHOLDER for local in return_symbols})
+    bindings: list[OwnerIdentityBinding] = []
+    for local, identity in sorted(mappings.items()):
+        kind = _owner_identity_kind(identity)
+        if kind is None:
+            continue
+        site = _owner_binding_site(
+            function,
+            local,
+            identity,
+            allocation_lines,
+        )
+        bindings.append(
+            OwnerIdentityBinding(
+                local_identity=local,
+                kind=kind,
+                summary_identity=identity,
+                bound_identity=identity,
+                site=site,
+                evidence=site.expression,
+            )
+        )
+    return tuple(bindings)
+
+
+def _owner_identity_kind(identity: str) -> OwnerIdentityKind | None:
+    if identity == RETURN_PLACEHOLDER:
+        return OwnerIdentityKind.RETURN
+    if identity.startswith(OUTPUT_PLACEHOLDER_PREFIX):
+        return OwnerIdentityKind.OUT_PARAM
+    if identity.startswith(FRESH_PLACEHOLDER_PREFIX):
+        return OwnerIdentityKind.FRESH
+    if re.fullmatch(r"arg\d+", identity):
+        return OwnerIdentityKind.PARAM
+    if re.match(r"^arg\d+(?:->|\.)", identity):
+        return OwnerIdentityKind.FIELD
+    return None
+
+
+def _owner_binding_site(
+    function: FunctionIR,
+    local: str,
+    identity: str,
+    allocation_lines: dict[str, int],
+) -> SourceSite:
+    fallback_line = allocation_lines.get(local, function.start_line)
+    fallback = SourceSite(
+        function.file.as_posix(),
+        fallback_line,
+        f"source-derived owner binding for {local}",
+    )
+    if function.body_node is None:
+        return fallback
+    candidates: list[SourceSite] = []
+    for node in function.body_node.walk():
+        expression = compact_ws(node.text)
+        if identity == RETURN_PLACEHOLDER and node.type == "return_statement":
+            if _return_expression(node) == local:
+                candidates.append(SourceSite(function.file.as_posix(), node.start_line, expression))
+            continue
+        if node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            left_text = compact_ws(left.text) if left is not None else ""
+            right_text = compact_ws(right.text) if right is not None else ""
+            if left_text == local or right_text == local:
+                candidates.append(SourceSite(function.file.as_posix(), node.start_line, expression))
+        elif node.type == "init_declarator":
+            declarator = node.child_by_field_name("declarator")
+            if (_declarator_name(declarator) or "") == local:
+                candidates.append(SourceSite(function.file.as_posix(), node.start_line, expression))
+    return min(candidates, key=lambda item: item.line) if candidates else fallback
 
 
 @dataclass(frozen=True)
@@ -3465,6 +4284,147 @@ def _bind_exhaustive_container_cleanups(
             )
         )
     return tuple(result)
+
+
+def _bind_existential_member_identities(
+    function: FunctionIR,
+    effects: tuple[MetadataEffect, ...],
+    pointer_locals: set[str],
+) -> tuple[MetadataEffect, ...]:
+    """Preserve one aggregate-derived member without naming a caller object."""
+
+    if function.body_node is None:
+        return effects
+    assignments: list[tuple[str, str, FrontendNode]] = []
+    for node in function.body_node.walk():
+        if node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            if left is not None and right is not None:
+                assignments.append((compact_ws(left.text), compact_ws(right.text), node))
+        elif node.type == "init_declarator":
+            declarator = node.child_by_field_name("declarator")
+            value = node.child_by_field_name("value")
+            local = _declarator_name(declarator) or ""
+            if local and value is not None:
+                assignments.append((local, compact_ws(value.text), node))
+
+    aggregate_sources: dict[str, set[str]] = {}
+    aggregate_sites: dict[tuple[str, str], SourceSite] = {}
+    for left, right, node in assignments:
+        left_family = _aggregate_member_family(left)
+        right_family = _aggregate_member_family(right)
+        if left_family is None or right_family is None:
+            continue
+        aggregate_sources.setdefault(left_family, set()).add(right_family)
+        aggregate_sites[(left_family, right_family)] = SourceSite(
+            function.file.as_posix(),
+            node.start_line,
+            compact_ws(node.text),
+        )
+
+    local_assignments: dict[str, list[tuple[str, FrontendNode]]] = {}
+    for left, right, node in assignments:
+        if left in pointer_locals:
+            local_assignments.setdefault(left, []).append((right, node))
+
+    provenance: dict[str, tuple[str, SourceSite, SourceSite]] = {}
+    for local, values in local_assignments.items():
+        if len(values) != 1:
+            continue
+        right, node = values[0]
+        right_family = _aggregate_member_family(right)
+        if right_family is None:
+            continue
+        sources = aggregate_sources.get(right_family, set())
+        if len(sources) != 1:
+            continue
+        origin = next(iter(sources))
+        store_site = aggregate_sites[(right_family, origin)]
+        load_site = SourceSite(
+            function.file.as_posix(),
+            node.start_line,
+            compact_ws(node.text),
+        )
+        if store_site.line > load_site.line:
+            continue
+        provenance[local] = (origin, store_site, load_site)
+
+    bound: list[MetadataEffect] = []
+    next_index = 0
+    for effect in effects:
+        if effect.delta is not MetadataDelta.ADD or effect.key != "list_membership":
+            bound.append(effect)
+            continue
+        match = re.fullmatch(r"([A-Za-z_]\w*)->([A-Za-z_]\w*)", effect.value)
+        local = match.group(1) if match is not None else ""
+        member_field = match.group(2) if match is not None else ""
+        if local not in provenance:
+            expanded = _expanded_existential_member(effect.value, provenance, local_assignments)
+            if expanded is None:
+                bound.append(effect)
+                continue
+            local, member_field = expanded
+        if local not in provenance:
+            bound.append(effect)
+            continue
+        origin, store_site, load_site = provenance[local]
+        placeholder = f"__exists_member{next_index}__"
+        next_index += 1
+        relation = ExistentialMemberIdentity(
+            placeholder=placeholder,
+            origin_expression=origin,
+            destination_container=effect.root,
+            member_field=member_field,
+            binding_site=load_site,
+            source_identity=(
+                f"{store_site.expression} -> {load_site.expression} -> "
+                f"{effect.site.expression}"
+            ),
+        )
+        bound.append(
+            replace(
+                effect,
+                value=f"{placeholder}->{member_field}",
+                existential_member_identity=relation,
+            )
+        )
+    return tuple(bound)
+
+
+def _expanded_existential_member(
+    value: str,
+    provenance: dict[str, tuple[str, SourceSite, SourceSite]],
+    local_assignments: dict[str, list[tuple[str, FrontendNode]]],
+) -> tuple[str, str] | None:
+    """Match an alias-expanded aggregate member to one proven local load."""
+
+    matches: list[tuple[str, str]] = []
+    for local in provenance:
+        assignments = local_assignments.get(local, [])
+        if len(assignments) != 1:
+            continue
+        aggregate, _ = assignments[0]
+        prefix = compact_ws(aggregate).strip("() ")
+        candidate = compact_ws(value).strip("() ")
+        if not candidate.startswith(f"{prefix}->"):
+            continue
+        member_field = candidate[len(prefix) + 2 :]
+        if re.fullmatch(r"[A-Za-z_]\w*", member_field):
+            matches.append((local, member_field))
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _aggregate_member_family(expression: str) -> str | None:
+    value = compact_ws(expression).strip("() ")
+    if "[" not in value or not re.fullmatch(
+        r"[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*|\[[^\]]+\])+",
+        value,
+    ):
+        return None
+    return re.sub(r"\[[^\]]+\]", "[*]", value)
 
 
 def _exhaustive_container_cleanup_relations(

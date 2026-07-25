@@ -20,6 +20,30 @@ def _effect_by_expr(effects, expression: str):
     return next(effect for effect in effects if effect.site.expression == expression)
 
 
+def test_exact_transaction_cancel_survives_transient_context_filter(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+void cancel_scrub(struct xfs_scrub *sc)
+{
+    xfs_trans_cancel(sc->tp);
+    arbitrary_trans_cancel(sc->tp);
+}
+""",
+    )
+
+    effects = extract_metadata_effects(function)
+
+    assert len(effects) == 1
+    effect = effects[0]
+    assert (effect.root, effect.key, effect.delta, effect.evidence) == (
+        "sc->tp",
+        "xfs_trans_cancel",
+        MetadataDelta.CLOSE,
+        EffectEvidence.EXPLICIT_PRIMITIVE,
+    )
+
+
 def test_extracts_accounting_field_increment_and_decrement(tmp_path: Path):
     function = _function(
         tmp_path,
@@ -701,6 +725,53 @@ int work(struct fs_info *fs_info, struct root *root, struct inherit *inherit)
     if (btrfs_get_root_last_trans(root) == 1)
         return 0;
     return btrfs_qgroup_check_inherit(fs_info, inherit, sizeof(*inherit));
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_quota_accessors_are_not_guessed_as_mutations(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct xfs_mount *mp, struct xfs_dquot *dqp, int qtype)
+{
+    struct xfs_inode *quotip = xfs_quota_inode(mp, qtype);
+
+    if (!xfs_this_quota_on(dqp->q_mount, qtype))
+        return -ESRCH;
+    return quotip != 0;
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_translate_helper_does_not_match_transaction_substring(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct xfs_buftarg *btp, u64 offset, u64 len,
+         xfs_daddr_t *daddr, uint64_t *bblen)
+{
+    return xfs_dax_translate_range(btp, offset, len, daddr, bblen);
+}
+""",
+    )
+
+    assert extract_metadata_effects(function) == ()
+
+
+def test_recovery_inode_getter_is_not_guessed_as_metadata_add(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(struct xfs_mount *mp, xfs_ino_t ino, struct xfs_inode **ipp)
+{
+    return xlog_recover_iget(mp, ino, ipp);
 }
 """,
     )

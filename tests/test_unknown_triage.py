@@ -2,8 +2,14 @@ import json
 from pathlib import Path
 
 from src.unknown_triage import (
+    ERROR_PARTITION_SELECTION_UNPROVEN,
+    INDIRECT_TARGET_SET_UNPROVEN,
+    OWNER_BINDING_UNPROVEN,
+    RETURN_BINDING_UNPROVEN,
+    SUMMARY_BODY_UNAVAILABLE,
     build_unknown_triage,
     triage_to_markdown,
+    unknown_cause_proof_gap,
     unknown_cause_taxonomy,
     write_unknown_triage,
 )
@@ -60,6 +66,10 @@ def test_unknown_triage_ranks_causes_details_and_functions(tmp_path: Path):
         "missing_summary": 2,
         "structural": 1,
     }
+    assert triage["unknown_proof_gap_counts"] == {
+        OWNER_BINDING_UNPROVEN: 1,
+        SUMMARY_BODY_UNAVAILABLE: 2,
+    }
     categories = {
         item["category"]: item for item in triage["cause_categories"]
     }
@@ -113,6 +123,31 @@ def test_unknown_cause_taxonomy_labels_structural_and_missing_summary():
     )
 
 
+def test_unknown_proof_gap_refines_structural_and_summary_causes():
+    assert (
+        unknown_cause_proof_gap("helper: unbound_callee_local_identity")
+        == OWNER_BINDING_UNPROVEN
+    )
+    assert (
+        unknown_cause_proof_gap("helper: unresolved_identity: __return__")
+        == RETURN_BINDING_UNPROVEN
+    )
+    assert (
+        unknown_cause_proof_gap("helper: callee_failure_effect_order_unknown")
+        == ERROR_PARTITION_SELECTION_UNPROVEN
+    )
+    assert (
+        unknown_cause_proof_gap("helper: indirect_call: cb(arg)")
+        == INDIRECT_TARGET_SET_UNPROVEN
+    )
+    assert (
+        unknown_cause_proof_gap(
+            "unresolved metadata helper on error path: cleanup_metadata"
+        )
+        == SUMMARY_BODY_UNAVAILABLE
+    )
+
+
 def test_compare_runs_reports_taxonomy_resolution(tmp_path: Path):
     baseline = [
         _unknown_report(
@@ -145,3 +180,9 @@ def test_compare_runs_reports_taxonomy_resolution(tmp_path: Path):
     assert rows["unresolved_metadata_helper_on_error_path"]["taxonomy"] == (
         "missing_summary"
     )
+    proof_gaps = {
+        item["proof_gap"]: item
+        for item in matrix["unknown_proof_gap_resolution"]
+    }
+    assert proof_gaps[SUMMARY_BODY_UNAVAILABLE]["to_candidate"] == 1
+    assert proof_gaps[INDIRECT_TARGET_SET_UNPROVEN]["to_unknown"] == 1

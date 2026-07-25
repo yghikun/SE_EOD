@@ -178,3 +178,131 @@ int work(void)
     assert len(points) == 1
     assert points[0].error_edge.outcome_extension is True
     assert points[0].error_edge.exit_expression == "0"
+
+
+def test_detects_exact_negative_error_comparison(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    int ret = prepare_metadata();
+
+    if (ret == -EIO)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    points = find_failure_points(function)
+
+    assert len(points) == 1
+    assert points[0].result_symbol == "ret"
+    assert points[0].check_kind == "eq:-EIO"
+
+
+def test_detects_ptr_err_exact_comparison_on_pointer_result(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    struct page *page = get_page();
+
+    if (PTR_ERR(page) == -EIO)
+        return -EIO;
+    return 0;
+}
+""",
+    )
+
+    points = find_failure_points(function)
+
+    assert len(points) == 1
+    assert points[0].callee == "get_page"
+    assert points[0].result_symbol == "page"
+    assert points[0].check_kind == "eq:-EIO"
+
+
+def test_detects_constant_switch_error_case(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    int ret = prepare_metadata();
+
+    switch (ret) {
+    case -EIO:
+        return ret;
+    default:
+        return 0;
+    }
+}
+""",
+    )
+
+    points = find_failure_points(function)
+
+    assert len(points) == 1
+    assert points[0].callee == "prepare_metadata"
+    assert points[0].check_kind == "eq:-EIO"
+
+
+def test_exact_comparison_rejects_retry_path_that_can_rebind_result(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    int ret;
+
+retry:
+    ret = prepare_metadata();
+    if (ret == -ENOMEM)
+        goto retry;
+    return ret;
+}
+""",
+    )
+
+    assert find_failure_points(function) == ()
+
+
+def test_exact_comparison_rejects_normalized_error_value(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    int error;
+
+    error = reserve_metadata();
+    if (error == -ENOSPC)
+        error = 0;
+    return error;
+}
+""",
+    )
+
+    assert find_failure_points(function) == ()
+
+
+def test_exact_comparison_rejects_rewritten_special_error_return(tmp_path: Path):
+    function = _function(
+        tmp_path,
+        """
+int work(void)
+{
+    int ret;
+
+    ret = finish_metadata();
+    if (ret == -EINPROGRESS)
+        ret = RESULT_STILL_RUNNING;
+    return ret;
+}
+""",
+    )
+
+    assert find_failure_points(function) == ()

@@ -9,12 +9,24 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-UNKNOWN_TRIAGE_SCHEMA_VERSION = 1
+UNKNOWN_TRIAGE_SCHEMA_VERSION = 2
 
 
 STRUCTURAL_UNKNOWN = "structural"
 MISSING_SUMMARY_UNKNOWN = "missing_summary"
 OTHER_UNKNOWN = "other"
+
+OWNER_BINDING_UNPROVEN = "OWNER_BINDING_UNPROVEN"
+OUTPUT_BINDING_UNPROVEN = "OUTPUT_BINDING_UNPROVEN"
+RETURN_BINDING_UNPROVEN = "RETURN_BINDING_UNPROVEN"
+CALLSITE_ARGUMENT_BINDING_UNPROVEN = "CALLSITE_ARGUMENT_BINDING_UNPROVEN"
+ERROR_PARTITION_SELECTION_UNPROVEN = "ERROR_PARTITION_SELECTION_UNPROVEN"
+CONDITIONAL_CONTAINMENT_NOT_MUST = "CONDITIONAL_CONTAINMENT_NOT_MUST"
+TRANSACTION_OWNERSHIP_UNPROVEN = "TRANSACTION_OWNERSHIP_UNPROVEN"
+FATAL_SCOPE_UNPROVEN = "FATAL_SCOPE_UNPROVEN"
+SUMMARY_BODY_UNAVAILABLE = "SUMMARY_BODY_UNAVAILABLE"
+INDIRECT_TARGET_SET_UNPROVEN = "INDIRECT_TARGET_SET_UNPROVEN"
+OTHER_PROOF_GAP = "OTHER_PROOF_GAP"
 
 
 def unknown_cause_category(cause: str) -> str:
@@ -60,6 +72,55 @@ def unknown_cause_taxonomy(cause: str) -> str:
     return OTHER_UNKNOWN
 
 
+def unknown_cause_proof_gap(cause: str) -> str:
+    """Return the actionable semantic proof that is absent for one UNKNOWN."""
+
+    category = unknown_cause_category(cause)
+    text = cause.lower()
+    if category == "unbound_callee_local_identity":
+        return OWNER_BINDING_UNPROVEN
+    if category == "unresolved_identity":
+        if "__return__" in text or "return" in text:
+            return RETURN_BINDING_UNPROVEN
+        if "__output" in text or "out_param" in text:
+            return OUTPUT_BINDING_UNPROVEN
+        return CALLSITE_ARGUMENT_BINDING_UNPROVEN
+    if category in {
+        "unclassified_return_exit",
+        "callee_failure_effect_order_unknown",
+        "lifecycle_exit_partition_unproven",
+        "success_only_publication_not_proven_on_error",
+    }:
+        return ERROR_PARTITION_SELECTION_UNPROVEN
+    if "conditional" in text and (
+        "cancellation" in text
+        or "protection" in text
+        or "containment" in text
+        or "abort" in text
+    ):
+        return CONDITIONAL_CONTAINMENT_NOT_MUST
+    if "transaction" in text or "abort_transaction" in text:
+        return TRANSACTION_OWNERSHIP_UNPROVEN
+    if any(item in text for item in ("fatal", "shutdown", "checkpoint_stop")):
+        return FATAL_SCOPE_UNPROVEN
+    if category in {
+        "unresolved_metadata_helper_on_error_path",
+        "return_bound_unresolved_helper",
+        "cleanup_effect_scope_unproven",
+        "unresolved_metadata_helper",
+        "source_visible_helper_without_summary",
+        "callee_exit_partition_unproven",
+    }:
+        return SUMMARY_BODY_UNAVAILABLE
+    if category in {
+        "indirect_call",
+        "indirect_call_on_error_path",
+        "function_pointer_parameter_call",
+    }:
+        return INDIRECT_TARGET_SET_UNPROVEN
+    return OTHER_PROOF_GAP
+
+
 def unknown_taxonomy_counts(
     reports: Iterable[Any],
 ) -> dict[str, dict[str, int]]:
@@ -77,6 +138,15 @@ def unknown_taxonomy_counts(
     }
 
 
+def unknown_proof_gap_counts(reports: Iterable[Any]) -> dict[str, int]:
+    counts = Counter(
+        unknown_cause_proof_gap(cause)
+        for report in reports
+        for cause in _report_unknown_causes(report)
+    )
+    return dict(sorted(counts.items()))
+
+
 def build_unknown_triage(
     reports: Iterable[dict[str, Any]],
     *,
@@ -92,7 +162,9 @@ def build_unknown_triage(
     ]
     category_counts: Counter[str] = Counter()
     taxonomy_counts: Counter[str] = Counter()
+    proof_gap_counts: Counter[str] = Counter()
     detail_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    category_proof_gaps: dict[str, Counter[str]] = defaultdict(Counter)
     function_counts: dict[str, Counter[str]] = defaultdict(Counter)
     detail_examples: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(
         lambda: defaultdict(list)
@@ -106,12 +178,15 @@ def build_unknown_triage(
         for cause in _unknown_causes(report):
             category = unknown_cause_category(cause)
             taxonomy = unknown_cause_taxonomy(cause)
+            proof_gap = unknown_cause_proof_gap(cause)
             detail = _unknown_cause_detail(cause, category)
             example = _report_example(report, cause)
 
             category_counts[category] += 1
             taxonomy_counts[taxonomy] += 1
+            proof_gap_counts[proof_gap] += 1
             detail_counts[category][detail] += 1
+            category_proof_gaps[category][proof_gap] += 1
             function_counts[category][function] += 1
             _append_example(
                 detail_examples[category][detail], example, examples_per_item
@@ -125,6 +200,8 @@ def build_unknown_triage(
         categories.append(
             {
                 "category": category,
+                "proof_gap": _rank_counts(category_proof_gaps[category], limit=1)[0][0],
+                "proof_gap_counts": dict(sorted(category_proof_gaps[category].items())),
                 "count": count,
                 "top_details": [
                     {
@@ -156,6 +233,7 @@ def build_unknown_triage(
         "unknown_reports": len(unknown_reports),
         "unknown_cause_mentions": sum(category_counts.values()),
         "unknown_taxonomy_counts": dict(sorted(taxonomy_counts.items())),
+        "unknown_proof_gap_counts": dict(sorted(proof_gap_counts.items())),
         "cause_categories": categories,
     }
 
@@ -223,6 +301,8 @@ def triage_to_markdown(triage: dict[str, Any]) -> str:
             [
                 "",
                 f"## {category.get('category', 'unknown')} ({category.get('count', 0)})",
+                "",
+                f"Proof gap: `{category.get('proof_gap', OTHER_PROOF_GAP)}`",
                 "",
                 "### Top Details",
                 "",

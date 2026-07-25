@@ -16,9 +16,14 @@ from .effect_extractor import (
     write_only_output_parameters,
 )
 from .failure_points import FailurePoint, find_failure_points
-from .failure_domain_primitives import is_failure_domain_key
+from .failure_domain_primitives import (
+    covered_effects_for_action,
+    is_failure_domain_key,
+    transaction_cancel_owner_index,
+)
 from .frontend.model import BasicBlockIR, ControlFlowGraphIR, FrontendNode, FunctionIR
 from .function_summary import (
+    ErrorExitPartition,
     FunctionSummary,
     LifecycleEvent,
     LifecycleExit,
@@ -103,8 +108,12 @@ def slice_function_residuals(
     transient_effects = tuple(transient_effects_list)
     local_lifecycles = build_local_lifecycle_bindings(function, summaries)
     output_parameters = write_only_output_parameters(function)
-    known_error_path_effect_sites = _known_error_path_effect_sites(local_effects)
     call_apps = tuple(_summary_applications(function, cfg, summaries))
+    local_effects = _drop_summarized_name_inferred_call_effects(
+        local_effects,
+        call_apps,
+    )
+    known_error_path_effect_sites = _known_error_path_effect_sites(local_effects)
     direct_owner_teardowns = extract_owner_teardowns(function)
 
     slices: list[ResidualSlice] = []
@@ -178,10 +187,24 @@ def slice_function_residuals(
 
         for app in call_apps:
             is_failure_call = _is_failure_call_application(app, point)
+            selected_partition = (
+                _select_exact_error_partition(
+                    app.error_exit_partitions,
+                    point,
+                    exhaustive=app.error_partitions_exhaustive,
+                )
+                if is_failure_call
+                else None
+            )
+            failure_effects_complete = (
+                selected_partition.complete
+                if selected_partition is not None
+                else app.failure_effects_complete
+            )
             transfer_order_unknown = (
                 is_failure_call
                 and app.has_ownership_transfer
-                and not app.failure_effects_complete
+                and not failure_effects_complete
             )
             if (
                 is_failure_call
@@ -189,15 +212,57 @@ def slice_function_residuals(
                 and app.block_id in reaching_blocks
                 and app.site.line <= point.call_site.line
             ):
-                reaching_effects.extend(app.error_opens)
-                cancellations.extend(app.error_cancels)
-                protections.extend(app.error_protects)
-                if app.failure_unknown:
-                    unknown_causes.extend(app.failure_unknown_causes)
+                failure_opens = (
+                    _selected_partition_opens(selected_partition)
+                    if selected_partition is not None
+                    else app.error_opens
+                )
+                failure_cancels = (
+                    selected_partition.cancels
+                    if selected_partition is not None
+                    else app.error_cancels
+                )
+                failure_protects = (
+                    tuple(dict.fromkeys((
+                        *selected_partition.protects,
+                        *selected_partition.terminal_actions,
+                    )))
+                    if selected_partition is not None
+                    else app.error_protects
+                )
+                failure_unknown_causes = (
+                    tuple(dict.fromkeys((
+                        *(
+                            cause
+                            for cause in app.failure_unknown_causes
+                            if "unresolved_identity:" in cause
+                        ),
+                        *(
+                            (
+                                "selected_error_partition_residual_identity_unproven",
+                            )
+                            if _selected_partition_needs_identity_proof(
+                                selected_partition
+                            )
+                            else ()
+                        ),
+                        *(
+                            f"{app.function_name}: {cause}"
+                            for cause in selected_partition.unknown_causes
+                        ),
+                    )))
+                    if selected_partition is not None
+                    else app.failure_unknown_causes
+                )
+                reaching_effects.extend(failure_opens)
+                cancellations.extend(failure_cancels)
+                protections.extend(failure_protects)
+                if failure_unknown_causes:
+                    unknown_causes.extend(failure_unknown_causes)
                     unknown_influences.extend(
                         _influences_for_app(
                             app,
-                            app.failure_unknown_causes,
+                            failure_unknown_causes,
                             phase="failure_call",
                         )
                     )
@@ -295,6 +360,7 @@ def slice_function_residuals(
         residuals = tuple(
             effect for effect in residuals if effect not in owner_closed_effects
         )
+        containment_candidates = tuple(residuals)
         certain_residuals = tuple(
             effect
             for effect in residuals
@@ -320,12 +386,27 @@ def slice_function_residuals(
             tuple(reaching_effects),
             tuple(cancellations),
             tuple(protections),
+            containment_candidates,
         )
+        containment_covered = {
+            effect
+            for proof in containment_proofs
+            for effect in proof.covered_effects
+        }
+        if (
+            residuals
+            and point.check_kind.startswith(("eq:", "ne:"))
+            and not all(effect in containment_covered for effect in residuals)
+        ):
+            unknown_causes = sorted({
+                *unknown_causes,
+                "exact_return_code_residual_identity_unproven",
+            })
         state = (
             ResidualState.UNKNOWN
             if unknown_causes
             else ResidualState.CONTAINED
-            if residuals and containment_proofs
+            if residuals and all(effect in containment_covered for effect in residuals)
             else ResidualState.EXPOSED
             if residuals
             else ResidualState.PROTECTED
@@ -413,6 +494,8 @@ class _SummaryApp:
     has_ownership_transfer: bool
     lifecycle_facts: tuple[LifecycleFact, ...]
     owner_teardowns: tuple[OwnerTeardown, ...]
+    error_exit_partitions: tuple[ErrorExitPartition, ...]
+    error_partitions_exhaustive: bool
 
     @property
     def cancels_before_failure(self) -> tuple[MetadataEffect, ...]:
@@ -494,6 +577,15 @@ def _summary_applications(
         error_opens = _drop_unexposed_fresh_error_effects(error_opens)
         error_cancels = _drop_unexposed_fresh_error_effects(error_cancels)
         error_protects = _drop_unexposed_fresh_error_effects(error_protects)
+        error_exit_partitions = tuple(
+            _partition_at_application_site(
+                partition,
+                function,
+                site,
+                app.summary.function_name,
+            )
+            for partition in app.error_exit_partitions
+        )
         opens = _effects_at_application_site(opens, site, app.summary.function_name)
         cancels = _effects_at_application_site(cancels, site, app.summary.function_name)
         protects = _effects_at_application_site(
@@ -523,6 +615,17 @@ def _summary_applications(
             error_opens = ()
             error_cancels = ()
             error_protects = ()
+            error_exit_partitions = tuple(
+                replace(
+                    partition,
+                    opens=(),
+                    cancels=(),
+                    protects=(),
+                    residuals=(),
+                    terminal_actions=(),
+                )
+                for partition in error_exit_partitions
+            )
         yield _SummaryApp(
             function_name=app.summary.function_name,
             block_id=block.id if block is not None else None,
@@ -555,7 +658,31 @@ def _summary_applications(
                 )
                 for teardown in app.owner_teardowns
             ),
+            error_exit_partitions=error_exit_partitions,
+            error_partitions_exhaustive=app.error_partitions_exhaustive,
         )
+
+
+def _drop_summarized_name_inferred_call_effects(
+    local_effects: tuple[_LocatedEffect, ...],
+    call_apps: tuple[_SummaryApp, ...],
+) -> tuple[_LocatedEffect, ...]:
+    summarized_sites = {
+        (app.site.line, compact_ws(app.site.expression))
+        for app in call_apps
+    }
+    return tuple(
+        item
+        for item in local_effects
+        if not (
+            item.effect.evidence is EffectEvidence.NAME_INFERRED
+            and (
+                item.effect.site.line,
+                compact_ws(item.effect.site.expression),
+            )
+            in summarized_sites
+        )
+    )
 
 
 def _is_failure_call_application(app: _SummaryApp, point: FailurePoint) -> bool:
@@ -563,6 +690,160 @@ def _is_failure_call_application(app: _SummaryApp, point: FailurePoint) -> bool:
         app.site.line == point.call_site.line
         and compact_ws(app.site.expression) == compact_ws(point.call_site.expression)
     )
+
+
+def _partition_at_application_site(
+    partition: ErrorExitPartition,
+    function: FunctionIR,
+    site: SourceSite,
+    callee: str,
+) -> ErrorExitPartition:
+    def project(effects: tuple[MetadataEffect, ...]) -> tuple[MetadataEffect, ...]:
+        in_scope = _in_scope_summary_effects(function, effects)
+        in_scope = _drop_unexposed_fresh_error_effects(in_scope)
+        return _effects_at_application_site(in_scope, site, callee)
+
+    return replace(
+        partition,
+        opens=project(partition.opens),
+        cancels=project(partition.cancels),
+        protects=project(partition.protects),
+        residuals=project(partition.residuals),
+        terminal_actions=project(partition.terminal_actions),
+    )
+
+
+def _select_exact_error_partition(
+    partitions: tuple[ErrorExitPartition, ...],
+    point: FailurePoint,
+    *,
+    exhaustive: bool,
+) -> ErrorExitPartition | None:
+    """Select one source-proven callee exit, or preserve aggregate MUST semantics."""
+
+    if not exhaustive or not partitions:
+        return None
+    classifications = tuple(
+        _partition_matches_failure_check(partition, point)
+        for partition in partitions
+    )
+    if any(value is None for value in classifications):
+        return None
+    matches = tuple(
+        partition
+        for partition, matches in zip(partitions, classifications)
+        if matches
+    )
+    if len(matches) != 1 or not matches[0].complete:
+        return None
+    return matches[0]
+
+
+def _partition_matches_failure_check(
+    partition: ErrorExitPartition,
+    point: FailurePoint,
+) -> bool | None:
+    constraint = partition.return_constraint
+    if constraint in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
+        if point.check_kind not in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
+            return None
+        return point.error_edge.kind != "false"
+    if constraint == "NEGATIVE":
+        value = "-1"
+    elif constraint.startswith("EXACT:"):
+        value = constraint[6:]
+    else:
+        value = _partition_return_value(partition.return_expression)
+    if value is None:
+        return None
+    check_kind = point.check_kind
+    predicate_true = point.error_edge.kind != "false"
+    if check_kind == "nonzero":
+        result = _constant_not_equal(value, "0")
+    elif check_kind.startswith("eq:"):
+        result = _constant_equal(value, check_kind[3:])
+    elif check_kind.startswith("ne:"):
+        equal = _constant_equal(value, check_kind[3:])
+        result = None if equal is None else not equal
+    elif check_kind in {"<0", "<=0", ">0", ">=0"}:
+        result = _constant_order_test(value, check_kind)
+    elif check_kind in {"0<", "0<=", "0>", "0>="}:
+        reverse = {"0<": ">0", "0<=": ">=0", "0>": "<0", "0>=": "<=0"}
+        result = _constant_order_test(value, reverse[check_kind])
+    else:
+        return None
+    if result is None:
+        return None
+    return result if predicate_true else not result
+
+
+def _selected_partition_opens(
+    partition: ErrorExitPartition,
+) -> tuple[MetadataEffect, ...]:
+    """Expose selected branch-local opens only when branch evidence can resolve them."""
+
+    return partition.opens
+
+
+def _selected_partition_needs_identity_proof(
+    partition: ErrorExitPartition,
+) -> bool:
+    return bool(
+        partition.opens
+        and not partition.cancels
+        and not partition.protects
+        and not partition.terminal_actions
+    )
+
+
+def _partition_return_value(expression: str) -> str | None:
+    value = compact_ws(expression).strip()
+    while value.startswith("(") and value.endswith(")"):
+        value = value[1:-1].strip()
+    name, args = call_name_and_args(value)
+    if name in {"ERR_PTR", "PTR_ERR"} and len(args) == 1:
+        value = compact_ws(args[0]).strip("() ")
+    if value in {"NULL", "0L", "0UL"}:
+        return "0"
+    return value if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", value) else None
+
+
+def _constant_equal(left: str, right: str) -> bool | None:
+    left_value = _partition_return_value(left)
+    right_value = _partition_return_value(right)
+    if left_value is None or right_value is None:
+        return None
+    return left_value == right_value
+
+
+def _constant_not_equal(left: str, right: str) -> bool | None:
+    equal = _constant_equal(left, right)
+    return None if equal is None else not equal
+
+
+def _constant_order_test(value: str, operation: str) -> bool | None:
+    numeric = _signed_constant_value(value)
+    if numeric is None:
+        return None
+    return {
+        "<0": numeric < 0,
+        "<=0": numeric <= 0,
+        ">0": numeric > 0,
+        ">=0": numeric >= 0,
+    }[operation]
+
+
+def _signed_constant_value(value: str) -> int | None:
+    normalized = _partition_return_value(value)
+    if normalized is None:
+        return None
+    if re.fullmatch(r"-\d+", normalized):
+        return int(normalized)
+    if normalized.isdigit():
+        return int(normalized)
+    if re.fullmatch(r"-[A-Z_]\w*", normalized):
+        return -1
+    return None
 
 
 def _drop_unexposed_fresh_error_effects(
@@ -784,6 +1065,16 @@ def _conditional_effect_can_affect(
     for effect in conditional_effects:
         if effects_cancel(residual, effect) or effect_protected_by(residual, effect):
             return True
+        if is_failure_domain_key(effect.key):
+            try:
+                kind = FailureDomainKind(effect.value)
+            except ValueError:
+                kind = None
+            if (
+                kind is FailureDomainKind.TRANSACTION_ABORT
+                and covered_effects_for_action(effect, (residual,))
+            ):
+                return True
         if not _is_transaction_abort(effect):
             continue
         transaction = _leading_symbol(effect.root)
@@ -972,7 +1263,7 @@ def _aborted_transaction_protections(
     )
     protections: list[MetadataEffect] = []
     for abort in aborts:
-        transaction = _leading_symbol(abort.root)
+        transaction = _exact_transaction_identity(abort.root)
         if not transaction:
             continue
         for effect in reaching_effects:
@@ -998,14 +1289,14 @@ def _aborted_transaction_protections(
 
 def _is_transaction_abort(effect: MetadataEffect) -> bool:
     name, _ = call_name_and_args(compact_ws(effect.site.expression))
-    lowered = name.lower()
     return effect.delta is MetadataDelta.CLOSE and (
-        "abort" in lowered or "cancel" in lowered
-    ) and ("trans" in lowered or "transaction" in lowered)
+        transaction_cancel_owner_index(name) is not None
+        or transaction_cancel_owner_index(effect.key) is not None
+    )
 
 
 def _effect_mentions_transaction(effect: MetadataEffect, transaction: str) -> bool:
-    token = rf"\b{re.escape(transaction)}\b"
+    token = rf"(?<![A-Za-z0-9_]){re.escape(transaction)}(?![A-Za-z0-9_])"
     return any(
         re.search(token, value) is not None
         for value in (effect.root, effect.key, effect.value)
@@ -1025,6 +1316,7 @@ def _explicit_failure_domain_proofs(
     reaching_effects: tuple[MetadataEffect, ...],
     cancellations: tuple[MetadataEffect, ...],
     protections: tuple[MetadataEffect, ...],
+    residuals: tuple[MetadataEffect, ...],
 ) -> tuple[FailureDomainProof, ...]:
     proofs = []
     for protection in protections:
@@ -1033,6 +1325,17 @@ def _explicit_failure_domain_proofs(
         try:
             kind = FailureDomainKind(protection.value)
         except ValueError:
+            continue
+        coverage_candidates = residuals
+        if kind is FailureDomainKind.TRANSACTION_ABORT:
+            coverage_candidates = tuple(
+                dict.fromkeys((*residuals, *reaching_effects))
+            )
+        covered_effects = covered_effects_for_action(
+            protection,
+            coverage_candidates,
+        )
+        if not covered_effects:
             continue
         proofs.append(
             FailureDomainProof(
@@ -1043,17 +1346,25 @@ def _explicit_failure_domain_proofs(
                     f"{protection.site.expression} is an explicit terminal "
                     "failure-domain primitive on the must-execute error path"
                 ),
+                covered_effects=covered_effects,
             )
         )
     for cancellation in cancellations:
         name, _ = call_name_and_args(compact_ws(cancellation.site.expression))
-        if name != "xfs_trans_cancel":
-            continue
-        transaction = _leading_symbol(cancellation.root)
-        if not transaction or not any(
-            _effect_mentions_transaction(effect, transaction)
-            for effect in reaching_effects
+        if (
+            transaction_cancel_owner_index(name) is None
+            and transaction_cancel_owner_index(cancellation.key) is None
         ):
+            continue
+        transaction = _exact_transaction_identity(cancellation.root)
+        if not transaction:
+            continue
+        covered = _transaction_cancel_covered_residuals(
+            transaction,
+            tuple(dict.fromkeys((*reaching_effects, *protections))),
+            residuals,
+        )
+        if not covered:
             continue
         proofs.append(
             FailureDomainProof(
@@ -1064,9 +1375,52 @@ def _explicit_failure_domain_proofs(
                     "xfs_trans_cancel() observes transaction-owned dirty state; "
                     "its source contract forces shutdown when that state cannot be restored"
                 ),
+                covered_effects=covered,
             )
         )
     return tuple(dict.fromkeys(proofs))
+
+
+def _transaction_cancel_covered_residuals(
+    transaction: str,
+    reaching_effects: tuple[MetadataEffect, ...],
+    residuals: tuple[MetadataEffect, ...],
+) -> tuple[MetadataEffect, ...]:
+    directly_bound = tuple(
+        effect for effect in residuals if _effect_mentions_transaction(effect, transaction)
+    )
+    relation_bound = tuple(
+        effect
+        for effect in residuals
+        if any(
+            _transaction_relation_covers_effect(relation_effect, transaction, effect)
+            for relation_effect in reaching_effects
+        )
+    )
+    return tuple(dict.fromkeys((*directly_bound, *relation_bound)))
+
+
+def _transaction_relation_covers_effect(
+    relation_effect: MetadataEffect,
+    transaction: str,
+    effect: MetadataEffect,
+) -> bool:
+    relation = relation_effect.transaction_ownership
+    if relation is None:
+        return False
+    if compact_ws(relation.transaction_root) != transaction:
+        return False
+    owned = compact_ws(relation.owned_root)
+    root = compact_ws(effect.root)
+    return root == owned or root.startswith((f"{owned}->", f"{owned}."))
+
+
+def _exact_transaction_identity(text: str) -> str:
+    value = compact_ws(text).strip("&*() ")
+    return value if re.fullmatch(
+        r"[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*",
+        value,
+    ) else ""
 
 
 def _effect_targets_unpublished_fresh_local(
