@@ -49,6 +49,8 @@ class ResidualAnalysisResult:
             "source_version": self.source_version,
             "reports": [report.to_dict() for report in self.reports],
             "candidate_count": len(self.candidates),
+            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
+            "function_boundary_residual_count": len(self.candidates),
             "unknown_count": sum(
                 report.kind is ReportKind.METADATA_RESIDUAL_UNKNOWN
                 for report in self.reports

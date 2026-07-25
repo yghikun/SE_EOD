@@ -26,6 +26,7 @@ from .function_summary import (
     LocalLifecycleBinding,
     apply_same_file_summary,
     build_local_lifecycle_bindings,
+    extract_owner_teardowns,
 )
 from .metadata_residual import (
     EffectEvidence,
@@ -33,6 +34,7 @@ from .metadata_residual import (
     FailureDomainProof,
     MetadataDelta,
     MetadataEffect,
+    OwnerTeardown,
     ResidualSlice,
     ResidualState,
     SourceSite,
@@ -103,6 +105,7 @@ def slice_function_residuals(
     output_parameters = write_only_output_parameters(function)
     known_error_path_effect_sites = _known_error_path_effect_sites(local_effects)
     call_apps = tuple(_summary_applications(function, cfg, summaries))
+    direct_owner_teardowns = extract_owner_teardowns(function)
 
     slices: list[ResidualSlice] = []
     all_unknown_causes: list[str] = []
@@ -118,6 +121,13 @@ def slice_function_residuals(
         reaching_effects: list[MetadataEffect] = []
         cancellations: list[MetadataEffect] = []
         protections: list[MetadataEffect] = []
+        must_owner_teardowns = [
+            teardown
+            for teardown in direct_owner_teardowns
+            if (block_id := _block_for_site(cfg, teardown.teardown_site)) is not None
+            and block_id in must_error_blocks
+            and teardown.teardown_site.line >= point.check_site.line
+        ]
         unknown_causes: list[str] = []
         error_path_unknown_causes: list[str] = []
         unknown_influences: list[_UnknownInfluence] = []
@@ -204,6 +214,7 @@ def slice_function_residuals(
                 if app.block_id in must_error_blocks:
                     cancellations.extend(app.cancels)
                     protections.extend(app.protects)
+                    must_owner_teardowns.extend(app.owner_teardowns)
                 elif app.cancels or app.protects:
                     cause = (
                         "conditional helper cancellation/protection not proven: "
@@ -270,6 +281,20 @@ def slice_function_residuals(
             )
             unknown_causes.extend(error_path_unknown_causes)
         residuals = normalized.residuals
+        owner_teardown_proofs = _owner_teardown_proofs(
+            tuple(residuals),
+            tuple(must_owner_teardowns),
+            point,
+            local_lifecycles,
+        )
+        owner_closed_effects = {
+            effect
+            for proof in owner_teardown_proofs
+            for effect in proof.closed_effects
+        }
+        residuals = tuple(
+            effect for effect in residuals if effect not in owner_closed_effects
+        )
         certain_residuals = tuple(
             effect
             for effect in residuals
@@ -320,6 +345,7 @@ def slice_function_residuals(
                 rationale=_rationale(state, residuals, unknown_causes),
                 out_of_scope_effects=tuple(out_of_scope_effects),
                 containment_proofs=containment_proofs,
+                owner_teardown_proofs=owner_teardown_proofs,
             )
         )
         all_unknown_causes.extend(unknown_causes)
@@ -386,6 +412,7 @@ class _SummaryApp:
     may_fail: bool
     has_ownership_transfer: bool
     lifecycle_facts: tuple[LifecycleFact, ...]
+    owner_teardowns: tuple[OwnerTeardown, ...]
 
     @property
     def cancels_before_failure(self) -> tuple[MetadataEffect, ...]:
@@ -461,30 +488,9 @@ def _summary_applications(
         opens = _in_scope_summary_effects(function, app.opens)
         cancels = _in_scope_summary_effects(function, app.cancels)
         protects = _in_scope_summary_effects(function, app.protects)
-        error_opens = _in_scope_summary_effects(
-            function,
-            tuple(
-                effect
-                for effect in app.exit_effects.error_must
-                if effect.delta in _OPEN_DELTAS
-            ),
-        )
-        error_cancels = _in_scope_summary_effects(
-            function,
-            tuple(
-                effect
-                for effect in app.exit_effects.error_must
-                if effect.delta in _CANCEL_DELTAS
-            ),
-        )
-        error_protects = _in_scope_summary_effects(
-            function,
-            tuple(
-                effect
-                for effect in app.exit_effects.error_must
-                if effect.delta in _PROTECT_DELTAS
-            ),
-        )
+        error_opens = _in_scope_summary_effects(function, app.error_opens)
+        error_cancels = _in_scope_summary_effects(function, app.error_cancels)
+        error_protects = _in_scope_summary_effects(function, app.error_protects)
         error_opens = _drop_unexposed_fresh_error_effects(error_opens)
         error_cancels = _drop_unexposed_fresh_error_effects(error_cancels)
         error_protects = _drop_unexposed_fresh_error_effects(error_protects)
@@ -537,6 +543,18 @@ def _summary_applications(
                 app.summary.has_ownership_transfer and transfer_is_caller_owned
             ),
             lifecycle_facts=app.lifecycle_facts,
+            owner_teardowns=tuple(
+                replace(
+                    teardown,
+                    teardown_site=site,
+                    via_function=app.summary.function_name,
+                    evidence=(
+                        f"{site.expression} via {app.summary.function_name}: "
+                        f"{teardown.evidence}"
+                    ),
+                )
+                for teardown in app.owner_teardowns
+            ),
         )
 
 
@@ -1063,7 +1081,89 @@ def _effect_targets_unpublished_fresh_local(
     )
     if binding is None or effect.site.line < binding.allocation_line:
         return False
+    if any(line <= point.call_site.line for line in binding.rebind_lines):
+        return False
     return not any(line <= point.call_site.line for line in binding.publication_lines)
+
+
+def _owner_teardown_proofs(
+    residuals: tuple[MetadataEffect, ...],
+    teardowns: tuple[OwnerTeardown, ...],
+    point: FailurePoint,
+    lifecycles: tuple[LocalLifecycleBinding, ...],
+) -> tuple[OwnerTeardown, ...]:
+    proofs: list[OwnerTeardown] = []
+    already_closed: set[MetadataEffect] = set()
+    for teardown in teardowns:
+        owner = _exact_owner_symbol(teardown.owner)
+        if not owner:
+            continue
+        binding = next(
+            (item for item in lifecycles if item.local_identity == owner),
+            None,
+        )
+        if binding is None or binding.allocation_line > point.call_site.line:
+            continue
+        if any(line <= teardown.teardown_site.line for line in binding.publication_lines):
+            continue
+        if any(line <= teardown.teardown_site.line for line in binding.escape_lines):
+            continue
+        if any(line <= teardown.teardown_site.line for line in binding.rebind_lines):
+            continue
+        closed = tuple(
+            effect
+            for effect in residuals
+            if effect not in already_closed
+            and _teardown_covers_embedded_effect(owner, effect)
+        )
+        if not closed:
+            continue
+        already_closed.update(closed)
+        proofs.append(
+            replace(
+                teardown,
+                owner=owner,
+                allocation_site=binding.allocation_site,
+                closed_effects=closed,
+                evidence=(
+                    f"{teardown.evidence}; owner is source-proven fresh, remains "
+                    "unpublished, unescaped, and never rebound, and teardown must execute before "
+                    "the verified error exit"
+                ),
+            )
+        )
+    return tuple(proofs)
+
+
+def _teardown_covers_embedded_effect(
+    owner: str,
+    effect: MetadataEffect,
+) -> bool:
+    root = compact_ws(effect.root)
+    if not (
+        root == owner
+        or root.startswith(f"{owner}->")
+        or root.startswith(f"{owner}.")
+    ):
+        return False
+    if effect.key in {"list_membership", "tree_membership"} or effect.key.startswith(
+        ("xarray:", "radix_tree:")
+    ):
+        return False
+    return (
+        effect.evidence is EffectEvidence.DIRECT_SOURCE
+        or (
+            effect.evidence is EffectEvidence.EXPLICIT_PRIMITIVE
+            and effect.key.startswith("bit:")
+        )
+    )
+
+
+def _exact_owner_symbol(text: str) -> str:
+    value = compact_ws(text).strip()
+    while match := re.fullmatch(r"\(\s*([A-Za-z_]\w*)\s*\)", value):
+        value = match.group(1)
+    return value if re.fullmatch(r"[A-Za-z_]\w*", value) else ""
 
 
 def _known_error_path_effect_sites(

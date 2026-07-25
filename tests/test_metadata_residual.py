@@ -5,6 +5,7 @@ from src.metadata_residual import (
     MetadataPlane,
     PerCpuSlotRelation,
     ReportKind,
+    ResidualClassification,
     ResidualSlice,
     ResidualState,
     SourceSite,
@@ -74,7 +75,9 @@ def test_exposed_residual_becomes_candidate_report():
     )
 
     assert report.kind is ReportKind.UNCLOSED_METADATA_RESIDUAL
+    assert report.classification is ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL
     assert report.confidence == "candidate"
+    assert report.to_dict()["classification"] == "FUNCTION_BOUNDARY_RESIDUAL"
     assert report.to_dict()["residual_slice"]["residuals"][0]["plane"] == "RECOVERY"
 
 
@@ -104,6 +107,7 @@ def test_unknown_residual_stays_review_only():
     )
 
     assert report.kind is ReportKind.METADATA_RESIDUAL_UNKNOWN
+    assert report.classification is ResidualClassification.METADATA_RESIDUAL_UNKNOWN
     assert report.confidence == "review"
 
 
@@ -125,6 +129,7 @@ def test_unknown_without_residual_is_not_a_finding():
     )
 
     assert report.kind is ReportKind.OUT_OF_SCOPE
+    assert report.classification is ResidualClassification.OUT_OF_SCOPE
 
 
 def test_name_inferred_residual_is_review_not_candidate():
@@ -154,4 +159,8 @@ def test_name_inferred_residual_is_review_not_candidate():
     )
 
     assert report.kind is ReportKind.METADATA_RESIDUAL_REVIEW
+    assert (
+        report.classification
+        is ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL_REVIEW
+    )
     assert report.confidence == "review"

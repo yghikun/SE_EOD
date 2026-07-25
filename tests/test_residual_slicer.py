@@ -680,6 +680,364 @@ out:
     assert cleanup.container_iteration_cleanup.container_root == "fs_devices->devices"
 
 
+def test_whole_owner_teardown_closes_fresh_unpublished_summary_effect(tmp_path: Path):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(void)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    kfree(obj);
+    return ret;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+    assert [effect.key for effect in summaries["init_obj"].opens] == ["inode_flags"]
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert residual_slice.residuals == ()
+    assert len(residual_slice.owner_teardown_proofs) == 1
+    proof = residual_slice.owner_teardown_proofs[0]
+    assert proof.owner == "obj"
+    assert proof.deallocator == "kfree"
+    assert proof.allocation_site is not None
+    assert [effect.key for effect in proof.closed_effects] == ["inode_flags"]
+
+
+def test_source_visible_teardown_wrapper_closes_same_fresh_owner(tmp_path: Path):
+    init_obj, destroy_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+static void destroy_obj(struct fs_object *obj)
+{
+    kfree(obj);
+}
+
+int work(void)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret)
+        goto out;
+    return 0;
+out:
+    destroy_obj(obj);
+    return ret;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, destroy_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.CLOSED
+    assert len(residual_slice.owner_teardown_proofs) == 1
+    proof = residual_slice.owner_teardown_proofs[0]
+    assert proof.owner == "obj"
+    assert proof.via_function == "destroy_obj"
+    assert proof.deallocator == "kfree"
+
+
+def test_conditional_owner_teardown_cannot_close_effect(tmp_path: Path):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(bool cleanup)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret) {
+        if (cleanup)
+            kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert [effect.key for effect in residual_slice.residuals] == ["inode_flags"]
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_published_owner_teardown_cannot_close_embedded_effect(tmp_path: Path):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(struct fs_holder *holder)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    holder->inode = obj;
+    ret = fail_metadata();
+    if (ret) {
+        kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert any(effect.key == "inode_flags" for effect in residual_slice.residuals)
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_escaped_owner_teardown_cannot_close_embedded_effect(tmp_path: Path):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(void)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    opaque_consumer(obj);
+    ret = fail_metadata();
+    if (ret) {
+        kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.residuals
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_owner_teardown_does_not_close_container_membership(tmp_path: Path):
+    link_external, work = _functions(
+        tmp_path,
+        """
+static void link_external(
+    struct fs_object *obj,
+    struct external_object *external)
+{
+    list_add(&external->link, &obj->children);
+}
+
+int work(struct external_object *external)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    link_external(obj, external);
+    ret = fail_metadata();
+    if (ret) {
+        kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((link_external, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert any(effect.key == "list_membership" for effect in residual_slice.residuals)
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_teardown_of_nonfresh_parameter_cannot_close_effect(tmp_path: Path):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(struct fs_object *obj)
+{
+    int ret;
+
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret) {
+        kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert [effect.key for effect in residual_slice.residuals] == ["inode_flags"]
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_rebound_fresh_local_cannot_use_original_allocation_as_owner_proof(
+    tmp_path: Path,
+):
+    init_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+int work(void)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    obj = lookup_existing_object();
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret) {
+        kfree(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert residual_slice.residuals
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_teardown_wrapper_on_owner_field_cannot_destroy_parent_owner(tmp_path: Path):
+    init_holder, destroy_obj, work = _functions(
+        tmp_path,
+        """
+static void init_holder(struct fs_holder *holder)
+{
+    holder->inode_flags = 1;
+}
+
+static void destroy_obj(struct fs_object *obj)
+{
+    kfree(obj);
+}
+
+int work(void)
+{
+    struct fs_holder *holder = kzalloc(sizeof(*holder), GFP_KERNEL);
+    int ret;
+
+    init_holder(holder);
+    ret = fail_metadata();
+    if (ret) {
+        destroy_obj(holder->child);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_holder, destroy_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert [effect.key for effect in residual_slice.residuals] == ["inode_flags"]
+    assert residual_slice.owner_teardown_proofs == ()
+
+
+def test_destroy_named_noop_helper_is_not_owner_teardown(tmp_path: Path):
+    init_obj, destroy_obj, work = _functions(
+        tmp_path,
+        """
+static void init_obj(struct fs_object *obj)
+{
+    obj->inode_flags = 1;
+}
+
+static void destroy_obj(struct fs_object *obj)
+{
+}
+
+int work(void)
+{
+    struct fs_object *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+    int ret;
+
+    init_obj(obj);
+    ret = fail_metadata();
+    if (ret) {
+        destroy_obj(obj);
+        return ret;
+    }
+    return 0;
+}
+""",
+    )
+    summaries = build_same_file_summaries((init_obj, destroy_obj, work))
+
+    residual_slice = slice_function_residuals(work, summaries=summaries).slices[0]
+
+    assert [effect.key for effect in residual_slice.residuals] == ["inode_flags"]
+    assert residual_slice.owner_teardown_proofs == ()
+
+
 def test_summary_effect_on_caller_stack_output_is_out_of_scope(tmp_path: Path):
     helper, work = _functions(
         tmp_path,

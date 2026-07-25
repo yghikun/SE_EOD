@@ -9,7 +9,7 @@ from typing import Iterable
 from .metadata_residual import MetadataResidualReport, ReportKind, SourceSite
 
 
-RESIDUAL_WITNESS_SCHEMA_VERSION = 2
+RESIDUAL_WITNESS_SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,7 @@ def report_to_markdown(report: ResidualWitnessReport) -> str:
         "",
         f"- Source version: `{report.source_version}`",
         f"- Confidence: `{data.confidence}`",
+        f"- Classification: `{data.classification.value}`",
         f"- Scope: {data.scope_rationale}",
         f"- Failure point: {_site_text(residual_slice.failure_site)}",
         f"- Error exit: {_site_text(residual_slice.exit_site)}",
@@ -72,6 +73,12 @@ def report_to_markdown(report: ResidualWitnessReport) -> str:
             f"{_site_text(proof.site)}"
             + (f" in `{proof.via_function}`" if proof.via_function else "")
             + (f"; {proof.evidence}" if proof.evidence else "")
+        )
+    for teardown in residual_slice.owner_teardown_proofs:
+        lines.append(
+            f"- Owner teardown: `{teardown.state.value}` owner "
+            f"`{teardown.owner}` via {_site_text(teardown.teardown_site)}; "
+            f"closes {len(teardown.closed_effects)} embedded effect(s)"
         )
     if data.mdr_evidence:
         lines.append(f"- MDR evidence: {data.mdr_evidence}")

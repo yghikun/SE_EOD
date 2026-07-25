@@ -14,7 +14,7 @@ from typing import Any, Iterable
 from .frontend.tree_sitter_frontend import TreeSitterFrontend
 from .function_summary import FunctionSummary, build_project_summaries
 from .frontend.model import FunctionIR
-from .metadata_residual import ReportKind
+from .metadata_residual import ReportKind, ResidualClassification
 from .metadata_scope import DEFAULT_METADATA_SCOPE, MetadataScope
 from .residual_analyzer import ResidualAnalysisResult, analyze_functions
 from .residual_report import (
@@ -29,7 +29,7 @@ from .transient_provenance import (
 )
 
 
-EVALUATION_SCHEMA_VERSION = 2
+EVALUATION_SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -89,6 +89,9 @@ class EvaluationResult:
             self.reports
         )
         candidate_count = kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value]
+        classification_counts = Counter(
+            report.report.classification.value for report in self.reports
+        )
         contained_count = kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value]
         unknown_count = kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value]
         out_of_scope_count = kind_counts[ReportKind.OUT_OF_SCOPE.value]
@@ -104,6 +107,13 @@ class EvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": candidate_count,
+            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
+            "function_boundary_residual_count": classification_counts[
+                ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL.value
+            ],
+            "live_metadata_residual_count": classification_counts[
+                ResidualClassification.LIVE_METADATA_RESIDUAL.value
+            ],
             "contained_count": contained_count,
             "unknown_count": unknown_count,
             "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
@@ -111,6 +121,9 @@ class EvaluationResult:
             **quality,
             "out_of_scope_count": out_of_scope_count,
             "report_kind_counts": dict(sorted(kind_counts.items())),
+            "residual_classification_counts": dict(
+                sorted(classification_counts.items())
+            ),
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
@@ -181,6 +194,9 @@ class BatchEvaluationResult:
         unknown_taxonomy_category_counts = _unknown_taxonomy_category_counts(
             self.reports
         )
+        classification_counts = Counter(
+            report.report.classification.value for report in self.reports
+        )
         return {
             "schema_version": EVALUATION_SCHEMA_VERSION,
             "source_path": self.source_path,
@@ -196,6 +212,13 @@ class BatchEvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value],
+            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
+            "function_boundary_residual_count": classification_counts[
+                ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL.value
+            ],
+            "live_metadata_residual_count": classification_counts[
+                ResidualClassification.LIVE_METADATA_RESIDUAL.value
+            ],
             "contained_count": kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value],
             "unknown_count": kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value],
             "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
@@ -203,6 +226,9 @@ class BatchEvaluationResult:
             **quality,
             "out_of_scope_count": kind_counts[ReportKind.OUT_OF_SCOPE.value],
             "report_kind_counts": dict(sorted(kind_counts.items())),
+            "residual_classification_counts": dict(
+                sorted(classification_counts.items())
+            ),
             "residual_state_counts": dict(sorted(state_counts.items())),
             "unknown_cause_counts": dict(sorted(unknown_cause_counts.items())),
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),

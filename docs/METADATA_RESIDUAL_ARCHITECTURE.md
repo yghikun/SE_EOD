@@ -7,9 +7,11 @@ cannot escape its failure domain. `CONTAINED_METADATA_RESIDUAL` retains the
 residual and a source witness for teardown, transaction abort, forced shutdown,
 or checkpoint stop; it is not counted as a Candidate. Terminal primitives are
 accepted only when they execute on the current function's must-error path.
-They are not propagated through ordinary function summaries because the
-current summary contract cannot yet bind a terminal action to one exact error
-return.
+Function summaries retain an `ErrorExitPartition` for each classified error
+return so a terminal action stays correlated with that return. A terminal
+action is projected to an aggregate caller failure only when every complete
+error partition is terminal; branch-specific actions remain partition evidence
+until the caller slicer can analyze alternatives independently.
 
 ## Overview
 
@@ -282,11 +284,31 @@ UNKNOWN
 
 These are dataflow labels, not the method's main novelty and not a full EFSM.
 
-## Report Kinds
+## Semantic Classifications
+
+The canonical result field is `classification`:
+
+```text
+FUNCTION_BOUNDARY_RESIDUAL
+LIVE_METADATA_RESIDUAL
+CONTAINED_METADATA_RESIDUAL
+FUNCTION_BOUNDARY_RESIDUAL_REVIEW
+METADATA_RESIDUAL_UNKNOWN
+CLOSED
+OUT_OF_SCOPE
+```
+
+`FUNCTION_BOUNDARY_RESIDUAL` means only that a source-supported non-empty
+`R_f` reaches this function's error exit. Owner liveness and normal failure-
+domain continuation have not yet been proved, so it must not be presented as
+a confirmed or likely bug. M35a emits no `LIVE_METADATA_RESIDUAL`; that state
+is reserved for the owner-liveness layer.
+
+## Legacy Report Kinds
 
 ```text
 UNCLOSED_METADATA_RESIDUAL
-  R_f is non-empty and reaches an error exit.
+  Compatibility alias for FUNCTION_BOUNDARY_RESIDUAL.
 
 METADATA_RESIDUAL_UNKNOWN
   R_f is non-empty, but aliasing, indirect calls, async handoff, or helper
@@ -305,6 +327,24 @@ OUT_OF_SCOPE
   The effect is ordinary resource cleanup or source-proven automatic operation
   state rather than persistent filesystem metadata.
 ```
+
+`candidate_count` is likewise a compatibility alias for
+`function_boundary_residual_count`. New evaluation output includes both fields
+and a `residual_classification_counts` map.
+
+## Manual Review Oracle
+
+The 539-row M32d source review is materialized as
+`outputs/candidate_review_oracle.jsonl`. Every entry has
+`oracle_granularity=REPORT`, a source-stable failure/exit location, and sorted
+structured residual effect identities. The manual verdict remains report-level;
+mixed-effect reports are not falsely split into effect-level human truth.
+
+`scripts/audit_candidate_review_oracle.py` matches those records against full
+evaluation slices. It reports terminal migrations, retained live residuals,
+recognized containment, Candidate-to-UNKNOWN movement, and unmatched effect
+witnesses. A prior audit can be supplied to distinguish pre-existing safety
+issues from regressions introduced by the current milestone.
 
 An UNKNOWN slice with empty `R_f` is retained as a diagnostic only and is not
 emitted as a finding.

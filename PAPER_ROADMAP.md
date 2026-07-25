@@ -1,6 +1,6 @@
 # Paper Roadmap: Failure-Path Filesystem Metadata Residual Analysis
 
-Updated: 2026-07-24
+Updated: 2026-07-25
 
 ## Thesis
 
@@ -46,7 +46,7 @@ T_f = transaction, journal, orphan, recovery, or deferred protection effects
 R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-Report a candidate only when:
+Report a function-boundary residual only when:
 
 ```text
 R_f != empty
@@ -54,6 +54,11 @@ and R_f affects STRUCTURAL, ACCOUNTING, or RECOVERY metadata
 and the path reaches an error exit
 and the residual is not UNKNOWN
 ```
+
+This is not yet a bug classification. A high-priority live residual additionally
+requires proof that its owner survives and the failure domain permits ordinary
+continuation. Until those layers exist, `FUNCTION_BOUNDARY_RESIDUAL` is the
+sound claim and `Candidate` is only a legacy implementation label.
 
 ## Research Questions
 
@@ -121,7 +126,7 @@ Report:
 residual-expressible curated findings
 out-of-scope filtering decisions
 EXPOSED / PROTECTED / CLOSED / UNKNOWN distribution
-candidate precision after manual review
+function-boundary residual precision after manual review
 configuration size compared with MOCC-SE
 ```
 

@@ -120,6 +120,49 @@ int work(struct xfs_mount *mp, struct inode *inode, long nr)
     assert analyses["work"].slicing_result.slices[0].state is ResidualState.EXPOSED
 
 
+def test_callee_terminal_action_propagates_only_when_every_error_exit_is_terminal(
+    tmp_path: Path,
+):
+    functions = _functions(
+        tmp_path,
+        """
+static int stop_on_failure(struct f2fs_sb_info *sbi, int checkpoint_error)
+{
+    if (checkpoint_error) {
+        f2fs_stop_checkpoint(sbi, true);
+        return -EIO;
+    }
+    f2fs_stop_checkpoint(sbi, false);
+    return -ENOSPC;
+}
+
+int work(
+    struct f2fs_sb_info *sbi,
+    struct inode *inode,
+    long nr,
+    int checkpoint_error)
+{
+    int ret;
+
+    inode->i_blocks += nr;
+    ret = stop_on_failure(sbi, checkpoint_error);
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    analyses = {item.function: item for item in analyze_functions(functions)}
+    residual_slice = analyses["work"].slicing_result.slices[0]
+
+    assert residual_slice.state is ResidualState.CONTAINED
+    assert any(
+        proof.kind is FailureDomainKind.CHECKPOINT_STOP
+        for proof in residual_slice.containment_proofs
+    )
+
+
 def test_dirty_xfs_transaction_cancel_contains_unrestorable_peer_state(tmp_path: Path):
     function = _functions(
         tmp_path,

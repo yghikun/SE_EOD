@@ -11,10 +11,20 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.candidate_review_oracle import (
+    build_oracle_record,
+    write_jsonl as write_oracle,
+)
 
 
 REVIEW_DATE = "2026-07-24"
@@ -573,8 +583,43 @@ def main() -> int:
     write_csv(output / "candidate_review_m32d.csv", rows)
     write_markdown(output / "candidate_review_m32d.md", rows)
 
+    oracle_records = []
+    batch = repo / "outputs" / "residual-evaluation-batch"
+    rows_by_fs = {
+        fs: [row for row in rows if row["filesystem"] == fs] for fs in EXPECTED_COUNTS
+    }
+    for fs in EXPECTED_COUNTS:
+        report_path = batch / RUN_DIRS[fs] / "reports" / "all_reports.json"
+        reports = json.loads(report_path.read_text(encoding="utf-8"))
+        candidates = [
+            report for report in reports if report.get("confidence") == "candidate"
+        ]
+        if len(rows_by_fs[fs]) != len(candidates):
+            raise RuntimeError(
+                f"{fs}: review/report mismatch: {len(rows_by_fs[fs])} != "
+                f"{len(candidates)}"
+            )
+        oracle_records.extend(
+            build_oracle_record(
+                row,
+                report,
+                baseline_run=RUN_DIRS[fs],
+            )
+            for row, report in zip(rows_by_fs[fs], candidates)
+        )
+    write_oracle(output / "candidate_review_oracle.jsonl", oracle_records)
+
     counts = Counter(row["source_verdict"] for row in rows)
-    print(json.dumps({"rows": len(rows), "source_verdict": counts}, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "rows": len(rows),
+                "oracle_records": len(oracle_records),
+                "source_verdict": counts,
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 

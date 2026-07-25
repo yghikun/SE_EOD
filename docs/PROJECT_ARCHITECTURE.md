@@ -68,5 +68,5 @@ source file
   -> backward slice for E_f
   -> forward error-path slice for C_f and T_f
   -> residual normalization
-  -> error-exit candidate report
+  -> error-exit function-boundary residual report
 ```

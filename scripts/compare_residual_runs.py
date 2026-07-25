@@ -243,6 +243,11 @@ def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iter
     residual_keys = {_effect_key(effect) for effect in residuals}
     cancellations = tuple(residual_slice.get("cancellations") or ())
     protections = tuple(residual_slice.get("protections") or ())
+    teardown_closed_keys = {
+        _effect_key(effect)
+        for proof in residual_slice.get("owner_teardown_proofs", ())
+        for effect in (proof.get("closed_effects") or ())
+    }
     out_of_scope_keys = {_effect_key(effect) for effect in out_of_scope}
     for effect in effects:
         if _effect_key(effect) in out_of_scope_keys:
@@ -256,6 +261,7 @@ def _witnesses_from_slice(function: str, residual_slice: dict[str, Any]) -> Iter
                 slice_classification=slice_classification,
                 slice_kind=slice_kind,
                 slice_causes=_slice_unknown_causes(residual_slice),
+                teardown_closed_keys=teardown_closed_keys,
             )
         if classification is None:
             continue
@@ -300,7 +306,10 @@ def _effect_classification(
     slice_classification: str,
     slice_kind: str,
     slice_causes: list[str],
+    teardown_closed_keys: set[str],
 ) -> tuple[str | None, str, list[str]]:
+    if _effect_key(effect) in teardown_closed_keys:
+        return "CLOSED", "OUT_OF_SCOPE", []
     if _effect_key(effect) in residual_keys:
         return slice_classification, slice_kind, slice_causes
     if any(_cancellation_covers(effect, candidate) for candidate in cancellations):

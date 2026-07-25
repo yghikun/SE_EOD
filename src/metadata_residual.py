@@ -47,11 +47,33 @@ class ResidualState(str, Enum):
 
 
 class ReportKind(str, Enum):
+    """Legacy serialization kind retained for M34 tool compatibility."""
+
     UNCLOSED_METADATA_RESIDUAL = "UNCLOSED_METADATA_RESIDUAL"
     CONTAINED_METADATA_RESIDUAL = "CONTAINED_METADATA_RESIDUAL"
     METADATA_RESIDUAL_UNKNOWN = "METADATA_RESIDUAL_UNKNOWN"
     METADATA_RESIDUAL_REVIEW = "METADATA_RESIDUAL_REVIEW"
     OUT_OF_SCOPE = "OUT_OF_SCOPE"
+
+
+class ResidualClassification(str, Enum):
+    """Semantic result classification, independent of legacy Candidate naming."""
+
+    FUNCTION_BOUNDARY_RESIDUAL = "FUNCTION_BOUNDARY_RESIDUAL"
+    LIVE_METADATA_RESIDUAL = "LIVE_METADATA_RESIDUAL"
+    CONTAINED_METADATA_RESIDUAL = "CONTAINED_METADATA_RESIDUAL"
+    FUNCTION_BOUNDARY_RESIDUAL_REVIEW = "FUNCTION_BOUNDARY_RESIDUAL_REVIEW"
+    METADATA_RESIDUAL_UNKNOWN = "METADATA_RESIDUAL_UNKNOWN"
+    CLOSED = "CLOSED"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
+
+
+class OwnerLivenessState(str, Enum):
+    OWNER_LIVE = "OWNER_LIVE"
+    OWNER_DESTROYED = "OWNER_DESTROYED"
+    OWNER_UNPUBLISHED_AND_DISCARDED = "OWNER_UNPUBLISHED_AND_DISCARDED"
+    OWNER_ESCAPED = "OWNER_ESCAPED"
+    OWNER_LIFETIME_UNKNOWN = "OWNER_LIFETIME_UNKNOWN"
 
 
 class FailureDomainKind(str, Enum):
@@ -208,6 +230,34 @@ class MetadataEffect:
 
 
 @dataclass(frozen=True)
+class OwnerTeardown:
+    """Source proof that a deallocator destroys one complete in-memory owner."""
+
+    owner: str
+    teardown_site: SourceSite
+    deallocator: str
+    via_function: str = ""
+    allocation_site: SourceSite | None = None
+    state: OwnerLivenessState = OwnerLivenessState.OWNER_DESTROYED
+    closed_effects: tuple[MetadataEffect, ...] = ()
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "owner": self.owner,
+            "teardown_site": self.teardown_site.to_dict(),
+            "deallocator": self.deallocator,
+            "via_function": self.via_function,
+            "allocation_site": (
+                self.allocation_site.to_dict() if self.allocation_site else None
+            ),
+            "state": self.state.value,
+            "closed_effects": [effect.to_dict() for effect in self.closed_effects],
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
 class ResidualSlice:
     failure_site: SourceSite
     reaching_effects: tuple[MetadataEffect, ...]
@@ -219,6 +269,7 @@ class ResidualSlice:
     rationale: str = ""
     out_of_scope_effects: tuple[MetadataEffect, ...] = ()
     containment_proofs: tuple[FailureDomainProof, ...] = ()
+    owner_teardown_proofs: tuple[OwnerTeardown, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -236,12 +287,16 @@ class ResidualSlice:
             "containment_proofs": [
                 item.to_dict() for item in self.containment_proofs
             ],
+            "owner_teardown_proofs": [
+                item.to_dict() for item in self.owner_teardown_proofs
+            ],
         }
 
 
 @dataclass(frozen=True)
 class MetadataResidualReport:
     kind: ReportKind
+    classification: ResidualClassification
     function: str
     residual_slice: ResidualSlice
     scope_rationale: str
@@ -251,6 +306,7 @@ class MetadataResidualReport:
     def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind.value,
+            "classification": self.classification.value,
             "function": self.function,
             "residual_slice": self.residual_slice.to_dict(),
             "scope_rationale": self.scope_rationale,
@@ -284,9 +340,31 @@ def residual_report(
     confidence = "candidate" if kind is ReportKind.UNCLOSED_METADATA_RESIDUAL else "review"
     return MetadataResidualReport(
         kind=kind,
+        classification=_residual_classification(residual_slice, kind),
         function=function,
         residual_slice=residual_slice,
         scope_rationale=scope_rationale,
         mdr_evidence=mdr_evidence,
         confidence=confidence,
     )
+
+
+def _residual_classification(
+    residual_slice: ResidualSlice,
+    kind: ReportKind,
+) -> ResidualClassification:
+    if kind is ReportKind.UNCLOSED_METADATA_RESIDUAL:
+        # Owner liveness is intentionally not inferred until M35b.  EXPOSED
+        # proves only that R_f crosses this function's error boundary.
+        return ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL
+    if kind is ReportKind.CONTAINED_METADATA_RESIDUAL:
+        return ResidualClassification.CONTAINED_METADATA_RESIDUAL
+    if kind is ReportKind.METADATA_RESIDUAL_UNKNOWN:
+        return ResidualClassification.METADATA_RESIDUAL_UNKNOWN
+    if kind is ReportKind.METADATA_RESIDUAL_REVIEW:
+        return ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL_REVIEW
+    if residual_slice.out_of_scope_effects:
+        return ResidualClassification.OUT_OF_SCOPE
+    if residual_slice.state in {ResidualState.CLOSED, ResidualState.PROTECTED}:
+        return ResidualClassification.CLOSED
+    return ResidualClassification.OUT_OF_SCOPE

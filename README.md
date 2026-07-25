@@ -26,13 +26,16 @@ R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
 If `R_f` is non-empty at an error exit, and the residual is structural,
-accounting, or recovery-visible filesystem metadata, the analyzer reports a
-candidate only when the effect has direct source or explicit primitive
-evidence:
+accounting, or recovery-visible filesystem metadata, direct source or explicit
+primitive evidence establishes only:
 
 ```text
-UNCLOSED_METADATA_RESIDUAL
+FUNCTION_BOUNDARY_RESIDUAL
 ```
+
+It does not by itself prove that the owner remains live or that the filesystem
+can continue normally. `UNCLOSED_METADATA_RESIDUAL` and `candidate_count` are
+retained as legacy serialization aliases while downstream tooling migrates.
 
 Name-only helper inference is emitted separately as
 `METADATA_RESIDUAL_REVIEW`. `METADATA_RESIDUAL_UNKNOWN` requires a non-empty
@@ -89,6 +92,7 @@ src/parser.py                 C parser fallback helpers
 src/function_extractor.py     function extraction helpers for source files
 src/metadata_scope.py         versioned filesystem metadata scope contract
 src/metadata_residual.py      filesystem metadata residual data model
+src/candidate_review_oracle.py report-level manual oracle and transition audit
 configs/metadata_scope/       metadata boundary and confirmed-bug labels
 outputs/confirmed_bugs.md     curated evidence ledger
 docs/                         current architecture and paper notes

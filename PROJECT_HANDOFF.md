@@ -1,6 +1,6 @@
 # Failure-Path Filesystem Metadata Residual Analysis Handoff
 
-Updated: 2026-07-24
+Updated: 2026-07-25
 
 This is the current implementation handoff for the reset project. The active
 research object is:
@@ -27,7 +27,7 @@ T_f = effects explicitly protected or transferred to transaction, journal,
 R_f = Normalize(E_f (+) C_f) - T_f
 ```
 
-Report `UNCLOSED_METADATA_RESIDUAL` only when:
+Report `FUNCTION_BOUNDARY_RESIDUAL` only when:
 
 ```text
 R_f is non-empty
@@ -39,6 +39,14 @@ and the result is not UNKNOWN
 If object identity, helper semantics, async handoff, return classification, or
 transaction ownership cannot be proven from source, keep the report as
 `METADATA_RESIDUAL_UNKNOWN`. Do not guess safe and do not guess bug.
+
+`FUNCTION_BOUNDARY_RESIDUAL` is not a bug verdict. It proves only that `R_f`
+crosses the current function's error boundary. Owner liveness and normal
+failure-domain continuation require later semantic layers.
+
+`UNCLOSED_METADATA_RESIDUAL`, `confidence=candidate`, and `candidate_count`
+remain serialized as M34 compatibility aliases. New consumers must use the
+`classification` field and `function_boundary_residual_count`.
 
 An UNKNOWN slice is emitted as a finding only when `R_f` is non-empty. Missing
 helper or identity semantics with an empty residual remain in diagnostic
@@ -120,6 +128,7 @@ scripts/evaluate_residuals_batch.py
 scripts/summarize_candidates.py
 scripts/summarize_unknowns.py
 scripts/compare_residual_runs.py
+scripts/audit_candidate_review_oracle.py
 scripts/download_linux_fs.py
 scripts/fetch_kernel_source_file.py
 ```
@@ -132,6 +141,7 @@ PAPER_ROADMAP.md
 docs/METADATA_RESIDUAL_ARCHITECTURE.md
 docs/PROJECT_ARCHITECTURE.md
 outputs/confirmed_bugs.md
+outputs/candidate_review_oracle.jsonl
 outputs/btrfs_tool_findings_pending_review_2026-07-23.md
 outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md
 ```
@@ -157,7 +167,7 @@ Current unit-test status:
 
 ```text
 python -m pytest -q -p no:cacheprovider
-222 passed
+239 passed
 ```
 
 Runtime dependencies include `z3-solver>=4.13,<5`. If Z3 is unavailable or an
@@ -243,6 +253,22 @@ METADATA_RESIDUAL_REVIEW
 OUT_OF_SCOPE
 ```
 
+Canonical semantic classifications (M35a):
+
+```text
+FUNCTION_BOUNDARY_RESIDUAL
+LIVE_METADATA_RESIDUAL
+CONTAINED_METADATA_RESIDUAL
+FUNCTION_BOUNDARY_RESIDUAL_REVIEW
+METADATA_RESIDUAL_UNKNOWN
+CLOSED
+OUT_OF_SCOPE
+```
+
+M35a intentionally emits zero `LIVE_METADATA_RESIDUAL` reports. That label
+requires owner-liveness and failure-domain continuation proofs that are not yet
+implemented.
+
 Effect evidence levels:
 
 ```text
@@ -285,6 +311,8 @@ ownership_transfer_roots
 lifecycle_facts
 exposure_facts
 cleanup_footprints
+owner_teardowns
+escaping_parameters
 exit_effects
 unresolved_calls
 unknown_causes
@@ -1244,3 +1272,264 @@ summary must map each failure return to its own opens, cancellations, terminal
 action, and failed-owner destruction. Without that relation, btrfs abort and
 F2FS checkpoint-stop proofs cannot be propagated safely. Do not add more fatal
 primitive names or function-family suppressions before this contract exists.
+
+## 15. M34a Exact Error-Exit Partition Contract (2026-07-25)
+
+M34a implements the data contract required by the M33 TOC constraint without
+changing the aggregate report projection.
+
+```text
+ErrorExitPartition:
+  exit_site
+  return_expression
+  opens / cancels / protects / residuals
+  terminal_actions
+  failed_owner_destructions
+  interprocedural path
+  complete / unknown_causes
+```
+
+Each classified source error return gets its own partition. Only effects that
+dominate that exact return enter its automatic open/cancel/protect set. Direct
+callee error returns split a caller partition instead of merging their terminal
+actions. A prior visible call's `success_must` effects are retained in a later
+failure partition, which captures the abstract shape:
+
+```text
+helper A succeeds and mutates metadata
+  -> helper B fails
+  -> A's effect remains correlated with B's error return
+```
+
+The aggregate `error_opens/error_cancels/error_protects` projection remains the
+existing all-error `MUST` projection. A terminal action is added to that
+projection only when every complete error partition has a terminal action.
+This makes all-terminal wrappers propagatable while preserving the M33 guard:
+one fatal branch cannot contain an ordinary error return from the same callee.
+
+Rejected experiment:
+
+```text
+Union every per-exit MAY/residual open into the aggregate caller slice.
+```
+
+On Btrfs this changed Candidate 235 -> 281, created 213 new Candidate effect
+witnesses, and produced one UNMATCHED baseline witness. The cause was loss of
+partition-local cleanup and feasibility correlation. The experiment was
+reverted. Do not project a union of partition residuals into the current
+single-state caller slice.
+
+M33f -> M34a conservative full Linux v6.14 result:
+
+| Filesystem | Candidate | Contained | Residual UNKNOWN | Review | Witnesses | New Candidate | UNMATCHED |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Btrfs | 235 | 0 | 152 | 92 | 2346 | 0 | 0 |
+| ext4 | 80 | 0 | 117 | 166 | 1330 | 0 | 0 |
+| XFS | 184 | 9 | 146 | 188 | 2065 | 0 | 0 |
+| F2FS | 38 | 0 | 55 | 36 | 634 | 0 | 0 |
+
+All four runs keep `zero_residual_finding_count = 0`. Unit tests: 225 passed.
+
+The real Linux v6.14 #16 audit is still not exact. `create_chunk()` adds
+`dev->post_commit_list` to the parameter-bound
+`trans->transaction->dev_update_list`, but `dev` is a loop local derived from
+`devices_info[i].dev`. The current summary drops that ADD because the member
+identity is unbound before it reaches the new partition contract. Therefore
+M34a must not be described as full `post_commit_list` recall.
+
+The next TOC constraint is the earliest remaining blocker in that chain:
+source-proven existential member identity for an exact parameter-bound
+container. It must preserve a call-site-scoped opaque member through summaries
+without pretending that it equals the failed new device. After that evidence
+exists, the caller slicer can consume error alternatives independently rather
+than unioning them. Keep P1, P3, #7, #16-#18 and the M33 XFS containment
+witnesses visible throughout this work.
+
+## 16. M35a Output Semantics and Manual Oracle (2026-07-25)
+
+M35a fixes the measurement contract before adding more analysis power.
+
+First-principles distinction:
+
+```text
+non-empty R_f reaches a function error exit
+  != residual owner is still live
+  != filesystem can continue normally
+  != bug
+```
+
+The canonical report field is now `classification`. An EXPOSED residual with
+direct source or explicit primitive evidence is classified as
+`FUNCTION_BOUNDARY_RESIDUAL`. The legacy `UNCLOSED_METADATA_RESIDUAL` kind,
+`confidence=candidate`, and `candidate_count` remain for compatibility.
+Evaluation schema 3 adds:
+
+```text
+function_boundary_residual_count
+live_metadata_residual_count
+residual_classification_counts
+candidate_count_legacy_alias_of
+```
+
+The M32d manual review is now an executable 539-record oracle:
+
+```text
+outputs/candidate_review_oracle.jsonl
+src/candidate_review_oracle.py
+scripts/audit_candidate_review_oracle.py
+```
+
+Each record is explicitly `oracle_granularity=REPORT` and contains a stable
+failure/exit location plus sorted structured residual effect identities. The
+manual verdict is not projected onto individual effects in mixed reports.
+The audit reads full `evaluation.json` slices so missing reports/effects remain
+`UNMATCHED` rather than being credited as fixes. It also distinguishes
+pre-existing safety issues from new milestone regressions when given a prior
+audit.
+
+Oracle final-state targets:
+
+| Expected state | Reports |
+|---|---:|
+| OUT_OF_SCOPE | 417 |
+| CLOSED | 6 |
+| CONTAINED_METADATA_RESIDUAL | 106 |
+| LIVE_METADATA_RESIDUAL | 6 |
+| METADATA_RESIDUAL_UNKNOWN | 4 |
+
+M35a full Linux v6.14 result:
+
+| Filesystem | Function-boundary residual | Contained | UNKNOWN | Review | Witnesses | New legacy Candidate | UNMATCHED |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Btrfs | 235 | 0 | 152 | 92 | 2346 | 0 | 0 |
+| ext4 | 80 | 0 | 117 | 166 | 1330 | 0 | 0 |
+| XFS | 184 | 9 | 146 | 188 | 2065 | 0 | 0 |
+| F2FS | 38 | 0 | 55 | 36 | 634 | 0 | 0 |
+
+All four runs have schema 3, `candidate_count ==
+function_boundary_residual_count`, `live_metadata_residual_count = 0`, and
+`zero_residual_finding_count = 0`. Unit tests: 229 passed.
+
+The M34a -> M35a oracle gate reports:
+
+```text
+539 / 539 reviewed report locations matched
+0 reviewed effect witnesses unmatched
+6 / 6 manual live or likely residuals remain visible
+0 new safety regressions
+```
+
+One pre-existing M32d -> M34a safety issue is now visible rather than silent:
+`XFS-186` in `xfs_trans_alloc` moved from Candidate to UNKNOWN because
+`xfs_trans_cancel` retains `unbound_callee_local_identity`. M35a did not create
+that transition: M34a -> M35a is identity-preserving. Do not count UNKNOWN as
+a fix, and do not suppress this record by function name.
+
+The next TOC constraint is M35b owner liveness and whole-owner teardown. The
+manual review has 312 `PRIVATE_OR_CLEANED_STATE` reports and 69
+`FAILED_OBJECT_TEARDOWN` reports; this 381-report cluster is the largest
+precision constraint. Implement source-proven owner destruction/publication
+semantics before M35c failure-domain containment, M35d partition consumption,
+M35e relational member identity, or M35f demand-driven helper/indirect-call
+work. The real #16 exact-recall limitation remains unchanged.
+
+## 17. M35b Owner Liveness and Whole-Owner Teardown (2026-07-25)
+
+M35b adds a source-auditable proof for the only owner-liveness state that can
+close an effect without M35c failure-domain reasoning:
+
+```text
+field residual exists
+  != owner is still live
+  != effect remains observable
+
+source-proven OWNER_DESTROYED on every feasible error exit
+  -> owner-embedded effect may be CLOSED
+```
+
+The implementation records `OwnerTeardown` witnesses in the residual slice and
+serializes the owner, allocation site, teardown site, exact deallocator,
+source-visible wrapper, closed effects, and evidence. Directly recognized
+primitives are deliberately limited to:
+
+```text
+kfree(arg0)
+kvfree(arg0)
+vfree(arg0)
+free_percpu(arg0)
+kmem_cache_free(cache, arg1)
+```
+
+A teardown closes an effect only when all of the following are source-proven:
+
+```text
+the owner came from a fresh allocation
+the deallocator argument is the exact same bare local identity
+the local identity was not rebound after allocation
+the owner was not published before teardown
+the owner was not passed to a possibly escaping call before teardown
+the teardown must execute on the selected error path
+the effect is a direct/nested field of that owner
+the effect has DIRECT_SOURCE evidence, or is an explicit bit primitive
+```
+
+Source-visible wrappers propagate the same proof only when the inner exact
+primitive or another proven wrapper dominates every wrapper exit. Helper names
+containing `free`, `destroy`, `release`, or `cleanup` provide no evidence.
+Instantiated expressions such as `holder->child`, `&owner`, and `*slot` are not
+collapsed to the leading variable, because doing so would enlarge owner
+identity and could create a false CLOSED result.
+
+Whole-owner teardown does not automatically close:
+
+```text
+list/tree/xarray/radix-tree membership
+state published into an external owner
+shared or persistent state
+name-inferred helper effects
+effects on a non-fresh parameter owner
+effects whose owner escaped or was rebound
+```
+
+M35b full Linux v6.14 result:
+
+| Filesystem | Boundary M35a -> M35b | Contained | UNKNOWN | Review | Teardown-proof slices | Fully CLOSED slices |
+|---|---:|---:|---:|---:|---:|---:|
+| Btrfs | 235 -> 233 | 0 | 152 | 92 | 4 | 2 |
+| ext4 | 80 -> 80 | 0 | 117 | 166 | 0 | 0 |
+| XFS | 184 -> 182 | 9 | 146 | 188 | 2 | 2 |
+| F2FS | 38 -> 38 | 0 | 55 | 36 | 0 | 0 |
+
+The six proof slices close 24 prior effect witnesses: 20 in Btrfs and 4 in XFS.
+Two Btrfs slices remain EXPOSED because teardown closes only the fresh owner's
+embedded fields while other residual effects remain. The four fully closed
+reports are `BTRFS-071`, `BTRFS-072`, `XFS-069`, and `XFS-070` in the manual
+oracle.
+
+M35a -> M35b oracle and comparator gates:
+
+```text
+539 / 539 reviewed report locations matched
+0 reviewed effect witnesses unmatched
+4 manual false-positive reports moved to CLOSED
+6 / 6 manual live or likely residuals remain visible
+0 new safety regressions
+0 new Candidate witnesses
+0 lost known witnesses
+all four runs: zero_residual_finding_count = 0
+unit tests: 239 passed
+```
+
+The pre-existing `XFS-186` Candidate-to-UNKNOWN transition remains the only
+safety issue and is unchanged by M35b. P1, P3, #7, #16-#18,
+`btrfs_create_uuid_tree`, ext4 `make_indexed_dir`, and the M33 XFS containment
+witness remain visible. The real #16 `post_commit_list` limitation is still not
+exact recall.
+
+M35b intentionally does not emit `LIVE_METADATA_RESIDUAL`. Proving that an
+owner survives teardown is insufficient to prove normal filesystem
+continuation; that requires M35c failure-domain semantics. The next TOC
+constraint is therefore M35c transaction abort, fatal shutdown, mount-failure
+teardown, and recovery-abort containment. Do not broaden the deallocator set or
+infer destruction from helper names to reduce the remaining 418 pending manual
+false positives.

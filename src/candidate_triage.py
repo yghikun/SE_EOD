@@ -10,7 +10,7 @@ from typing import Any
 from .unknown_triage import load_reports
 
 
-CANDIDATE_TRIAGE_SCHEMA_VERSION = 1
+CANDIDATE_TRIAGE_SCHEMA_VERSION = 2
 
 
 def build_candidate_triage(
@@ -24,7 +24,11 @@ def build_candidate_triage(
     candidates = [
         report
         for report in reports
-        if report.get("kind") == "UNCLOSED_METADATA_RESIDUAL"
+        if report.get("classification") == "FUNCTION_BOUNDARY_RESIDUAL"
+        or (
+            "classification" not in report
+            and report.get("kind") == "UNCLOSED_METADATA_RESIDUAL"
+        )
     ]
     function_counts: Counter[str] = Counter()
     plane_delta_counts: Counter[str] = Counter()
@@ -62,6 +66,8 @@ def build_candidate_triage(
     return {
         "schema_version": CANDIDATE_TRIAGE_SCHEMA_VERSION,
         "candidate_reports": len(candidates),
+        "candidate_reports_legacy_alias_of": "function_boundary_residual_reports",
+        "function_boundary_residual_reports": len(candidates),
         "residual_effects": residual_effects,
         "top_functions": [
             {
@@ -125,9 +131,10 @@ def write_candidate_triage(
 
 def triage_to_markdown(triage: dict[str, Any]) -> str:
     lines = [
-        "# Filesystem Metadata Residual Candidate Triage",
+        "# Function-Boundary Metadata Residual Triage",
         "",
-        f"- Candidate reports: `{triage.get('candidate_reports', 0)}`",
+        "- Function-boundary residual reports: "
+        f"`{triage.get('function_boundary_residual_reports', triage.get('candidate_reports', 0))}`",
         f"- Residual effects: `{triage.get('residual_effects', 0)}`",
     ]
     source_reports = triage.get("source_reports")

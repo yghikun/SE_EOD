@@ -58,6 +58,7 @@ def test_candidate_triage_ranks_functions_and_residual_identities(tmp_path: Path
     triage = build_candidate_triage(reports, top_n=2, examples_per_item=1)
 
     assert triage["candidate_reports"] == 3
+    assert triage["function_boundary_residual_reports"] == 3
     assert triage["residual_effects"] == 3
     assert triage["top_functions"][0]["function"] == "work"
     assert triage["top_functions"][0]["count"] == 2
@@ -67,7 +68,7 @@ def test_candidate_triage_ranks_functions_and_residual_identities(tmp_path: Path
     assert triage["top_plane_deltas"][0]["plane_delta"] == "ACCOUNTING INC"
 
     markdown = triage_to_markdown(triage)
-    assert "Filesystem Metadata Residual Candidate Triage" in markdown
+    assert "Function-Boundary Metadata Residual Triage" in markdown
     assert "inode.i_blocks" in markdown
     assert "work @ fs/btrfs/example.c:10" in markdown
 

@@ -64,6 +64,11 @@ int work(struct inode *inode, long nr)
     assert result.summary == summary
     assert summary["functions_analyzed"] == 2
     assert summary["candidate_count"] == 1
+    assert summary["function_boundary_residual_count"] == 1
+    assert summary["live_metadata_residual_count"] == 0
+    assert summary["candidate_count_legacy_alias_of"] == (
+        "function_boundary_residual_count"
+    )
     assert summary["review_count"] == 0
     assert summary["confirmed_bug_records"] == 1
     assert summary["confirmed_bug_functions_in_source"] == ["work"]
@@ -82,6 +87,8 @@ int work(struct inode *inode, long nr)
     assert summary["target_filesystems"] == ["ext4", "xfs", "btrfs", "f2fs"]
     assert summary["metadata_domain_ids"][0] == "replay_recovery"
     assert all_reports[0]["kind"] == "UNCLOSED_METADATA_RESIDUAL"
+    assert all_reports[0]["classification"] == "FUNCTION_BOUNDARY_RESIDUAL"
+    assert "Classification: `FUNCTION_BOUNDARY_RESIDUAL`" in markdown
     assert "UNCLOSED_METADATA_RESIDUAL: work" in markdown
     assert list((out_dir / "reports").glob("0001_work_*.json"))
     assert list((out_dir / "reports").glob("0001_work_*.md"))

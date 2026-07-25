@@ -1124,6 +1124,116 @@ static int charge_before_failure(
     }
 
 
+def test_summary_keeps_terminal_action_correlated_with_exact_error_exit(tmp_path: Path):
+    function = _functions(
+        tmp_path,
+        """
+static int maybe_shutdown(
+    struct xfs_mount *mp,
+    struct inode *inode,
+    long nr,
+    int corrupt)
+{
+    inode->i_blocks += nr;
+    if (corrupt) {
+        xfs_force_shutdown(mp, SHUTDOWN_CORRUPT_INCORE);
+        return -EFSCORRUPTED;
+    }
+    return -ENOMEM;
+}
+""",
+    )[0]
+
+    summary = build_function_summary(function)
+
+    assert len(summary.error_exit_partitions) == 2
+    by_return = {
+        partition.return_expression: partition
+        for partition in summary.error_exit_partitions
+    }
+    assert len(by_return["-EFSCORRUPTED"].terminal_actions) == 1
+    assert by_return["-ENOMEM"].terminal_actions == ()
+    assert not any(
+        effect.key.startswith("failure_domain:")
+        for effect in summary.error_protects
+    )
+
+
+def test_exit_partition_composition_keeps_prior_success_effect_on_later_failure(
+    tmp_path: Path,
+):
+    attach, init_first, outer = _functions(
+        tmp_path,
+        """
+static int attach_device(
+    struct transaction *trans,
+    struct device *device,
+    int fail)
+{
+    if (fail)
+        return -ENOMEM;
+    list_add_tail(&device->post_commit_list, &trans->dev_update_list);
+    return 0;
+}
+
+static int init_first(
+    struct transaction *trans,
+    struct device *device,
+    int fail_first,
+    int fail_second)
+{
+    int ret;
+
+    ret = attach_device(trans, device, fail_first);
+    if (ret)
+        return ret;
+    ret = reserve_system_chunk(fail_second);
+    if (ret)
+        return ret;
+    return 0;
+}
+
+int outer(
+    struct transaction *trans,
+    struct device *device,
+    int fail_first,
+    int fail_second)
+{
+    int ret = init_first(trans, device, fail_first, fail_second);
+
+    if (ret)
+        return ret;
+    return 0;
+}
+""",
+    )
+
+    summaries = build_same_file_summaries((attach, init_first, outer))
+    init_summary = summaries["init_first"]
+
+    init_partitions = sorted(
+        init_summary.error_exit_partitions,
+        key=lambda partition: partition.exit_site.line,
+    )
+    assert len(init_partitions) == 2
+    assert not any(
+        effect.key == "list_membership"
+        for effect in init_partitions[0].residuals
+    )
+    assert any(
+        effect.key == "list_membership"
+        and "post_commit_list" in effect.value
+        for effect in init_partitions[1].residuals
+    )
+    # The partition retains the evidence, but the aggregate projection remains
+    # MUST-only until the caller slicer can keep alternatives independent.
+    assert not any(
+        effect.key == "list_membership"
+        and "post_commit_list" in effect.value
+        for effect in init_summary.error_opens
+    )
+
+
 def test_summary_binds_exhaustive_safe_list_cleanup_to_parameter_container(
     tmp_path: Path,
 ):
