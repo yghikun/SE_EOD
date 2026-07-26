@@ -30,3 +30,8 @@ env/
 *.bzImage
 outputs/residual-evaluation-batch/
 outputs/residual-evaluation/
+
+# Presentation build and inspection intermediates
+/.codex-ppt-*/
+/*.pptx.inspect.ndjson
+/*/slide-*.png

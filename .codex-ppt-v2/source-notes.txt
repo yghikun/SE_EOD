@@ -1,9 +1,0 @@
-SE_EOD group-meeting deck source notes
-
-- Architecture rationale and pipeline: docs/PROJECT_ARCHITECTURE.md and docs/METADATA_RESIDUAL_ARCHITECTURE.md
-- Effect and residual data model: src/metadata_residual.py
-- Exit-sensitive interprocedural summaries: src/function_summary.py
-- Confirmed Bug #7 and #4 evidence: outputs/confirmed_bugs.md and the referenced Linux v6.14 source files
-- Weekly pending-review candidates P1-P3: outputs/btrfs_tool_findings_pending_review_2026-07-23.md and Linux v6.14 btrfs source snapshots
-
-The deck labels P1-P3 as pending review and does not claim reproduction, upstream acceptance, or confirmed-bug status.
