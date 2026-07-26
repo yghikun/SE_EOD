@@ -1,6 +1,6 @@
 # Failure-Path Filesystem Metadata Residual Analysis Handoff
 
-Updated: 2026-07-25
+Updated: 2026-07-26
 
 This is the current implementation handoff for the reset project. The active
 research object is:
@@ -42,7 +42,8 @@ transaction ownership cannot be proven from source, keep the report as
 
 `FUNCTION_BOUNDARY_RESIDUAL` is not a bug verdict. It proves only that `R_f`
 crosses the current function's error boundary. Owner liveness and normal
-failure-domain continuation require later semantic layers.
+failure-domain continuation require separate source proofs; M38-M41 now
+compute those proofs, and retain Boundary when they are unavailable.
 
 `UNCLOSED_METADATA_RESIDUAL`, `confidence=candidate`, and `candidate_count`
 remain serialized as M34 compatibility aliases. New consumers must use the
@@ -55,13 +56,15 @@ metrics and must not be presented as metadata-residual findings.
 Current implementation snapshot:
 
 ```text
-implementation milestone: M36b-M36g
+implementation milestone: M38-M41 (current worktree, final8 accepted)
+accepted comparison baseline: M36b-M36g (ad06c19)
+M37 status: rejected experiment, excluded from all baselines and claims
 evaluation schema: 4
 UNKNOWN triage schema: 2
 semantic blocker impact schema: 1
 oracle records: 539
-unit tests: 297
-M35f regression gate: 34 / 34
+unit tests: 325
+M38-M41 regression gate: 40 / 40
 ```
 
 ## 2. Scope Contract
@@ -181,8 +184,8 @@ milestone notes as required repository files.
 Current unit-test status:
 
 ```text
-python -m pytest -q -p no:cacheprovider
-260 passed
+python -m pytest -q
+325 passed
 ```
 
 Runtime dependencies include `z3-solver>=4.13,<5`. If Z3 is unavailable or an
@@ -747,22 +750,34 @@ Historical detailed run outputs under `outputs/residual-evaluation*` have been
 removed from the working tree. The handoff now records milestone intent rather
 than treating those directories as persistent project files.
 
-## 12. Next Work
+## 12. Milestone Program
 
-Recommended next milestone:
+Implemented in the current M38-M41 worktree:
 
 ```text
-M36b: demand-driven summary body closure, beginning with one source-visible
-      sole-blocker helper and retaining the complete M35f gate
+M38a: rebuild the decision surface from the accepted M36b-M36g baseline and
+      freeze proof/transition contracts
+M38b: parent-child owner hierarchy and transitive whole-owner teardown
+M38c: unpublished failed-mount construction and teardown
+M38d: exact output, operation-state, cursor, and retry provenance
+M39:  transaction ownership and effect-scoped failure-domain containment
+M40:  exact interprocedural relation closure for residual-bearing UNKNOWNs
+M41:  owner-liveness completion and final report prioritization
 ```
 
-This recommendation supersedes the historical M32 plan below. M36a shows that
-broad summary loading is not justified: 478 is a cause-mention count, only 272
-UNKNOWN reports contain that gap, only 200 have it as their sole proof gap, and
-only 129 of those have an exact source body in the current snapshot. Start with
-`xchk_trans_cancel` (20 sole-gap reports, body in the XFS analysis root), then
-accept expansion only after report/effect transitions and the four-filesystem
-gate show useful, non-regressive behavior.
+M37 is deliberately excluded from this accepted sequence. The generated M37
+semantic-audit runs are a rejected experiment, not a project baseline; see
+Section 22. The next accepted milestone number is M38.
+
+This recommendation supersedes both the historical M32 plan below and the old
+M36b-only recommendation. M36a correctly showed that broad summary loading is
+not justified, while the M32d manual oracle showed a larger paper-level
+constraint: 418 reviewed reports awaited owner/scope semantics and 105 awaited
+failure-domain semantics. The next program must therefore reduce Boundary and
+UNKNOWN populations through reusable source-proven semantic layers, not by
+adding helper-name rules. Demand-driven summary closure remains necessary, but
+it moves behind the proof contracts and is selected only from post-M36
+residual-bearing sole blockers.
 
 M32.0: report-level state-transition audit (implemented).
 
@@ -2059,3 +2074,687 @@ summary-body unavailability, exact error-partition selection, owner binding,
 indirect target sets, and conditional containment. Treat `RETAINED_SLICE` as an
 audit state: it preserves visibility across projection changes; it is not a
 claim that the old effect was fixed.
+
+## 22. Accepted Post-M36 Program; M37 Excluded (2026-07-26)
+
+This section is the authoritative next-work plan. It combines the M36 evidence,
+the 539-record manual oracle, and the useful parts of the external three-layer
+proposal. Where they disagree, the existing project claim and accepted M36
+measurements take precedence.
+
+### 22.1 Corrected Decision Surface
+
+The accepted M36b-M36g counts are:
+
+```text
+FUNCTION_BOUNDARY_RESIDUAL:        530
+CONTAINED_METADATA_RESIDUAL:        34
+METADATA_RESIDUAL_UNKNOWN:         484
+FUNCTION_BOUNDARY_RESIDUAL_REVIEW: 409
+```
+
+The external proposal's `533 Boundary / 33 Contained` snapshot is not the
+accepted M36 result. Do not repeat it in the paper or later comparisons.
+
+The high-level diagnosis is nevertheless correct. Large-scale precision needs
+three reusable, effect-scoped semantic layers:
+
+```text
+Owner / Scope:
+  which owner carries the effect; whether the owner or a uniquely owned child
+  is private, published, escaped, or destroyed
+
+Failure Domain:
+  whether the exact effect is isolated by transaction abort, fatal shutdown,
+  checkpoint stop, failed-mount teardown, or caller containment
+
+Exact Interprocedural Relation:
+  which error partition, object identity, container member, return/out-param
+  binding, or indirect target applies at the current call site
+```
+
+Owner/scope and failure-domain work primarily reduce Boundary reports. Exact
+interprocedural relations primarily reduce residual-bearing UNKNOWNs. These
+are interacting layers, not independent suppressors: every state transition
+must identify the effect that the proof covers.
+
+### 22.2 M37 Exclusion
+
+Generated directories named `m37-*` exist under the ignored evaluation-output
+tree. They were produced after the M36 commit and are not an accepted milestone:
+
+```text
+outputs/residual-evaluation-batch/linux-v6.14-fs-*-m37-semantic-audit
+outputs/residual-evaluation-batch/m37-comparisons
+outputs/residual-evaluation-batch/m37-preflight-comparisons
+outputs/residual-evaluation-batch/m37c-semantic-blocker-impact
+outputs/residual-evaluation-batch/m37-regression-gate.json
+```
+
+The experiment failed its regression gate in all four filesystems because the
+comparison required more compatibility matches than the admitted budgets. A
+compatibility match is an audited exception, not exact witness retention. The
+experiment therefore cannot establish a safe reduction, cannot replace the
+M36 baseline, and must not be used for paper counts, oracle claims, or the next
+comparison baseline.
+
+No tracked source rollback is required: `main` remains the M36 commit and the
+tracked worktree has no M37 source delta. Keep the artifacts only as rejected
+experimental evidence. The next accepted implementation label is M38.
+
+### 22.3 Classification Contract
+
+The per-effect decision order is:
+
+```text
+non-empty R_f at an error exit
+  -> metadata scope proof
+     -> source-proven cancellation, aggregate restore, or owner teardown
+        -> effect-scoped failure-domain containment
+           -> owner liveness and normal-continuation proof
+```
+
+The corresponding outcomes are:
+
+```text
+not filesystem metadata                         -> OUT_OF_SCOPE
+cancelled/restored/destroyed with exact coverage -> CLOSED
+isolated by an exact failure domain              -> CONTAINED_METADATA_RESIDUAL
+published live owner plus normal continuation    -> LIVE_METADATA_RESIDUAL
+effect computation has a proof gap               -> METADATA_RESIDUAL_UNKNOWN
+residual proven only across this function         -> FUNCTION_BOUNDARY_RESIDUAL
+```
+
+`FUNCTION_BOUNDARY_RESIDUAL` remains a valid intermediate semantic result and
+an audit-visible report. It must not be silently relabeled UNKNOWN merely
+because owner liveness has not yet been implemented. Keep two uncertainties
+separate:
+
+```text
+effect/cancellation/identity uncertainty -> METADATA_RESIDUAL_UNKNOWN
+liveness or containment not yet proven   -> FUNCTION_BOUNDARY_RESIDUAL with
+                                             structured semantic blockers
+```
+
+Only after owner-liveness and normal-continuation proofs exist may the primary
+user view prioritize `LIVE_METADATA_RESIDUAL` and residual-bearing UNKNOWNs.
+The legacy Candidate aliases remain compatibility fields during this program.
+
+Do not add `INTENTIONAL_RESIDUAL` as a paper-level classification yet.
+Source-proven write-only output or operation-descriptor state may become
+`OUT_OF_SCOPE` with a specific reason. Progress and retry state that records
+submitted or completed metadata work remains a Boundary residual with an
+audit-only intentional-progress disposition until the oracle and paper claim
+justify a separate classification.
+
+### 22.4 M38: Owner and Scope Semantics
+
+M38a is measurement and contract work only. Regenerate the decision surface
+from the four accepted M36b-M36g runs; do not reuse M37 outputs. For each proof
+gap report:
+
+```text
+report count
+sole-gap count
+source-visible sole-gap count
+oracle destination
+known-witness involvement
+candidate semantic family
+```
+
+Rank implementation targets by report-level opportunity, not cause mentions:
+
+```text
+priority = sole-gap reports
+           x exact source availability
+           x expected final-state transition
+           x reusable report-family coverage
+```
+
+M38a must also freeze a transition schema that records exact and compatibility
+matches separately. Every compatibility match needs a typed reason. M38a sets
+the accepted budgets from M36 and later milestones must not increase them
+without effect-by-effect review.
+
+M38b extends the existing `OwnerIdentityBinding`, `ExposureFact`, and
+`OwnerTeardown` models with bounded parent-child ownership relations:
+
+```text
+OwnershipEdge:
+  child
+  parent
+  relation = EMBEDDED | UNIQUE_POINTER | CONTAINER_OWNED | ARRAY_ELEMENT
+  acquisition_site
+  publication_sites
+  escape_state
+
+OwnerTeardownClosure:
+  destroyed_owner
+  transitively_destroyed_children
+  externally_published_effects
+  nonclosable_effects
+```
+
+Close an effect only when the child is uniquely owned, has not escaped, and the
+source-visible teardown footprint covers it. Never close external accounting,
+persistent/recovery-visible state, shared objects, block-device ownership,
+global topology, or membership already published to a global list/tree/xarray.
+Implement each ownership relation as a separate source shape; do not build a
+general alias engine.
+
+M38c adds an explicit unpublished mount-construction domain. An in-memory
+effect may close through failed-mount teardown only when all of these are
+proven:
+
+```text
+the owner belongs to the filesystem instance under construction
+the instance has not reached an active superblock or global registry
+every feasible error exit reaches complete teardown
+the effect has not reached disk, a device, or another shared owner
+no worker, RCU reference, return, output, or other escape survives teardown
+```
+
+Persistent, recovery-visible, external-device, and global-topology effects are
+never closed merely because mount construction fails.
+
+M38d adds provenance, not name rules, for:
+
+```text
+WRITE_ONLY_OUTPUT
+OPERATION_DESCRIPTOR
+PROGRESS_CURSOR
+RETRY_STATE
+```
+
+`WRITE_ONLY_OUTPUT` requires caller-provided storage, write-only construction,
+no dependence on the incoming pointee, no publication, and no later metadata
+consumer. `OPERATION_DESCRIPTOR` must satisfy the existing universal visible
+call-site discipline used by transient-argument provenance. Cursor/retry state
+must prove that it records submitted or completed progress and that rollback
+could repeat work; it is retained for audit unless separately proven outside
+the filesystem-metadata completion contract.
+
+Primary modules:
+
+```text
+src/metadata_residual.py
+src/function_summary.py
+src/transient_provenance.py
+src/residual_slicer.py
+src/candidate_review_oracle.py
+src/semantic_blocker_impact.py
+```
+
+M38 acceptance requires reviewed family-level migrations, not a target count.
+The expected useful transitions are Boundary -> OUT_OF_SCOPE/CLOSED and
+Boundary -> UNKNOWN only where exact source analysis exposes an effect,
+identity, or containment proof gap. Missing liveness proof alone leaves the
+result as a Boundary residual with a structured semantic blocker.
+
+### 22.5 M39: Transaction and Failure-Domain Semantics
+
+M39a extends the existing `TransactionOwnershipRelation`; it does not infer
+ownership from `tp`, `trans`, `journal`, or helper names. The proof must carry:
+
+```text
+transaction identity
+owned effect/root
+registration site and primitive
+owner object
+publication/escape state before abort
+effect-specific abort footprint
+```
+
+Only an effect registered to the same transaction, not externally published,
+and covered by a MUST abort footprint may become contained. Device topology,
+active device pointers, global filesystem fields, transaction-external list
+membership, and persistent/recovery-visible state remain Boundary or UNKNOWN.
+
+M39b makes terminal actions plane- and visibility-scoped:
+
+```text
+FailureDomainScope:
+  action
+  allowed_planes
+  allowed_visibility
+  forbidden_categories
+  required_owner_relation
+```
+
+`xfs_force_shutdown`, `f2fs_stop_checkpoint`, and
+`btrfs_abort_transaction` must never contain a complete slice by name. Each
+`FailureDomainProof.covered_effects` entry must be justified independently.
+In particular, `RECOVERY_VISIBLE` effects cannot be contained by shutdown
+alone, and transaction-external effects cannot be contained by abort alone.
+A transaction-local lifecycle effect may use the RECOVERY plane while still
+being covered by an effect-scoped shutdown or checkpoint proof; visibility,
+not the plane label alone, controls this distinction.
+
+M39c keeps failed-mount teardown, recovery abort, transaction abort, checkpoint
+stop, and fatal shutdown as distinct domains. Cross-function caller
+containment remains valid only when complete propagated error effects are
+visible and every source-visible caller seals them.
+
+Primary modules:
+
+```text
+src/failure_domain_primitives.py
+src/failure_domain.py
+src/metadata_residual.py
+src/function_summary.py
+src/residual_slicer.py
+```
+
+### 22.6 M40: Exact Interprocedural UNKNOWN Closure
+
+M40 work is demand-first. Select only residual-bearing reports where the proof
+gap is sole or where one shared relation can eliminate a reviewed multi-gap
+family. Broad `fs/*.c` summary loading remains rejected.
+
+M40a consumes the existing `ErrorExitPartition` at callers:
+
+```text
+CallerConstraint + CalleeReturnPartition -> SelectedErrorAlternative
+```
+
+Begin with bounded predicates already compatible with the CFG/SMT layer:
+
+```text
+ret == 0, ret != 0, ret < 0, ret > 0
+ret == constant errno
+switch constant cases
+bounded IS_ERR/PTR_ERR forms
+```
+
+Each selected alternative independently carries opens, cancels, protects,
+terminal actions, failed-owner destructions, and transaction ownership. If two
+feasible alternatives differ semantically, keep UNKNOWN.
+
+M40b adds demand-driven summary requests:
+
+```text
+DemandSummaryRequest:
+  report_id
+  helper and exact call site
+  expected root
+  required semantics
+  transitive body budget
+```
+
+Allowed required semantics include `MUST_CANCEL`, `MUST_PROTECT`,
+`OWNER_BINDING`, `RETURN_BINDING`, `TERMINAL_ACTION`, `READ_ONLY`,
+`CONTAINER_DRAIN`, and `OWNER_TEARDOWN`. Load the exact body and only the
+minimal transitive dependencies needed for that proof. Body availability is a
+precondition, not evidence of a final-state transition.
+
+M40c extends, rather than duplicates, the existing
+`ExistentialMemberIdentity`. The first recall target is confirmed bug #16:
+
+```text
+devices_info[i].dev
+  -> loop-local dev
+  -> dev->post_commit_list
+  -> trans->transaction->dev_update_list
+```
+
+The proof denotes some source-visible member from the container; it must not
+claim that this object equals the failed new device without caller provenance.
+The same bounded identity form may later support list/tree/radix members.
+
+M40d adds source-derived indirect target sets, initially for repeated XFS
+families:
+
+```text
+IndirectTargetSet:
+  call_site
+  receiver_type
+  ops_table
+  possible_targets
+  completeness
+```
+
+Accept targets only from exact static ops initializers, dominating assignments,
+closed-world types, and compile-time configuration. Resolve only when the set
+is complete and all targets provide the same MUST cancellation or containment
+semantics. Never choose one likely callback.
+
+Lexical reader suppression remains audit-only throughout M40:
+
+```text
+may prevent a NAME_INFERRED effect from being created
+may not delete DIRECT_SOURCE or EXPLICIT_PRIMITIVE evidence
+may not establish CLOSED, PROTECTED, or CONTAINED
+```
+
+Record the helper, lexical rule, suppressed hypothesis, and source-body
+availability. High-impact helpers should eventually receive source-derived
+`READ_ONLY` summaries; an unavailable body remains Review or UNKNOWN as
+appropriate.
+
+### 22.7 M41: Liveness and Report Completion
+
+M41 may emit `LIVE_METADATA_RESIDUAL` only when all three are source-proven:
+
+```text
+the exact owner survives the error exit
+the owner/effect was published outside a closing or containing domain
+the filesystem or relevant owner can continue ordinary work
+```
+
+M41 now computes these proofs and separates the primary triage view from the
+audit view without removing serialized M34 compatibility aliases. No full-run
+final7 effect satisfied all three conditions, so `LIVE_METADATA_RESIDUAL = 0`;
+the M36 `FUNCTION_BOUNDARY_RESIDUAL` claim remains the sound classification for
+those effects.
+
+### 22.8 Transition Evidence and Gates
+
+Every accepted milestone must report at least:
+
+```text
+Boundary -> OUT_OF_SCOPE / CLOSED / CONTAINED / UNKNOWN / LIVE
+UNKNOWN  -> OUT_OF_SCOPE / CLOSED / CONTAINED / Boundary / LIVE
+Review   -> UNKNOWN / Boundary / OUT_OF_SCOPE
+```
+
+Each transition records:
+
+```text
+old and new complete effect identity
+source proof
+owner/scope proof
+failure-domain proof
+partition or target-set proof
+oracle expectation and review status
+exact, source-projection, compatibility, or retained-slice match kind
+```
+
+Also report family-level yield for owner teardown, mount teardown,
+output/operation/progress provenance, transaction ownership, failure-domain
+scope, partition selection, summary closure, existential identity, and indirect
+targets. A total-count reduction without these attributions is not evidence of
+precision.
+
+Keep the existing hard gates:
+
+```text
+the complete unit-test suite passes (currently 313 tests)
+all four Linux v6.14 filesystem runs and comparisons are present
+6 / 6 manually established high-value residuals remain visible
+P1, P3, #7, and #16-#18 remain visible at the required evidence level
+btrfs_create_uuid_tree and ext4 make_indexed_dir remain visible
+9 / 9 exact M33 XFS contained slices remain retained
+zero_residual_finding_count = 0
+UNMATCHED exact known witnesses = 0
+no new oracle safety regression
+RETAINED_SLICE is never counted as a fix
+```
+
+Add these gates before accepting the corresponding semantic layer:
+
+```text
+DIRECT_SOURCE cannot disappear through a lexical rule
+RECOVERY_VISIBLE cannot become contained through shutdown alone
+transaction-external effects cannot become contained through abort alone
+parent teardown cannot close an escaped or published child effect
+compatibility-match exceptions are typed, reviewed, and budgeted
+```
+
+The existing `0 new Candidate witness` gate remains in force until the oracle
+workflow can review new Boundary witnesses in the same run. After that schema
+change, replace it with:
+
+```text
+0 unreviewed new Boundary witnesses
+```
+
+An UNKNOWN -> Boundary transition is allowed only with source proof and an
+oracle decision; forbidding every such transition would optimize the count at
+the expense of correctness.
+
+The program is successful when large reviewed families move to
+OUT_OF_SCOPE/CLOSED/CONTAINED, the few live residuals stay visible, and the
+remaining UNKNOWNs correspond to genuine missing source, incomplete target
+sets, unresolved object identity, or asynchronous semantics. UNKNOWN equal to
+zero and Candidate equal to zero are not objectives.
+
+## 23. M38-M41 Implementation and Final7 Acceptance (2026-07-26)
+
+M38-M41 are implemented in the current worktree and verified against the
+accepted M36b-M36g baseline at commit `ad06c19`. No M37 run, comparison, source
+delta, or count was used. The rejected M37 artifacts remain untouched only as
+historical evidence.
+
+### 23.1 Implemented Semantic Surface
+
+M38 adds effect-scoped owner and scope semantics:
+
+```text
+EffectSemanticProvenance and EffectVisibility
+OwnershipEdge, OwnerScopeProof, and transitive owner teardown
+path-sensitive publication, escape, rebind, and teardown ordering
+PRIVATE_OWNER, WRITE_ONLY_OUTPUT, OPERATION_DESCRIPTOR,
+PROGRESS_CURSOR, and RETRY_STATE provenance
+```
+
+Fresh local descriptors copied from caller state are treated as operation
+descriptors rather than as writes to the caller's transaction. Unpublished
+fresh-owner effects remain serialized as auditable out-of-scope effects.
+Potentially escaped owners retain an exposed result and an effect-level review
+reason instead of closing the whole slice.
+
+M39 adds effect-scoped failure-domain and transaction semantics:
+
+```text
+TransactionOwnershipRelation
+FailureDomainScope and FailureDomainProof.covered_effects
+separate transaction abort, recovery abort, fatal shutdown,
+checkpoint stop, failed-owner teardown, and caller containment domains
+```
+
+Containment is checked per effect using plane, visibility, ownership, and
+forbidden categories. A bare transaction owner is `TRANSACTION_LOCAL`, even
+when its lifecycle helper uses the RECOVERY plane. This preserves the M33
+`xfs_defer_trans_roll(tp)` shutdown-contained slice without allowing a true
+`RECOVERY_VISIBLE` effect to be closed by shutdown alone.
+
+M40 adds exact interprocedural audit structures and bounded resolution:
+
+```text
+DemandSummaryRequest
+error-partition and exact return-code diagnostics
+IndirectTargetSet
+ExistentialMemberIdentity integration
+LexicalSuppressionEvidence
+```
+
+Exact return-code or partition identity gaps are attached to demand-summary
+and semantic diagnostics; they do not downgrade an otherwise direct residual
+effect to UNKNOWN. Lexical suppression can prevent a name-inferred hypothesis,
+but cannot delete direct-source evidence or establish closure/containment.
+
+M41 adds `OwnerLivenessProof`, `LIVE_METADATA_RESIDUAL`, effect-level review
+selection, primary/audit report views, schema-v4 semantic-family metrics, and
+schema-v4 exact/compatibility/retained-slice transition reporting. A historical
+lexical witness whose exact effect projection disappears but whose failure/exit
+slice remains visible is `RETAINED_SLICE`, never a fix or an unmatched witness.
+
+Primary implementation files:
+
+```text
+src/owner_scope.py
+src/owner_liveness.py
+src/metadata_residual.py
+src/effect_extractor.py
+src/function_summary.py
+src/failure_domain_primitives.py
+src/residual_slicer.py
+src/residual_analyzer.py
+src/residual_report.py
+src/evaluation_harness.py
+src/candidate_review_oracle.py
+scripts/compare_residual_runs.py
+scripts/check_m35_regression_gate.py
+```
+
+### 23.2 Final7 Linux v6.14 Result
+
+| Filesystem | Boundary | LIVE | Contained | UNKNOWN | Review | Reports | Witnesses |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Btrfs | 250 | 0 | 16 | 156 | 83 | 505 | 2349 |
+| ext4 | 80 | 0 | 0 | 120 | 165 | 365 | 1255 |
+| XFS | 175 | 0 | 6 | 117 | 168 | 466 | 1718 |
+| F2FS | 37 | 0 | 1 | 53 | 35 | 126 | 754 |
+| Total | 542 | 0 | 23 | 446 | 451 | 1462 | 6076 |
+
+Accepted M36b-M36g totals and final7 deltas:
+
+| Classification | M36 | final7 | Delta |
+|---|---:|---:|---:|
+| Boundary | 530 | 542 | +12 |
+| LIVE | 0 | 0 | 0 |
+| Contained | 34 | 23 | -11 |
+| UNKNOWN | 484 | 446 | -38 |
+| Review | 409 | 451 | +42 |
+
+The result does **not** establish simultaneous aggregate Candidate/Boundary
+and UNKNOWN reduction. UNKNOWN fell by 38, but Boundary rose by 12 because the
+new semantic layers expose and retain more effect-level evidence. Do not state
+that both populations decreased. The accepted result is stronger auditability
+and safe UNKNOWN reduction with exact baseline-witness retention, not a
+headline Candidate-count reduction.
+
+### 23.3 Transition, Oracle, and Gate Evidence
+
+```text
+313 / 313 unit tests passed
+5772 / 5772 M36 baseline witnesses retained as EXACT_WITNESS
+0 compatibility matches
+0 new Candidate witnesses
+0 unmatched baseline witnesses
+539 / 539 manual oracle entries matched
+0 unmatched oracle effects
+6 / 6 manual live residuals retained; 0 lost
+0 new oracle safety regressions
+9 / 9 exact M33 XFS contained slices retained
+0 zero-residual findings in all four filesystems
+38 / 38 regression-gate checks passed
+```
+
+The oracle still records 534 entries as `RETAINED_FOR_LATER_MILESTONE`. Only
+five entries reached their expected final state. Therefore final7 is an
+engineering acceptance of the M38-M41 semantic contracts and non-regression
+gates, not a claim that the manual semantic oracle has been fully discharged.
+
+### 23.4 Generated Artifacts
+
+```text
+outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-m38-m41-final7
+outputs/residual-evaluation-batch/linux-v6.14-fs-ext4-m38-m41-final7
+outputs/residual-evaluation-batch/linux-v6.14-fs-xfs-m38-m41-final7
+outputs/residual-evaluation-batch/linux-v6.14-fs-f2fs-m38-m41-final7
+outputs/residual-evaluation-batch/m38-m41-final7-comparisons/*
+outputs/residual-evaluation-batch/m38-m41-final7-oracle-audit.json
+outputs/residual-evaluation-batch/m38-m41-final7-regression-gate.json
+```
+
+### 23.5 Next Constraint
+
+Do not add broad helper-name rules or optimize the aggregate count. The next
+accepted work should use the final7 family metrics and the 534 pending oracle
+entries to select source-visible, effect-level families that can reach an
+oracle-approved final state. Prioritize exact owner teardown/scope families for
+Boundary reduction and exact summary/target/identity families for UNKNOWN
+reduction, while preserving all final7 exact-witness, manual-live, XFS
+containment, compatibility-zero, and safety-regression gates.
+
+## 24. M38-M41 Final8 Contained Audit and Acceptance (2026-07-27)
+
+Final8 completes the manual audit of the latest Contained population. It uses
+M36b-M36g and final7 as the only comparison baselines; M37 remains excluded.
+The implementation does not add a helper blacklist, suppress reports, or
+weaken the oracle. Cleanup, transaction, owner, and failure-domain decisions
+are effect-scoped and require source-visible identity and ordering evidence.
+
+### 24.1 Linux v6.14 Result
+
+| Filesystem | Boundary | LIVE | Contained | UNKNOWN | Review | Reports | Witnesses |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Btrfs | 266 | 0 | 8 | 125 | 71 | 470 | 2342 |
+| ext4 | 89 | 0 | 0 | 104 | 167 | 360 | 1255 |
+| XFS | 184 | 0 | 4 | 102 | 175 | 465 | 1712 |
+| F2FS | 39 | 0 | 1 | 49 | 37 | 126 | 754 |
+| Total | 578 | 0 | 13 | 380 | 450 | 1421 | 6063 |
+
+| Classification | M36 | final7 | final8 | final8 vs M36 | final8 vs final7 |
+|---|---:|---:|---:|---:|---:|
+| Boundary | 530 | 542 | 578 | +48 | +36 |
+| Contained | 34 | 23 | 13 | -21 | -10 |
+| UNKNOWN | 484 | 446 | 380 | -104 | -66 |
+| Review | 409 | 451 | 450 | +41 | -1 |
+| Reports | 1457 | 1462 | 1421 | -36 | -41 |
+
+Final8 therefore compresses Contained and UNKNOWN without claiming that every
+newly proven Boundary residual is a bug. Boundary increases because more
+effects now have sufficient identity/order evidence to leave UNKNOWN.
+
+### 24.2 Audited Contained Decisions
+
+The remaining 13 Contained reports are source-confirmed fail-stop cases:
+
+```text
+Btrfs: balance_level (5), push_nodes_for_insert (2), walk_up_proc (1)
+XFS:   xfs_defer_finish_noroll, xfs_defer_finish, xfs_swap_extents (4 total)
+F2FS:  written_valid_blocks (1)
+```
+
+The reviewed false Contained families migrated as follows:
+
+```text
+CLOSED:
+  do_chunk_alloc
+  __btrfs_run_delayed_items
+  xfs_trans_alloc
+  btrfs_add_link
+  __cow_file_range_inline
+
+OUT_OF_SCOPE:
+  f2fs_allocate_data_block::fragment_remained_chunk
+
+REVIEW:
+  xfs_bmap_recover_work:532
+  xfs_bmap_recover_work:536
+```
+
+`do_chunk_alloc` closes because the outer
+`btrfs_trans_release_chunk_metadata(trans)` wrapper now matches the summarized
+prior reservation for the same owner and resource token. The two XFS recovery
+paths remain Review with `conditional_shutdown_review:ip` and
+`owner_liveness_unproven`: shutdown is conditional and there is no preceding
+open/write dirty or log evidence. They are not silently treated as Contained.
+
+### 24.3 Verification and Artifacts
+
+```text
+325 / 325 unit tests passed
+0 new Candidate witnesses in all M36 and final7 comparisons
+0 unmatched baseline witnesses in all M36 and final7 comparisons
+539 / 539 manual oracle entries matched
+0 Candidate -> UNKNOWN transitions
+6 / 6 manual live residuals retained; 0 lost
+0 unmatched oracle entries or effects
+0 oracle safety regressions
+40 / 40 regression-gate checks passed
+```
+
+Final run artifacts:
+
+```text
+outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-m38-m41-final8-final5
+outputs/residual-evaluation-batch/linux-v6.14-fs-ext4-m38-m41-final8-final2
+outputs/residual-evaluation-batch/linux-v6.14-fs-xfs-m38-m41-final8-final5
+outputs/residual-evaluation-batch/linux-v6.14-fs-f2fs-m38-m41-final8-final2
+outputs/residual-evaluation-batch/m38-m41-final8-final5-vs-m36-comparisons/*
+outputs/residual-evaluation-batch/m38-m41-final8-final5-oracle-audit.json
+outputs/residual-evaluation-batch/m38-m41-final8-final5-regression-gate.json
+```

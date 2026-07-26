@@ -1,0 +1,24 @@
+Deck topic: SE_EOD current architecture and detailed bug cases.
+Generated: 2026-07-26 (Asia/Shanghai).
+
+All claims and visuals are derived from repository-local sources. No external images or external factual claims are used.
+
+Primary sources:
+- README.md
+- docs/PROJECT_ARCHITECTURE.md
+- docs/METADATA_RESIDUAL_ARCHITECTURE.md
+- PAPER_ROADMAP.md
+- PROJECT_HANDOFF.md
+- outputs/confirmed_bugs.md
+- outputs/residual-evaluation-batch/*-m37-semantic-audit/summary.json
+- outputs/residual-evaluation-batch/m37-regression-gate.json
+- outputs/residual-evaluation-batch/m37c-semantic-blocker-impact/semantic_blocker_impact.md
+- linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c
+- linux-sources/linux-v6.14-fs/fs/btrfs/volumes.c
+- linux-sources/linux-v6.14-fs/fs/ext4/xattr.c
+- src/, tests/, scripts/, requirements.txt, .github/workflows/ci.yml
+
+Verification evidence:
+- python -m pytest -q: 297 passed in 51.18s on 2026-07-26.
+- M37 regression gate: 38 checks, 4 failures, passed=false.
+

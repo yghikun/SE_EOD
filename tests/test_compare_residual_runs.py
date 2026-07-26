@@ -481,7 +481,30 @@ def test_compare_runs_writes_review_artifacts_and_detects_new_candidate(tmp_path
         "resolved_unknowns.json",
         "new_candidates.json",
         "lost_known_witnesses.json",
+        "candidate_compatibility_exceptions.json",
+        "report_level_transition_matrix.json",
+        "comparison_match_audit.json",
     }
+
+
+def test_compare_runs_preserves_live_classification_and_typed_match(tmp_path: Path):
+    effect = _effect()
+    baseline = _write_evaluation(
+        tmp_path / "baseline",
+        [_slice("EXPOSED", residuals=[effect], reaching=[effect])],
+    )
+    current = _write_evaluation(
+        tmp_path / "current",
+        [_slice("LIVE", residuals=[effect], reaching=[effect])],
+    )
+
+    comparison = compare_runs(baseline, current)
+    transition = comparison["transitions"][0]
+
+    assert transition["new_state"] == "LIVE_METADATA_RESIDUAL"
+    assert transition["match_kind"] == "EXACT_WITNESS"
+    assert transition["match_reason"] == "complete_stable_witness_identity"
+    assert comparison["report_transition_matrix"]["compatibility_match_count"] == 0
 
 
 def test_compare_runs_matches_transient_effect_as_out_of_scope(tmp_path: Path):

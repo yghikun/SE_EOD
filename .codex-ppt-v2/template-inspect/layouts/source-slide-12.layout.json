@@ -1,0 +1,537 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/8f2psfyx",
+    "id": "8f2psfyx",
+    "slide": 12,
+    "layoutId": "/ppt/slideLayouts/slideLayout1.xml",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "fontScheme": {
+      "name": "Office",
+      "majorFont": {
+        "latinTypeface": "Calibri Light",
+        "eastAsianTypeface": "Calibri Light",
+        "complexScriptTypeface": "Calibri Light"
+      },
+      "minorFont": {
+        "latinTypeface": "Calibri",
+        "eastAsianTypeface": "Calibri",
+        "complexScriptTypeface": "Calibri"
+      }
+    },
+    "typefaces": [
+      "Calibri",
+      "Calibri Light",
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wvupgz6t",
+      "id": "10",
+      "name": "title",
+      "bbox": [
+        41.33,
+        36.12,
+        1197.33,
+        74
+      ],
+      "geometry": "rect",
+      "text": "四个文件系统已形成可量化的残差分析基线",
+      "textPreview": "四个文件系统已形成可量化的残差分析基线",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "四个文件系统已形成可量化的残差分析基线"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "四个文件系统已形成可量化的残差分析基线",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 38.67,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "四个文件系统已形成可量化的残差分析基线",
+              "fontSize": 38.67,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1gbm9s3a",
+      "id": "2",
+      "name": "metric-0",
+      "bbox": [
+        41.33,
+        470,
+        374.67,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0f2lgnmp",
+      "id": "3",
+      "name": "metric-text-0",
+      "bbox": [
+        71.33,
+        500,
+        1208.67,
+        220
+      ],
+      "geometry": "rect",
+      "text": "9,676\n函数被分析",
+      "textPreview": "9,676 | 函数被分析",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "9,676"
+          },
+          {
+            "index": 2,
+            "text": "函数被分析"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "9,676",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "9,676",
+              "fontSize": 44,
+              "typeface": "Microsoft YaHei",
+              "color": "#3D8DFF",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "函数被分析",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "函数被分析",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ra943il8",
+      "id": "4",
+      "name": "metric-1",
+      "bbox": [
+        452.67,
+        470,
+        374.67,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q903ad4n",
+      "id": "5",
+      "name": "metric-text-1",
+      "bbox": [
+        482.67,
+        500,
+        797.33,
+        220
+      ],
+      "geometry": "rect",
+      "text": "6,872\n失败切片",
+      "textPreview": "6,872 | 失败切片",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "6,872"
+          },
+          {
+            "index": 2,
+            "text": "失败切片"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "6,872",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "6,872",
+              "fontSize": 44,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "失败切片",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "失败切片",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dcbm583y",
+      "id": "6",
+      "name": "metric-2",
+      "bbox": [
+        864.28,
+        470,
+        374.67,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sb2lcnmd",
+      "id": "7",
+      "name": "metric-text-2",
+      "bbox": [
+        894.28,
+        500,
+        385.72,
+        220
+      ],
+      "geometry": "rect",
+      "text": "1,425\n最终报告",
+      "textPreview": "1,425 | 最终报告",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1,425"
+          },
+          {
+            "index": 2,
+            "text": "最终报告"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1,425",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "1,425",
+              "fontSize": 44,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "最终报告",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "最终报告",
+              "fontSize": 20,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/b6d4f2lc",
+      "id": "8",
+      "name": "footer",
+      "bbox": [
+        1184.18,
+        659.24,
+        54.48,
+        25.33
+      ],
+      "geometry": "rect",
+      "text": "12",
+      "textPreview": "12",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "bottom",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "12"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "12",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 13.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "12",
+              "fontSize": 13.33,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "chart",
+      "scope": "slide",
+      "aid": "ch/l03ix076",
+      "id": "11",
+      "name": "Chart",
+      "bbox": [
+        52,
+        132,
+        1170,
+        300
+      ],
+      "chartType": "bar"
+    }
+  ],
+  "composeRuns": []
+}

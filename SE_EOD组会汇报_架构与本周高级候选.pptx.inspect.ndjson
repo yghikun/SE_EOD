@@ -1,0 +1,343 @@
+{"kind":"deck","id":"pr/iv5xdl","name":"Deck"}
+{"kind":"layout","layoutId":"6ff7308e-2655-4d5c-8fd0-9aae493a6d18","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"312367c0-2e71-4aca-aa37-138acce524e9","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/fnx5rn","slide":1,"title":"SE_EOD · 组会汇报","textShapes":5}
+{"kind":"textbox","id":"sh/jy98jqd8","slide":1,"name":"text","text":"SE_EOD · 组会汇报","textPreview":"SE_EOD · 组会汇报","textChars":13,"textLines":1,"bbox":[52,46,600,34]}
+{"kind":"shape","id":"sh/kzi9svet","slide":1,"name":"rect","bbox":[52,104,150,5]}
+{"kind":"textbox","id":"sh/l0rql0vy","slide":1,"name":"text","text":"失败路径文件系统\n元数据残差分析","textPreview":"失败路径文件系统 | 元数据残差分析","textChars":16,"textLines":2,"bbox":[52,166,890,190]}
+{"kind":"textbox","id":"sh/610ru5wj","slide":1,"name":"text","text":"为什么提出架构 · 两个确认案例 · 本周高级候选","textPreview":"为什么提出架构 · 两个确认案例 · 本周高级候选","textChars":25,"textLines":1,"bbox":[56,400,900,46]}
+{"kind":"textbox","id":"sh/72t8nad4","slide":1,"name":"text","text":"Linux 文件系统静态分析","textPreview":"Linux 文件系统静态分析","textChars":14,"textLines":1,"bbox":[56,594,400,34]}
+{"kind":"textbox","id":"sh/8329wvep","slide":1,"name":"text","text":"2026.07.26","textPreview":"2026.07.26","textChars":10,"textLines":1,"bbox":[1030,594,200,34]}
+{"kind":"notes","id":"nt/fnx5rn","slide":1,"text":"开场说明汇报主线：先解释问题为什么需要新的分析架构，再用两个确认 Bug 和本周候选检验架构是否真的抓住了复杂失败语义。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/confirmed_bugs.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md"}
+{"kind":"slide","id":"sl/m3522n","slide":2,"title":"SE_EOD · GROUP MEETING","textShapes":12}
+{"kind":"textbox","id":"sh/fq94bmlc","slide":2,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/0rilkr2x","slide":2,"name":"title","text":"真正困难的不是发现失败，而是判断失败返回时还残留什么","textPreview":"真正困难的不是发现失败，而是判断失败返回时还残留什么","textChars":26,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/1srmdw3i","slide":2,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/2t03m1kn","slide":2,"name":"page","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/nu94f6l8","slide":2,"name":"code-MOTIVATING FAILURE SHAPE","bbox":[48,154,660,430]}
+{"kind":"shape","id":"sh/ovilor2t","slide":2,"name":"bar-MOTIVATING FAILURE SHAPE","bbox":[48,154,7,430]}
+{"kind":"textbox","id":"sh/pwrmhw3e","slide":2,"name":"text","text":"MOTIVATING FAILURE SHAPE","textPreview":"MOTIVATING FAILURE SHAPE","textChars":24,"textLines":1,"bbox":[68,168,622,24]}
+{"kind":"textbox","id":"sh/ixw3axkj","slide":2,"name":"text","text":"publish(owner, metadata_state);     // 状态先对外可见\nupdate(counter_or_topology);\n\nret = later_operation();            // 后续步骤可能失败\nif (ret)\n    goto error;\n\nerror:\n    local_cleanup();                // 只清了一部分对象\n    return ret;","textPreview":"publish(owner, metadata_state);     // 状态先对外可见 | update(counter_or_topology); |  | ret = later_operation();            // 后续步骤可能失败 | if (...","textChars":221,"textLines":10,"bbox":[68,201,624,370]}
+{"kind":"shape","id":"sh/3ypk32l4","slide":2,"name":"panel-分析问题","bbox":[754,154,478,126]}
+{"kind":"textbox","id":"sh/zqpwr6lc","slide":2,"name":"text","text":"分析问题","textPreview":"分析问题","textChars":4,"textLines":1,"bbox":[774,170,438,30]}
+{"kind":"textbox","id":"sh/ypgvy14r","slide":2,"name":"text","text":"错误路径上的 cleanup 是否真正覆盖了此前已经发布的元数据效果？","textPreview":"错误路径上的 cleanup 是否真正覆盖了此前已经发布的元数据效果？","textChars":35,"textLines":1,"bbox":[774,209,438,58]}
+{"kind":"shape","id":"sh/ls7etg32","slide":2,"name":"panel-不能只看资源","bbox":[754,306,478,126]}
+{"kind":"textbox","id":"sh/0ryd0bmx","slide":2,"name":"text","text":"不能只看资源","textPreview":"不能只看资源","textChars":6,"textLines":1,"bbox":[774,322,438,30]}
+{"kind":"textbox","id":"sh/bmpcn6l0","slide":2,"name":"text","text":"残留可能是 bit、计数、链表成员、owner 指针、设备拓扑或返回值语义，而不只是 kmalloc/free。","textPreview":"残留可能是 bit、计数、链表成员、owner 指针、设备拓扑或返回值语义，而不只是 kmalloc/free。","textChars":56,"textLines":1,"bbox":[774,361,438,58]}
+{"kind":"shape","id":"sh/qlgvu14f","slide":2,"name":"panel-不能只看局部","bbox":[754,458,478,126]}
+{"kind":"textbox","id":"sh/do7epg36","slide":2,"name":"text","text":"不能只看局部","textPreview":"不能只看局部","textChars":6,"textLines":1,"bbox":[774,474,438,30]}
+{"kind":"textbox","id":"sh/cnydwbml","slide":2,"name":"text","text":"取消可能藏在 callee、transaction abort、owner teardown 或另一个错误出口；同名变量也不等于同一对象。","textPreview":"取消可能藏在 callee、transaction abort、owner teardown 或另一个错误出口；同名变量也不等于同一对象。","textChars":69,"textLines":1,"bbox":[774,513,438,58]}
+{"kind":"textbox","id":"sh/3y5cjm54","slide":2,"name":"text","text":"因此需要以失败点为中心，重建“写入 → 失败 → 清理 → 错误出口”的完整因果链。","textPreview":"因此需要以失败点为中心，重建“写入 → 失败 → 清理 → 错误出口”的完整因果链。","textChars":42,"textLines":1,"bbox":[48,622,1184,34]}
+{"kind":"notes","id":"nt/m3522n","slide":2,"text":"提出架构的直接原因是这种代码形态：状态先发布，错误后发生，清理分散且常常只覆盖局部对象。传统局部模式难以回答最终残差。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/confirmed_bugs.md"}
+{"kind":"slide","id":"sl/ffl8a2","slide":3,"title":"SE_EOD · GROUP MEETING","textShapes":11}
+{"kind":"textbox","id":"sh/rids72ds","slide":3,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/sjmtg7ed","slide":3,"name":"title","text":"三类语义断层使简单的“申请—释放”模型不够用","textPreview":"三类语义断层使简单的“申请—释放”模型不够用","textChars":22,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/tkva9cvy","slide":3,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/itkbaxwb","slide":3,"name":"page","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/juts3idw","slide":3,"name":"panel-状态效果不等于资源","bbox":[48,160,350,310]}
+{"kind":"textbox","id":"sh/4v2tcne1","slide":3,"name":"text","text":"状态效果不等于资源","textPreview":"状态效果不等于资源","textChars":9,"textLines":1,"bbox":[68,176,310,30]}
+{"kind":"textbox","id":"sh/5wva5svm","slide":3,"name":"text","text":"位状态、容器成员、计数增减、所属对象指针，以及成功状态/失败返回，都可能构成缺陷。","textPreview":"位状态、容器成员、计数增减、所属对象指针，以及成功状态/失败返回，都可能构成缺陷。","textChars":41,"textLines":1,"bbox":[68,215,310,242]}
+{"kind":"shape","id":"sh/upkb6dwz","slide":3,"name":"panel-清理不等于取消","bbox":[465,160,350,310]}
+{"kind":"textbox","id":"sh/vqtszidk","slide":3,"name":"text","text":"清理不等于取消","textPreview":"清理不等于取消","textChars":7,"textLines":1,"bbox":[485,176,310,30]}
+{"kind":"textbox","id":"sh/nqlwrqpo","slide":3,"name":"text","text":"free(local) 只能证明局部对象销毁；它不能自动取消已经挂到另一个 owner 字段、容器或事务链上的效果。","textPreview":"free(local) 只能证明局部对象销毁；它不能自动取消已经挂到另一个 owner 字段、容器或事务链上的效果。","textChars":58,"textLines":1,"bbox":[485,215,310,242]}
+{"kind":"shape","id":"sh/2pcvil83","slide":3,"name":"panel-残差不等于 Bug","bbox":[882,160,350,310]}
+{"kind":"textbox","id":"sh/9s3etg7u","slide":3,"name":"text","text":"残差不等于 Bug","textPreview":"残差不等于 Bug","textChars":9,"textLines":1,"bbox":[902,176,310,30]}
+{"kind":"textbox","id":"sh/orudkv69","slide":3,"name":"text","text":"函数边界上 R_f 非空，只说明错误退出时存在未闭合效果；owner 是否存活、影响是否可见仍需额外证据。","textPreview":"函数边界上 R_f 非空，只说明错误退出时存在未闭合效果；owner 是否存活、影响是否可见仍需额外证据。","textChars":53,"textLines":1,"bbox":[902,215,310,242]}
+{"kind":"textbox","id":"sh/belwvqpk","slide":3,"name":"text","text":"需要同时表达：对象身份、控制流可达性、错误出口分区、跨过程语义和证据强度。","textPreview":"需要同时表达：对象身份、控制流可达性、错误出口分区、跨过程语义和证据强度。","textChars":37,"textLines":1,"bbox":[48,525,1184,48]}
+{"kind":"textbox","id":"sh/atcfmlof","slide":3,"name":"text","text":"这五个要求共同决定了架构，而不是先有模块再寻找问题。","textPreview":"这五个要求共同决定了架构，而不是先有模块再寻找问题。","textChars":26,"textLines":1,"bbox":[48,590,1184,38]}
+{"kind":"notes","id":"nt/ffl8a2","slide":3,"text":"这里把架构需求从问题中推导出来：效果类型丰富、取消依赖身份、结论需要分层。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/PAPER_ROADMAP.md"}
+{"kind":"slide","id":"sl/264o31","slide":4,"title":"SE_EOD · GROUP MEETING","textShapes":17}
+{"kind":"textbox","id":"sh/dwji1gbq","slide":4,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/q98z61sz","slide":4,"name":"title","text":"由问题反推架构：四个设计原则缺一不可","textPreview":"由问题反推架构：四个设计原则缺一不可","textChars":18,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/ra10z6tk","slide":4,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/0zahcba1","slide":4,"name":"page","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"textbox","id":"sh/10ji5gbm","slide":4,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[48,166,38,22]}
+{"kind":"shape","id":"sh/exsza1sb","slide":4,"name":"rect","bbox":[48,196,520,2]}
+{"kind":"textbox","id":"sh/fy1036tg","slide":4,"name":"text","text":"Failure-centered","textPreview":"Failure-centered","textChars":16,"textLines":1,"bbox":[48,214,520,32]}
+{"kind":"textbox","id":"sh/o3u1gvad","slide":4,"name":"text","text":"以具体失败调用为锚，向前后两侧切片，而不是扫描孤立 API 名称。","textPreview":"以具体失败调用为锚，向前后两侧切片，而不是扫描孤立 API 名称。","textChars":33,"textLines":1,"bbox":[48,257,520,74]}
+{"kind":"textbox","id":"sh/p43i90by","slide":4,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[712,166,38,22]}
+{"kind":"shape","id":"sh/pcbq1cva","slide":4,"name":"rect","bbox":[712,196,520,2]}
+{"kind":"textbox","id":"sh/4bips7ep","slide":4,"name":"text","text":"Identity-aware","textPreview":"Identity-aware","textChars":14,"textLines":1,"bbox":[712,214,520,32]}
+{"kind":"textbox","id":"sh/3a98z2d4","slide":4,"name":"text","text":"效果和取消必须匹配 Root、Key、Plane、Value，避免名称相似造成误抵消。","textPreview":"效果和取消必须匹配 Root、Key、Plane、Value，避免名称相似造成误抵消。","textChars":43,"textLines":1,"bbox":[712,257,520,74]}
+{"kind":"textbox","id":"sh/2907qxwj","slide":4,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[48,390,38,22]}
+{"kind":"shape","id":"sh/d0bq5cv6","slide":4,"name":"rect","bbox":[48,420,520,2]}
+{"kind":"textbox","id":"sh/cf2pw7e1","slide":4,"name":"text","text":"Exit-sensitive","textPreview":"Exit-sensitive","textChars":14,"textLines":1,"bbox":[48,438,520,32]}
+{"kind":"textbox","id":"sh/ret832dg","slide":4,"name":"text","text":"不同 error return 保持独立分区，分支特有清理不能被提升为全函数保证。","textPreview":"不同 error return 保持独立分区，分支特有清理不能被提升为全函数保证。","textChars":41,"textLines":1,"bbox":[48,481,520,74]}
+{"kind":"textbox","id":"sh/qdk7uxwv","slide":4,"name":"text","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[712,390,38,22]}
+{"kind":"shape","id":"sh/tkrqt8v2","slide":4,"name":"rect","bbox":[712,420,520,2]}
+{"kind":"textbox","id":"sh/sjypkneh","slide":4,"name":"text","text":"Evidence-preserving","textPreview":"Evidence-preserving","textChars":19,"textLines":1,"bbox":[712,438,520,32]}
+{"kind":"textbox","id":"sh/kzmhw7qp","slide":4,"name":"text","text":"保留源码 site、路径、未知原因和 containment proof，让结果可回看、可质疑。","textPreview":"保留源码 site、路径、未知原因和 containment proof，让结果可回看、可质疑。","textChars":48,"textLines":1,"bbox":[712,481,520,74]}
+{"kind":"shape","id":"sh/50vypc7a","slide":4,"name":"panel-架构目标","bbox":[48,565,1184,100]}
+{"kind":"textbox","id":"sh/ix4zuh8j","slide":4,"name":"text","text":"架构目标","textPreview":"架构目标","textChars":4,"textLines":1,"bbox":[68,581,1144,30]}
+{"kind":"textbox","id":"sh/jydgn2p4","slide":4,"name":"text","text":"不追求更多 candidate，而是输出可逐行复核、能限制结论边界的 residual witness。","textPreview":"不追求更多 candidate，而是输出可逐行复核、能限制结论边界的 residual witness。","textChars":52,"textLines":1,"bbox":[68,620,1144,32]}
+{"kind":"notes","id":"nt/264o31","slide":4,"text":"四个原则分别回应前一页的断层：路径、身份、分区、证据。后续模块都是这些原则的工程实现。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/PROJECT_ARCHITECTURE.md"}
+{"kind":"slide","id":"sl/760a57","slide":5,"title":"SE_EOD · GROUP MEETING","textShapes":43}
+{"kind":"textbox","id":"sh/8zu1s3e5","slide":5,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/7ylkjyd0","slide":5,"name":"title","text":"架构主链路：从 C 源码到可审计 residual witness","textPreview":"架构主链路：从 C 源码到可审计 residual witness","textChars":33,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/6xcjqtwf","slide":5,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/lw3ihovu","slide":5,"name":"page","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/kva1o3e9","slide":5,"name":"rect","bbox":[48,176,122,148]}
+{"kind":"textbox","id":"sh/ja10fydo","slide":5,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[62,193,34,21]}
+{"kind":"textbox","id":"sh/y9sjmtw3","slide":5,"name":"text","text":"C source","textPreview":"C source","textChars":8,"textLines":1,"bbox":[62,232,96,28]}
+{"kind":"textbox","id":"sh/x8jidovi","slide":5,"name":"text","text":"Linux 源码","textPreview":"Linux 源码","textChars":8,"textLines":1,"bbox":[62,274,96,30]}
+{"kind":"textbox","id":"sh/w7a1kjed","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[168,229,32,36]}
+{"kind":"shape","id":"sh/ylorqxk3","slide":5,"name":"rect","bbox":[196,176,122,148]}
+{"kind":"textbox","id":"sh/zmx8z2lo","slide":5,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[210,193,34,21]}
+{"kind":"textbox","id":"sh/0nq9s729","slide":5,"name":"text","text":"FunctionIR","textPreview":"FunctionIR","textChars":10,"textLines":1,"bbox":[210,232,96,28]}
+{"kind":"textbox","id":"sh/lozq1c3u","slide":5,"name":"text","text":"前端归一","textPreview":"前端归一","textChars":4,"textLines":1,"bbox":[210,274,96,30]}
+{"kind":"textbox","id":"sh/qhormxk7","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[316,229,32,36]}
+{"kind":"shape","id":"sh/bix8v2ls","slide":5,"name":"rect","bbox":[344,176,122,148]}
+{"kind":"textbox","id":"sh/cj69o72d","slide":5,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[358,193,34,21]}
+{"kind":"textbox","id":"sh/dkfqxs3y","slide":5,"name":"text","text":"CFG","textPreview":"CFG","textChars":3,"textLines":1,"bbox":[358,232,96,28]}
+{"kind":"textbox","id":"sh/2t4ridkb","slide":5,"name":"text","text":"控制流","textPreview":"控制流","textChars":3,"textLines":1,"bbox":[358,274,96,30]}
+{"kind":"textbox","id":"sh/3ud8rilg","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[464,229,32,36]}
+{"kind":"shape","id":"sh/rytoze18","slide":5,"name":"rect","bbox":[492,176,122,148]}
+{"kind":"textbox","id":"sh/6xknq903","slide":5,"name":"text","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[506,193,34,21]}
+{"kind":"textbox","id":"sh/t0b61oje","slide":5,"name":"text","text":"Scope","textPreview":"Scope","textChars":5,"textLines":1,"bbox":[506,232,96,28]}
+{"kind":"textbox","id":"sh/sz25sjit","slide":5,"name":"text","text":"元数据边界","textPreview":"元数据边界","textChars":5,"textLines":1,"bbox":[506,274,96,30]}
+{"kind":"textbox","id":"sh/f2to3y1k","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[612,229,32,36]}
+{"kind":"shape","id":"sh/e1knut0z","slide":5,"name":"rect","bbox":[640,176,122,148]}
+{"kind":"textbox","id":"sh/1ov65ojq","slide":5,"name":"text","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[654,193,34,21]}
+{"kind":"textbox","id":"sh/gn2pw3i5","slide":5,"name":"text","text":"Failure","textPreview":"Failure","textChars":7,"textLines":1,"bbox":[654,232,96,28]}
+{"kind":"textbox","id":"sh/v69oru1g","slide":5,"name":"text","text":"失败点","textPreview":"失败点","textChars":3,"textLines":1,"bbox":[654,274,96,30]}
+{"kind":"textbox","id":"sh/u50nip0v","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[760,229,32,36]}
+{"kind":"shape","id":"sh/0belsvyd","slide":5,"name":"rect","bbox":[788,176,122,148]}
+{"kind":"textbox","id":"sh/lcn2l0zy","slide":5,"name":"text","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[802,193,34,21]}
+{"kind":"textbox","id":"sh/y9w3qlgn","slide":5,"name":"text","text":"Slice","textPreview":"Slice","textChars":5,"textLines":1,"bbox":[802,232,96,28]}
+{"kind":"textbox","id":"sh/za5kjqh8","slide":5,"name":"text","text":"双向切片","textPreview":"双向切片","textChars":4,"textLines":1,"bbox":[802,274,96,30]}
+{"kind":"textbox","id":"sh/c7elovyh","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[908,229,32,36]}
+{"kind":"shape","id":"sh/d8n2h0z2","slide":5,"name":"rect","bbox":[936,176,122,148]}
+{"kind":"textbox","id":"sh/q5c3mlgb","slide":5,"name":"text","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[950,193,34,21]}
+{"kind":"textbox","id":"sh/b65kfqhw","slide":5,"name":"text","text":"Summary","textPreview":"Summary","textChars":7,"textLines":1,"bbox":[950,232,96,28]}
+{"kind":"textbox","id":"sh/w3yl0fyl","slide":5,"name":"text","text":"跨过程","textPreview":"跨过程","textChars":3,"textLines":1,"bbox":[950,274,96,30]}
+{"kind":"textbox","id":"sh/h47mtkz6","slide":5,"name":"text","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[1056,229,32,36]}
+{"kind":"shape","id":"sh/t8jilcfi","slide":5,"name":"rect","bbox":[1084,176,122,148]}
+{"kind":"textbox","id":"sh/s7ahs7ed","slide":5,"name":"text","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1098,193,34,21]}
+{"kind":"textbox","id":"sh/rm10j2xs","slide":5,"name":"text","text":"Report","textPreview":"Report","textChars":6,"textLines":1,"bbox":[1098,232,96,28]}
+{"kind":"textbox","id":"sh/6l8zqxw7","slide":5,"name":"text","text":"证据输出","textPreview":"证据输出","textChars":4,"textLines":1,"bbox":[1098,274,96,30]}
+{"kind":"textbox","id":"sh/1cjipwfu","slide":5,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[48,400,38,22]}
+{"kind":"shape","id":"sh/gbahwre9","slide":5,"name":"rect","bbox":[48,430,340,2]}
+{"kind":"textbox","id":"sh/fa10nmxo","slide":5,"name":"text","text":"程序理解层","textPreview":"程序理解层","textChars":5,"textLines":1,"bbox":[48,448,340,32]}
+{"kind":"textbox","id":"sh/e9szuhw3","slide":5,"name":"text","text":"frontend/ 与 cfg.py 保留表达式、调用点、分支、goto 和 return。","textPreview":"frontend/ 与 cfg.py 保留表达式、调用点、分支、goto 和 return。","textChars":46,"textLines":1,"bbox":[48,491,340,74]}
+{"kind":"textbox","id":"sh/pg3itwfq","slide":5,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[470,400,38,22]}
+{"kind":"shape","id":"sh/ofu10re5","slide":5,"name":"rect","bbox":[470,430,340,2]}
+{"kind":"textbox","id":"sh/m9kny98r","slide":5,"name":"text","text":"残差计算层","textPreview":"残差计算层","textChars":5,"textLines":1,"bbox":[470,448,340,32]}
+{"kind":"textbox","id":"sh/nado7u9w","slide":5,"name":"text","text":"scope、failure point、effect extractor 与 slicer 计算 E_f / C_f / T_f / R_f。","textPreview":"scope、failure point、effect extractor 与 slicer 计算 E_f / C_f / T_f / R_f。","textChars":71,"textLines":1,"bbox":[470,491,340,74]}
+{"kind":"textbox","id":"sh/8bm50zqh","slide":5,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[892,400,38,22]}
+{"kind":"shape","id":"sh/9cv694r2","slide":5,"name":"rect","bbox":[892,430,340,2]}
+{"kind":"textbox","id":"sh/ad47298n","slide":5,"name":"text","text":"证据治理层","textPreview":"证据治理层","textChars":5,"textLines":1,"bbox":[892,448,340,32]}
+{"kind":"textbox","id":"sh/vedobe98","slide":5,"name":"text","text":"function summary、oracle 与 report 约束跨过程传播和最终结论。","textPreview":"function summary、oracle 与 report 约束跨过程传播和最终结论。","textChars":46,"textLines":1,"bbox":[892,491,340,74]}
+{"kind":"notes","id":"nt/760a57","slide":5,"text":"按三层讲模块，而不是逐个文件报菜名：程序理解、残差计算、证据治理。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/PROJECT_ARCHITECTURE.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/frontend/model.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/cfg.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/effect_extractor.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/residual_slicer.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/function_summary.py"}
+{"kind":"slide","id":"sl/wubqql","slide":6,"title":"SE_EOD · GROUP MEETING","textShapes":15}
+{"kind":"textbox","id":"sh/its72ts7","slide":6,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/5wj6dory","slide":6,"name":"title","text":"核心抽象把状态变化表示为可匹配、可追踪的效果","textPreview":"核心抽象把状态变化表示为可匹配、可追踪的效果","textChars":22,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/4vap4jqd","slide":6,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/rilofy9o","slide":6,"name":"page","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/6hs76t8j","slide":6,"name":"panel-E_f · reaching effects","bbox":[48,154,270,132]}
+{"kind":"textbox","id":"sh/tk36h8ru","slide":6,"name":"text","text":"E_f · reaching effects","textPreview":"E_f · reaching effects","textChars":22,"textLines":1,"bbox":[68,170,230,30]}
+{"kind":"textbox","id":"sh/sjup83q9","slide":6,"name":"text","text":"失败前已经生效，并在 CFG 上能够到达失败调用的元数据效果。","textPreview":"失败前已经生效，并在 CFG 上能够到达失败调用的元数据效果。","textChars":31,"textLines":1,"bbox":[68,209,230,64]}
+{"kind":"shape","id":"sh/fmloji90","slide":6,"name":"panel-C_f · cancellation","bbox":[348,154,270,132]}
+{"kind":"textbox","id":"sh/elc7ad8f","slide":6,"name":"text","text":"C_f · cancellation","textPreview":"C_f · cancellation","textChars":18,"textLines":1,"bbox":[368,170,230,30]}
+{"kind":"textbox","id":"sh/gri1cfyd","slide":6,"name":"text","text":"错误路径上对同一对象、键和值执行的逆向效果。","textPreview":"错误路径上对同一对象、键和值执行的逆向效果。","textChars":22,"textLines":1,"bbox":[368,209,230,64]}
+{"kind":"shape","id":"sh/hcr2lkfi","slide":6,"name":"panel-T_f · protection","bbox":[648,154,270,132]}
+{"kind":"textbox","id":"sh/up0ja5g7","slide":6,"name":"text","text":"T_f · protection","textPreview":"T_f · protection","textChars":16,"textLines":1,"bbox":[668,170,230,30]}
+{"kind":"textbox","id":"sh/vq9kjaxs","slide":6,"name":"text","text":"事务 abort、fatal shutdown、owner teardown 等明确接管效果。","textPreview":"事务 abort、fatal shutdown、owner teardown 等明确接管效果。","textChars":47,"textLines":1,"bbox":[668,209,230,64]}
+{"kind":"shape","id":"sh/4f2lgfe9","slide":6,"name":"panel-R_f · residual","bbox":[948,154,284,132]}
+{"kind":"textbox","id":"sh/5gb2pkfu","slide":6,"name":"text","text":"R_f · residual","textPreview":"R_f · residual","textChars":14,"textLines":1,"bbox":[968,170,244,30]}
+{"kind":"textbox","id":"sh/id0je5g3","slide":6,"name":"text","text":"R_f = Normalize(E_f ⊕ C_f) − T_f","textPreview":"R_f = Normalize(E_f ⊕ C_f) − T_f","textChars":32,"textLines":1,"bbox":[968,209,244,64]}
+{"kind":"shape","id":"sh/3e9knaxo","slide":6,"name":"code-src/metadata_residual.py · MetadataEffect","bbox":[48,332,584,292]}
+{"kind":"shape","id":"sh/sj2lkze5","slide":6,"name":"bar-src/metadata_residual.py · MetadataEffect","bbox":[48,332,7,292]}
+{"kind":"textbox","id":"sh/dkb2t4fq","slide":6,"name":"text","text":"src/metadata_residual.py · MetadataEffect","textPreview":"src/metadata_residual.py · MetadataEffect","textChars":41,"textLines":1,"bbox":[68,346,546,24]}
+{"kind":"textbox","id":"sh/1072xk7u","slide":6,"name":"text","text":"@dataclass(frozen=True)\nclass MetadataEffect:\n    root: str\n    key: str\n    plane: MetadataPlane\n    delta: MetadataDelta\n    value: str\n    site: SourceSite\n    evidence: EffectEvidence\n\nidentity = (root, key, plane)\ncancel_key = (root, key, plane, value)","textPreview":"@dataclass(frozen=True) | class MetadataEffect: |     root: str |     key: str |     plane: MetadataPlane |     delta: MetadataDelta |   ...","textChars":257,"textLines":12,"bbox":[68,379,548,232]}
+{"kind":"shape","id":"sh/0zy14z6p","slide":6,"name":"code-IDENTITY-AWARE CANCELLATION","bbox":[664,332,568,292]}
+{"kind":"shape","id":"sh/zypkvup4","slide":6,"name":"bar-IDENTITY-AWARE CANCELLATION","bbox":[664,332,7,292]}
+{"kind":"textbox","id":"sh/exgj2poj","slide":6,"name":"text","text":"IDENTITY-AWARE CANCELLATION","textPreview":"IDENTITY-AWARE CANCELLATION","textChars":27,"textLines":1,"bbox":[684,346,530,24]}
+{"kind":"textbox","id":"sh/94r21476","slide":6,"name":"text","text":"ADD(list, device)       ↔ REMOVE(list, device)\nINC(counter, n)         ↔ DEC(counter, n)\nSET(state_bit, value)   ↔ CLEAR(state_bit, value)\nATTACH(owner.field, x)  ↔ DROP(owner.field, x)\n\nsame spelling           ≠ same identity\nfree(local_object)      ≠ rollback(owner.field)\ntransaction abort       ≠ arbitrary state restore","textPreview":"ADD(list, device)       ↔ REMOVE(list, device) | INC(counter, n)         ↔ DEC(counter, n) | SET(state_bit, value)   ↔ CLEAR(state_bit, v...","textChars":324,"textLines":8,"bbox":[684,379,532,232]}
+{"kind":"notes","id":"nt/wubqql","slide":6,"text":"Effect schema 使结构、计数、恢复三类元数据共享统一表示；取消必须在身份和数值上兼容。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/metadata_residual.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md"}
+{"kind":"slide","id":"sl/25zojs","slide":7,"title":"SE_EOD · GROUP MEETING","textShapes":14}
+{"kind":"textbox","id":"sh/dc3m187e","slide":7,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/q9s36d83","slide":7,"name":"title","text":"跨过程摘要必须保留错误出口分区，否则容易过度证明清理","textPreview":"跨过程摘要必须保留错误出口分区，否则容易过度证明清理","textChars":26,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/ra14zipo","slide":7,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/4nal43qx","slide":7,"name":"page","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/5ojmx87i","slide":7,"name":"code-src/function_summary.py","bbox":[48,150,580,454]}
+{"kind":"shape","id":"sh/ils32t8r","slide":7,"name":"bar-src/function_summary.py","bbox":[48,150,7,454]}
+{"kind":"textbox","id":"sh/3m14vypc","slide":7,"name":"text","text":"src/function_summary.py","textPreview":"src/function_summary.py","textChars":23,"textLines":1,"bbox":[68,164,542,24]}
+{"kind":"textbox","id":"sh/oje5gn61","slide":7,"name":"text","text":"@dataclass(frozen=True)\nclass ErrorExitPartition:\n    exit_site: SourceSite\n    return_expression: str\n    return_constraint: str\n    opens: tuple[MetadataEffect, ...]\n    cancels: tuple[MetadataEffect, ...]\n    protects: tuple[MetadataEffect, ...]\n    residuals: tuple[MetadataEffect, ...]\n    terminal_actions: tuple[MetadataEffect, ...]\n    path: tuple[SourceSite, ...]\n    complete: bool\n    unknown_causes: tuple[str, ...]","textPreview":"@dataclass(frozen=True) | class ErrorExitPartition: |     exit_site: SourceSite |     return_expression: str |     return_constraint: str...","textChars":427,"textLines":13,"bbox":[68,197,544,394]}
+{"kind":"textbox","id":"sh/9knm9s7m","slide":7,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[670,164,38,22]}
+{"kind":"shape","id":"sh/lk3a90vi","slide":7,"name":"rect","bbox":[670,194,562,2]}
+{"kind":"textbox","id":"sh/0jutgvux","slide":7,"name":"text","text":"参数化身份","textPreview":"参数化身份","textChars":5,"textLines":1,"bbox":[670,212,562,32]}
+{"kind":"textbox","id":"sh/zils7ads","slide":7,"name":"text","text":"callee 中 param->field 投影为 caller 的实参 owner，并保留 call-site witness。","textPreview":"callee 中 param->field 投影为 caller 的实参 owner，并保留 call-site witness。","textChars":65,"textLines":1,"bbox":[670,255,562,74]}
+{"kind":"textbox","id":"sh/yhcbe5c7","slide":7,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[670,326,38,22]}
+{"kind":"shape","id":"sh/dg3a50vm","slide":7,"name":"rect","bbox":[670,356,562,2]}
+{"kind":"textbox","id":"sh/cfutcvu1","slide":7,"name":"text","text":"出口相关性","textPreview":"出口相关性","textChars":5,"textLines":1,"bbox":[670,374,562,32]}
+{"kind":"textbox","id":"sh/be1s3qdg","slide":7,"name":"text","text":"return -ENOMEM 与 return ret 的路径效果分别保存，不做无条件合并。","textPreview":"return -ENOMEM 与 return ret 的路径效果分别保存，不做无条件合并。","textChars":46,"textLines":1,"bbox":[670,417,562,74]}
+{"kind":"textbox","id":"sh/qdsralcv","slide":7,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[670,488,38,22]}
+{"kind":"shape","id":"sh/xcnahkvq","slide":7,"name":"rect","bbox":[670,518,562,2]}
+{"kind":"textbox","id":"sh/wbet8fu5","slide":7,"name":"text","text":"终止动作提升","textPreview":"终止动作提升","textChars":6,"textLines":1,"bbox":[670,536,562,32]}
+{"kind":"textbox","id":"sh/gfmdk32h","slide":7,"name":"text","text":"只有所有完整错误分区都包含 terminal action，才能投影为调用者级保证。","textPreview":"只有所有完整错误分区都包含 terminal action，才能投影为调用者级保证。","textChars":42,"textLines":1,"bbox":[670,579,562,74]}
+{"kind":"notes","id":"nt/25zojs","slide":7,"text":"这一页重点解释为何要做 ErrorExitPartition：同一函数不同错误出口的 cleanup 可能完全不同。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/src/function_summary.py\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md"}
+{"kind":"slide","id":"sl/hp8wqb","slide":8,"title":"SE_EOD · GROUP MEETING","textShapes":19}
+{"kind":"textbox","id":"sh/s725gr2d","slide":8,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/r6tonmls","slide":8,"name":"title","text":"报告结论分层：残差证据与真实 Bug 之间不能直接画等号","textPreview":"报告结论分层：残差证据与真实 Bug 之间不能直接画等号","textChars":28,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/q5knehk7","slide":8,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/54b6lc3m","slide":8,"name":"page","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/4325cr21","slide":8,"name":"rect","bbox":[48,154,1184,70]}
+{"kind":"textbox","id":"sh/329ojmlg","slide":8,"name":"text","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[68,172,44,30]}
+{"kind":"textbox","id":"sh/i10nah4v","slide":8,"name":"text","text":"SOURCE WITNESS","textPreview":"SOURCE WITNESS","textChars":14,"textLines":1,"bbox":[135,172,330,30]}
+{"kind":"textbox","id":"sh/h0r6hc3q","slide":8,"name":"text","text":"效果、失败点、错误出口都有源码位置","textPreview":"效果、失败点、错误出口都有源码位置","textChars":17,"textLines":1,"bbox":[500,172,700,32]}
+{"kind":"shape","id":"sh/gzi587m5","slide":8,"name":"rect","bbox":[48,246,1184,70]}
+{"kind":"textbox","id":"sh/6d87mdsn","slide":8,"name":"text","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[68,264,44,30]}
+{"kind":"textbox","id":"sh/7e18fi98","slide":8,"name":"text","text":"BOUNDARY RESIDUAL","textPreview":"BOUNDARY RESIDUAL","textChars":17,"textLines":1,"bbox":[135,264,330,30]}
+{"kind":"textbox","id":"sh/sfa9onat","slide":8,"name":"text","text":"R_f 非空并到达函数错误出口","textPreview":"R_f 非空并到达函数错误出口","textChars":15,"textLines":1,"bbox":[500,264,700,32]}
+{"kind":"shape","id":"sh/tgjqh8re","slide":8,"name":"rect","bbox":[48,338,1184,70]}
+{"kind":"textbox","id":"sh/i987itsb","slide":8,"name":"text","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[68,356,44,30]}
+{"kind":"textbox","id":"sh/jah8by9w","slide":8,"name":"text","text":"OWNER / DOMAIN PROOF","textPreview":"OWNER / DOMAIN PROOF","textChars":20,"textLines":1,"bbox":[135,356,330,30]}
+{"kind":"textbox","id":"sh/kbqpk3ah","slide":8,"name":"text","text":"owner 存活或 failure domain 未吸收残差","textPreview":"owner 存活或 failure domain 未吸收残差","textChars":30,"textLines":1,"bbox":[500,356,700,32]}
+{"kind":"shape","id":"sh/5czqd8r2","slide":8,"name":"rect","bbox":[48,430,1184,70]}
+{"kind":"textbox","id":"sh/alo7etsf","slide":8,"name":"text","text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[68,448,44,30]}
+{"kind":"textbox","id":"sh/bmx87yt0","slide":8,"name":"text","text":"DYNAMIC / REVIEW EVIDENCE","textPreview":"DYNAMIC / REVIEW EVIDENCE","textChars":25,"textLines":1,"bbox":[135,448,330,30]}
+{"kind":"textbox","id":"sh/zqd4fu9s","slide":8,"name":"text","text":"复现、故障注入、历史修复或补丁审查","textPreview":"复现、故障注入、历史修复或补丁审查","textChars":17,"textLines":1,"bbox":[500,448,700,32]}
+{"kind":"shape","id":"sh/ep4nmp87","slide":8,"name":"rect","bbox":[48,522,1184,70]}
+{"kind":"textbox","id":"sh/1sv6h47y","slide":8,"name":"text","text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[68,540,44,30]}
+{"kind":"textbox","id":"sh/0rm5ozqd","slide":8,"name":"text","text":"CONFIRMED BUG","textPreview":"CONFIRMED BUG","textChars":13,"textLines":1,"bbox":[135,540,330,30]}
+{"kind":"textbox","id":"sh/nedojupo","slide":8,"name":"text","text":"证据足以进入确认账本","textPreview":"证据足以进入确认账本","textChars":10,"textLines":1,"bbox":[500,540,700,32]}
+{"kind":"textbox","id":"sh/md4nqp83","slide":8,"name":"text","text":"本周候选停留在第 1–3 层：它们值得优先审查，但尚未进入 confirmed bug。","textPreview":"本周候选停留在第 1–3 层：它们值得优先审查，但尚未进入 confirmed bug。","textChars":44,"textLines":1,"bbox":[48,632,1184,34]}
+{"kind":"notes","id":"nt/hp8wqb","slide":8,"text":"为后面的候选项建立口径：pending review 是分析器和源码审查得到的高价值线索，不等同于已复现 Bug。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/README.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/confirmed_bugs.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md"}
+{"kind":"slide","id":"sl/d5rsai","slide":9,"title":"CONFIRMED BUG · BTRFS #7","textShapes":12}
+{"kind":"textbox","id":"sh/wzy18nid","slide":9,"name":"kicker","text":"CONFIRMED BUG · BTRFS #7","textPreview":"CONFIRMED BUG · BTRFS #7","textChars":24,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/vep0zi1s","slide":9,"name":"title","text":"确认案例 1：reloc_root 已挂到 fs_root，提交失败后引用未被撤销","textPreview":"确认案例 1：reloc_root 已挂到 fs_root，提交失败后引用未被撤销","textChars":41,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/adgj6x07","slide":9,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/54ri5cju","slide":9,"name":"page","text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/k3i1c7ip","slide":9,"name":"code-fs/btrfs/relocation.c · key path","bbox":[48,148,676,486]}
+{"kind":"shape","id":"sh/j2903214","slide":9,"name":"bar-fs/btrfs/relocation.c · key path","bbox":[48,148,7,486]}
+{"kind":"textbox","id":"sh/i10jax0j","slide":9,"name":"text","text":"fs/btrfs/relocation.c · key path","textPreview":"fs/btrfs/relocation.c · key path","textChars":32,"textLines":1,"bbox":[68,162,638,24]}
+{"kind":"textbox","id":"sh/l8nit8jq","slide":9,"name":"text","text":"4196  fs_root = btrfs_get_fs_root(fs_info, ...);\n4205  ret = __add_reloc_root(reloc_root);\n4207  if (ret) { ... goto out_unset; }\n\n4213  fs_root->reloc_root = btrfs_grab_root(reloc_root);\n4214  btrfs_put_root(fs_root);\n\n4217  ret = btrfs_commit_transaction(trans);\n4218  if (ret)\n4219      goto out_unset;\n\n4235  out_unset:\n4236      unset_reloc_control(rc);\n4241      free_reloc_roots(&reloc_roots);\n4252      return ret;","textPreview":"4196  fs_root = btrfs_get_fs_root(fs_info, ...); | 4205  ret = __add_reloc_root(reloc_root); | 4207  if (ret) { ... goto out_unset; } |  ...","textChars":422,"textLines":15,"bbox":[68,195,640,426]}
+{"kind":"shape","id":"sh/07e10325","slide":9,"name":"panel-E_f","bbox":[760,148,472,104]}
+{"kind":"textbox","id":"sh/qtwbmtsz","slide":9,"name":"text","text":"E_f","textPreview":"E_f","textChars":3,"textLines":1,"bbox":[780,164,432,30]}
+{"kind":"textbox","id":"sh/bu5cvytk","slide":9,"name":"text","text":"ATTACH(fs_root->reloc_root, reloc_root)\nsite: line 4213","textPreview":"ATTACH(fs_root->reloc_root, reloc_root) | site: line 4213","textChars":55,"textLines":2,"bbox":[780,203,432,36]}
+{"kind":"shape","id":"sh/cveto3a5","slide":9,"name":"panel-C_f / T_f","bbox":[760,274,472,126]}
+{"kind":"textbox","id":"sh/dwnux8bq","slide":9,"name":"text","text":"C_f / T_f","textPreview":"C_f / T_f","textChars":9,"textLines":1,"bbox":[780,290,432,30]}
+{"kind":"textbox","id":"sh/yxgbqdsb","slide":9,"name":"text","text":"局部 control 与 reloc_roots list 被释放，但没有动作指向已发布的 fs_root 字段。","textPreview":"局部 control 与 reloc_roots list 被释放，但没有动作指向已发布的 fs_root 字段。","textChars":57,"textLines":1,"bbox":[780,329,432,58]}
+{"kind":"shape","id":"sh/zypczytw","slide":9,"name":"panel-R_f","bbox":[760,422,472,126]}
+{"kind":"textbox","id":"sh/0zyds3ah","slide":9,"name":"text","text":"R_f","textPreview":"R_f","textChars":3,"textLines":1,"bbox":[780,438,432,30]}
+{"kind":"textbox","id":"sh/l07u18bm","slide":9,"name":"text","text":"fs_root->reloc_root 引用跨越错误出口；故障注入观察到 25 个 root 保留 reloc_refs=1。","textPreview":"fs_root->reloc_root 引用跨越错误出口；故障注入观察到 25 个 root 保留 reloc_refs=1。","textChars":63,"textLines":1,"bbox":[780,477,432,58]}
+{"kind":"textbox","id":"sh/m1gvuds7","slide":9,"name":"text","text":"关键不是 cleanup 数量少，而是 cleanup 的 owner identity 与 4213 的写入不匹配。","textPreview":"关键不是 cleanup 数量少，而是 cleanup 的 owner identity 与 4213 的写入不匹配。","textChars":59,"textLines":1,"bbox":[760,575,472,58]}
+{"kind":"notes","id":"nt/d5rsai","slide":9,"text":"一页讲完确认案例：4213 发布引用，4217 提交失败，out_unset 未对同一 owner 字段执行 DROP。动态注入进一步确认引用残留。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.14-fs/fs/btrfs/relocation.c\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/confirmed_bugs.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/linux-v6.8/btrfs/recover_relocation_qemu_report.md"}
+{"kind":"slide","id":"sl/no81fb","slide":10,"title":"CONFIRMED BUG · EXT4 #4","textShapes":12}
+{"kind":"textbox","id":"sh/q50j6183","slide":10,"name":"kicker","text":"CONFIRMED BUG · EXT4 #4","textPreview":"CONFIRMED BUG · EXT4 #4","textChars":23,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/dsrihgre","slide":10,"name":"title","text":"确认案例 2：fallback 已更新 inode 状态，却可能返回上一轮 -ENOSPC","textPreview":"确认案例 2：fallback 已更新 inode 状态，却可能返回上一轮 -ENOSPC","textChars":45,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/cri18bq9","slide":10,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/32p0b69c","slide":10,"name":"page","text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/21gj218r","slide":10,"name":"code-fs/ext4/xattr.c · key retry path","bbox":[48,148,672,458]}
+{"kind":"shape","id":"sh/p47idgri","slide":10,"name":"bar-fs/ext4/xattr.c · key retry path","bbox":[48,148,7,458]}
+{"kind":"textbox","id":"sh/43y14bqx","slide":10,"name":"text","text":"fs/ext4/xattr.c · key retry path","textPreview":"fs/ext4/xattr.c · key retry path","textChars":32,"textLines":1,"bbox":[68,162,634,24]}
+{"kind":"textbox","id":"sh/fyp07m9g","slide":10,"name":"text","text":"2837  error = ext4_xattr_make_inode_space(...);\n2840  if (error) {\n2841      if (error == -ENOSPC && ... ) {\n2843          tried_min_extra_isize++;\n2844          new_extra_isize = s_min_extra_isize;\n2845          goto retry;\n2846      }\n2847      goto cleanup;\n2848  }\n2849  shift:\n2851      ext4_xattr_shift_entries(...);\n2855      EXT4_I(inode)->i_extra_isize = new_extra_isize;\n2860  cleanup:\n2866      return error;","textPreview":"2837  error = ext4_xattr_make_inode_space(...); | 2840  if (error) { | 2841      if (error == -ENOSPC && ... ) { | 2843          tried_mi...","textChars":419,"textLines":14,"bbox":[68,195,636,398]}
+{"kind":"shape","id":"sh/uxwzyh8v","slide":10,"name":"panel-第一次结果","bbox":[758,148,474,108]}
+{"kind":"textbox","id":"sh/cv2l8nux","slide":10,"name":"text","text":"第一次结果","textPreview":"第一次结果","textChars":5,"textLines":1,"bbox":[778,164,434,30]}
+{"kind":"textbox","id":"sh/xwbmhsvi","slide":10,"name":"text","text":"make_inode_space() 返回 -ENOSPC，error 保存失败值。","textPreview":"make_inode_space() 返回 -ENOSPC，error 保存失败值。","textChars":42,"textLines":1,"bbox":[778,203,434,40]}
+{"kind":"shape","id":"sh/atk36dc7","slide":10,"name":"panel-第二次状态","bbox":[758,278,474,126]}
+{"kind":"textbox","id":"sh/but4fids","slide":10,"name":"text","text":"第二次状态","textPreview":"第二次状态","textChars":5,"textLines":1,"bbox":[778,294,434,30]}
+{"kind":"textbox","id":"sh/o72l43u1","slide":10,"name":"text","text":"降低 new_extra_isize 后，fallback 可以进入 shift 并更新 i_extra_isize。","textPreview":"降低 new_extra_isize 后，fallback 可以进入 shift 并更新 i_extra_isize。","textChars":59,"textLines":1,"bbox":[778,333,434,58]}
+{"kind":"shape","id":"sh/p8b2d8vm","slide":10,"name":"panel-最终分歧","bbox":[758,426,474,180]}
+{"kind":"textbox","id":"sh/25032dcv","slide":10,"name":"text","text":"最终分歧","textPreview":"最终分歧","textChars":4,"textLines":1,"bbox":[778,442,434,30]}
+{"kind":"textbox","id":"sh/n6tkbidg","slide":10,"name":"text","text":"实际元数据状态 = 成功；函数 outcome = 旧失败。修复方向是在 retry 前清除 stale error。","textPreview":"实际元数据状态 = 成功；函数 outcome = 旧失败。修复方向是在 retry 前清除 stale error。","textChars":59,"textLines":1,"bbox":[778,481,434,112]}
+{"kind":"textbox","id":"sh/83mlg7u5","slide":10,"name":"text","text":"复现记录：同一配置下 FS_IOC_FSSETXATTR 失败数从 802 降至 86。","textPreview":"复现记录：同一配置下 FS_IOC_FSSETXATTR 失败数从 802 降至 86。","textChars":44,"textLines":1,"bbox":[48,628,1184,32]}
+{"kind":"notes","id":"nt/no81fb","slide":10,"text":"第二个案例展示架构不能只分析资源残留，还要表达成功状态与失败返回之间的 outcome residual。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.14-fs/fs/ext4/xattr.c\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/confirmed_bugs.md"}
+{"kind":"slide","id":"sl/cdfbh9","slide":11,"title":"PENDING REVIEW · 2026-07-23","textShapes":25}
+{"kind":"textbox","id":"sh/i5kfy1wf","slide":11,"name":"kicker","text":"PENDING REVIEW · 2026-07-23","textPreview":"PENDING REVIEW · 2026-07-23","textChars":27,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/58by9gv6","slide":11,"name":"title","text":"本周高级候选：三条路径分别落在状态、生命周期与设备拓扑","textPreview":"本周高级候选：三条路径分别落在状态、生命周期与设备拓扑","textChars":27,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/472x0bel","slide":11,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/ratgb6dw","slide":11,"name":"page","text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"textbox","id":"sh/q9kf21wb","slide":11,"name":"text","text":"ID","textPreview":"ID","textChars":2,"textLines":1,"bbox":[48,164,210,30]}
+{"kind":"textbox","id":"sh/dcvydgv2","slide":11,"name":"text","text":"函数","textPreview":"函数","textChars":2,"textLines":1,"bbox":[132,164,300,30]}
+{"kind":"textbox","id":"sh/sbmx4beh","slide":11,"name":"text","text":"残差","textPreview":"残差","textChars":2,"textLines":1,"bbox":[462,164,210,30]}
+{"kind":"textbox","id":"sh/fydgfqd8","slide":11,"name":"text","text":"分类","textPreview":"分类","textChars":2,"textLines":1,"bbox":[760,164,210,30]}
+{"kind":"textbox","id":"sh/ed4f6lwn","slide":11,"name":"text","text":"分析器来源","textPreview":"分析器来源","textChars":5,"textLines":1,"bbox":[1000,164,210,30]}
+{"kind":"shape","id":"sh/g329krud","slide":11,"name":"rect","bbox":[48,204,1184,2]}
+{"kind":"shape","id":"sh/h4vqdcby","slide":11,"name":"rect","bbox":[48,214,1184,78]}
+{"kind":"textbox","id":"sh/u1krihcn","slide":11,"name":"text","text":"P1","textPreview":"P1","textChars":2,"textLines":1,"bbox":[48,226,220,48]}
+{"kind":"textbox","id":"sh/v2t8bmts","slide":11,"name":"text","text":"btrfs_reconfigure()","textPreview":"btrfs_reconfigure()","textChars":19,"textLines":1,"bbox":[132,226,310,48]}
+{"kind":"textbox","id":"sh/4rm9orup","slide":11,"name":"text","text":"REMOUNTING bit 残留","textPreview":"REMOUNTING bit 残留","textChars":17,"textLines":1,"bbox":[462,226,220,48]}
+{"kind":"textbox","id":"sh/5svqhwba","slide":11,"name":"text","text":"核心元数据状态","textPreview":"核心元数据状态","textChars":7,"textLines":1,"bbox":[760,226,220,48]}
+{"kind":"textbox","id":"sh/i54rmhcj","slide":11,"name":"text","text":"直接 candidate","textPreview":"直接 candidate","textChars":12,"textLines":1,"bbox":[1000,226,220,48]}
+{"kind":"shape","id":"sh/36d8fmt4","slide":11,"name":"rect","bbox":[48,314,1184,78]}
+{"kind":"textbox","id":"sh/sv69sbul","slide":11,"name":"text","text":"P2","textPreview":"P2","textChars":2,"textLines":1,"bbox":[48,326,220,48]}
+{"kind":"textbox","id":"sh/dwfalwb6","slide":11,"name":"text","text":"btrfs_init_dev_replace_tgtdev()","textPreview":"btrfs_init_dev_replace_tgtdev()","textChars":31,"textLines":1,"bbox":[132,326,310,48]}
+{"kind":"textbox","id":"sh/1cbq5w3a","slide":11,"name":"text","text":"device allocation 泄漏","textPreview":"device allocation 泄漏","textChars":20,"textLines":1,"bbox":[462,326,220,48]}
+{"kind":"textbox","id":"sh/0r29crmp","slide":11,"name":"text","text":"资源生命周期","textPreview":"资源生命周期","textChars":6,"textLines":1,"bbox":[760,326,220,48]}
+{"kind":"textbox","id":"sh/zqt83ml4","slide":11,"name":"text","text":"直接 candidate","textPreview":"直接 candidate","textChars":12,"textLines":1,"bbox":[1000,326,220,48]}
+{"kind":"shape","id":"sh/ep0ra14z","slide":11,"name":"rect","bbox":[48,414,1184,78]}
+{"kind":"textbox","id":"sh/9gbq9g3m","slide":11,"name":"text","text":"P3","textPreview":"P3","textChars":2,"textLines":1,"bbox":[48,426,220,48]}
+{"kind":"textbox","id":"sh/of29gbm1","slide":11,"name":"text","text":"btrfs_dev_replace_start()","textPreview":"btrfs_dev_replace_start()","textChars":25,"textLines":1,"bbox":[132,426,310,48]}
+{"kind":"textbox","id":"sh/net876lg","slide":11,"name":"text","text":"target 仍挂入 devices","textPreview":"target 仍挂入 devices","textChars":18,"textLines":1,"bbox":[462,426,220,48]}
+{"kind":"textbox","id":"sh/mdkre14v","slide":11,"name":"text","text":"拓扑 + 计数","textPreview":"拓扑 + 计数","textChars":7,"textLines":1,"bbox":[760,426,220,48]}
+{"kind":"textbox","id":"sh/pkrqxc32","slide":11,"name":"text","text":"UNKNOWN → direct candidate","textPreview":"UNKNOWN → direct candidate","textChars":26,"textLines":1,"bbox":[1000,426,220,48]}
+{"kind":"shape","id":"sh/4jip47mh","slide":11,"name":"panel-共同证据","bbox":[48,550,1184,104]}
+{"kind":"textbox","id":"sh/udcfitg3","slide":11,"name":"text","text":"共同证据","textPreview":"共同证据","textChars":4,"textLines":1,"bbox":[68,566,1144,30]}
+{"kind":"textbox","id":"sh/ve5wryxo","slide":11,"name":"text","text":"三种代码形态在 Linux v6.14 与 v7.1 均存在；均需要重复查询 master / for-next / lore，并完成定向复现后才能升级为 confirmed bug。","textPreview":"三种代码形态在 Linux v6.14 与 v7.1 均存在；均需要重复查询 master / for-next / lore，并完成定向复现后才能升级为 confirmed bug。","textChars":92,"textLines":1,"bbox":[68,605,1144,36]}
+{"kind":"notes","id":"nt/cdfbh9","slide":11,"text":"这一页只做候选总览。P1/P3属于论文核心元数据语义，P2是真实资源生命周期问题，但需要明确其与核心 claim 的边界。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md"}
+{"kind":"slide","id":"sl/t1brm6","slide":12,"title":"PENDING REVIEW · P1","textShapes":12}
+{"kind":"textbox","id":"sh/y5krmlcj","slide":12,"name":"kicker","text":"PENDING REVIEW · P1","textPreview":"PENDING REVIEW · P1","textChars":19,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/lsvah0ba","slide":12,"name":"title","text":"候选 P1：两条验证失败直接 return，REMOUNTING bit 只在后续出口清除","textPreview":"候选 P1：两条验证失败直接 return，REMOUNTING bit 只在后续出口清除","textChars":45,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/kr2tovup","slide":12,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/7udsjat0","slide":12,"name":"page","text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/mt4bq5cf","slide":12,"name":"code-fs/btrfs/super.c · btrfs_reconfigure","bbox":[48,148,650,484]}
+{"kind":"shape","id":"sh/9wvalkb6","slide":12,"name":"bar-fs/btrfs/super.c · btrfs_reconfigure","bbox":[48,148,7,484]}
+{"kind":"textbox","id":"sh/8vmtsfal","slide":12,"name":"text","text":"fs/btrfs/super.c · btrfs_reconfigure","textPreview":"fs/btrfs/super.c · btrfs_reconfigure","textChars":36,"textLines":1,"bbox":[68,162,612,24]}
+{"kind":"textbox","id":"sh/ny9s76tw","slide":12,"name":"text","text":"1505  sync_filesystem(sb);\n1506  set_bit(BTRFS_FS_STATE_REMOUNTING,\n1507          &fs_info->fs_state);\n\n1508  if (!btrfs_check_options(...))\n1509      return -EINVAL;\n\n1511  ret = btrfs_check_features(...);\n1512  if (ret < 0)\n1513      return ret;\n\n1556  clear_bit(BTRFS_FS_STATE_REMOUNTING, ...);\n1558  return 0;\n1559  restore:\n1562      clear_bit(BTRFS_FS_STATE_REMOUNTING, ...);","textPreview":"1505  sync_filesystem(sb); | 1506  set_bit(BTRFS_FS_STATE_REMOUNTING, | 1507          &fs_info->fs_state); |  | 1508  if (!btrfs_check_op...","textChars":381,"textLines":15,"bbox":[68,195,614,424]}
+{"kind":"shape","id":"sh/2x0re1cb","slide":12,"name":"panel-E_f","bbox":[738,148,494,108]}
+{"kind":"textbox","id":"sh/07u9sfad","slide":12,"name":"text","text":"E_f","textPreview":"E_f","textChars":3,"textLines":1,"bbox":[758,164,454,30]}
+{"kind":"textbox","id":"sh/183al0by","slide":12,"name":"text","text":"SET fs_info->fs_state.bit:BTRFS_FS_STATE_REMOUNTING","textPreview":"SET fs_info->fs_state.bit:BTRFS_FS_STATE_REMOUNTING","textChars":51,"textLines":1,"bbox":[758,203,454,40]}
+{"kind":"shape","id":"sh/e5srq5s7","slide":12,"name":"panel-错误出口","bbox":[738,278,494,142]}
+{"kind":"textbox","id":"sh/z6lsjats","slide":12,"name":"text","text":"错误出口","textPreview":"错误出口","textChars":4,"textLines":1,"bbox":[758,294,454,30]}
+{"kind":"textbox","id":"sh/ovutwfap","slide":12,"name":"text","text":"btrfs_check_options() 和 btrfs_check_features() 失败时直接 return，绕过 success / restore 清理。","textPreview":"btrfs_check_options() 和 btrfs_check_features() 失败时直接 return，绕过 success / restore 清理。","textChars":84,"textLines":1,"bbox":[758,333,454,74]}
+{"kind":"shape","id":"sh/9w3apkbu","slide":12,"name":"panel-潜在长期影响","bbox":[738,442,494,140]}
+{"kind":"textbox","id":"sh/mtcbu5sj","slide":12,"name":"text","text":"潜在长期影响","textPreview":"潜在长期影响","textChars":6,"textLines":1,"bbox":[758,458,454,30]}
+{"kind":"textbox","id":"sh/nulsnat4","slide":12,"name":"text","text":"失败 remount 后原挂载仍存活；auto-defrag、qgroup rescan 与异步 space reclaim 会读取该状态位。","textPreview":"失败 remount 后原挂载仍存活；auto-defrag、qgroup rescan 与异步 space reclaim 会读取该状态位。","textChars":71,"textLines":1,"bbox":[758,497,454,72]}
+{"kind":"textbox","id":"sh/4za9kva5","slide":12,"name":"text","text":"待确认关键点：自然失败场景下 bit 是否持续可见，并实际抑制至少一条后台路径。","textPreview":"待确认关键点：自然失败场景下 bit 是否持续可见，并实际抑制至少一条后台路径。","textChars":40,"textLines":1,"bbox":[738,606,494,40]}
+{"kind":"notes","id":"nt/t1brm6","slide":12,"text":"P1 是最贴近核心方法的候选：SET bit 到达验证失败，错误出口没有 CLEAR，且 owner 是长生命周期 fs_info。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.14-fs/fs/btrfs/super.c"}
+{"kind":"slide","id":"sl/xhrjw8","slide":13,"title":"PENDING REVIEW · DEVICE REPLACE","textShapes":11}
+{"kind":"textbox","id":"sh/zilsve1s","slide":13,"name":"kicker","text":"PENDING REVIEW · DEVICE REPLACE","textPreview":"PENDING REVIEW · DEVICE REPLACE","textChars":31,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/kjut4jid","slide":13,"name":"title","text":"候选 P2 / P3：同一 target device 在“挂入拓扑前后”需要不同清理","textPreview":"候选 P2 / P3：同一 target device 在“挂入拓扑前后”需要不同清理","textChars":43,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/lk3axojy","slide":13,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/atsry90b","slide":13,"name":"page","text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"shape","id":"sh/bu1sre1w","slide":13,"name":"code-P2 · before list insertion","bbox":[48,150,542,380]}
+{"kind":"shape","id":"sh/cfa90jih","slide":13,"name":"bar-P2 · before list insertion","bbox":[48,150,7,380]}
+{"kind":"textbox","id":"sh/xgjat4j2","slide":13,"name":"text","text":"P2 · before list insertion","textPreview":"P2 · before list insertion","textChars":26,"textLines":1,"bbox":[68,164,504,24]}
+{"kind":"textbox","id":"sh/upwbat0f","slide":13,"name":"text","text":"293  device = btrfs_alloc_device(...);\n299  ret = lookup_bdev(...);\n300  if (ret)\n301      goto error;\n...\n322  ret = btrfs_get_dev_zone_info(device, false);\n323  if (ret)\n324      goto error;\n...\n335  error:\n336      fput(bdev_file);\n337      return ret;","textPreview":"293  device = btrfs_alloc_device(...); | 299  ret = lookup_bdev(...); | 300  if (ret) | 301      goto error; | ... | 322  ret = btrfs_get...","textChars":255,"textLines":12,"bbox":[68,197,506,320]}
+{"kind":"shape","id":"sh/vq5s3y10","slide":13,"name":"code-P3 · after list insertion","bbox":[642,150,590,380]}
+{"kind":"shape","id":"sh/zqt8vedg","slide":13,"name":"bar-P3 · after list insertion","bbox":[642,150,7,380]}
+{"kind":"textbox","id":"sh/ypkr29cv","slide":13,"name":"text","text":"P3 · after list insertion","textPreview":"P3 · after list insertion","textChars":25,"textLines":1,"bbox":[662,164,552,24]}
+{"kind":"textbox","id":"sh/lcbqx4vm","slide":13,"name":"text","text":"631  ret = btrfs_init_dev_replace_tgtdev(...,\n632          &tgt_device);\n633  if (ret)\n634      return ret;\n\n636  ret = mark_block_group_to_copy(...);\n637  if (ret)\n638      return ret;      // bypass leave\n...\n719  leave:\n720      btrfs_destroy_dev_replace_tgtdev(tgt_device);\n721      return ret;","textPreview":"631  ret = btrfs_init_dev_replace_tgtdev(..., | 632          &tgt_device); | 633  if (ret) | 634      return ret; |  | 636  ret = mark_bl...","textChars":298,"textLines":12,"bbox":[662,197,554,320]}
+{"kind":"shape","id":"sh/0r294ju1","slide":13,"name":"panel-P2 · 生命周期","bbox":[48,538,542,118]}
+{"kind":"textbox","id":"sh/ned8zeds","slide":13,"name":"text","text":"P2 · 生命周期","textPreview":"P2 · 生命周期","textChars":9,"textLines":1,"bbox":[68,554,502,30]}
+{"kind":"textbox","id":"sh/mdkr69c7","slide":13,"name":"text","text":"device 尚未挂入 fs_devices；错误出口仅 fput(bdev_file)，没有释放已分配的 device。","textPreview":"device 尚未挂入 fs_devices；错误出口仅 fput(bdev_file)，没有释放已分配的 device。","textChars":61,"textLines":1,"bbox":[68,593,502,50]}
+{"kind":"shape","id":"sh/9gvq1ovi","slide":13,"name":"panel-P3 · 元数据拓扑","bbox":[642,538,590,118]}
+{"kind":"textbox","id":"sh/8fm98jux","slide":13,"name":"text","text":"P3 · 元数据拓扑","textPreview":"P3 · 元数据拓扑","textChars":10,"textLines":1,"bbox":[662,554,550,30]}
+{"kind":"textbox","id":"sh/vids3ydo","slide":13,"name":"text","text":"target 已挂入 devices 并增加计数；mark_block_group_to_copy() 失败直接 return，绕过 leave。","textPreview":"target 已挂入 devices 并增加计数；mark_block_group_to_copy() 失败直接 return，绕过 leave。","textChars":73,"textLines":1,"bbox":[662,593,550,50]}
+{"kind":"notes","id":"nt/xhrjw8","slide":13,"text":"P2 和 P3 放在一页是为了比较 phase-sensitive cleanup：同一个 device 在挂入拓扑前后需要不同清理函数，不能共用一个粗粒度 free 规则。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/linux-sources/linux-v6.14-fs/fs/btrfs/dev-replace.c"}
+{"kind":"slide","id":"sl/gl7lej","slide":14,"title":"SE_EOD · GROUP MEETING","textShapes":17}
+{"kind":"textbox","id":"sh/7mp0zq5k","slide":14,"name":"kicker","text":"SE_EOD · GROUP MEETING","textPreview":"SE_EOD · GROUP MEETING","textChars":22,"textLines":1,"bbox":[48,23,720,24]}
+{"kind":"textbox","id":"sh/8nyh8v6p","slide":14,"name":"title","text":"组会讨论：候选能否升级，取决于三个证据判断","textPreview":"组会讨论：候选能否升级，取决于三个证据判断","textChars":21,"textLines":1,"bbox":[48,53,1184,64]}
+{"kind":"shape","id":"sh/to7i10na","slide":14,"name":"title-rule","bbox":[48,124,1184,2]}
+{"kind":"textbox","id":"sh/upgza54v","slide":14,"name":"page","text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1178,677,54,20]}
+{"kind":"textbox","id":"sh/vqp03a5g","slide":14,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[48,164,38,22]}
+{"kind":"shape","id":"sh/gryhcfm1","slide":14,"name":"rect","bbox":[48,194,520,2]}
+{"kind":"textbox","id":"sh/hsri5knm","slide":14,"name":"text","text":"P1 的活性与影响","textPreview":"P1 的活性与影响","textChars":9,"textLines":1,"bbox":[48,212,520,32]}
+{"kind":"textbox","id":"sh/it0zep47","slide":14,"name":"text","text":"失败 remount 后 fs_info 长期存活可以成立；还需证明 stale bit 对后台消费者的实际抑制。","textPreview":"失败 remount 后 fs_info 长期存活可以成立；还需证明 stale bit 对后台消费者的实际抑制。","textChars":57,"textLines":1,"bbox":[48,255,520,74]}
+{"kind":"textbox","id":"sh/3u907u5s","slide":14,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[712,164,38,22]}
+{"kind":"shape","id":"sh/r210rixc","slide":14,"name":"rect","bbox":[712,194,520,2]}
+{"kind":"textbox","id":"sh/q1sjidw7","slide":14,"name":"text","text":"P2 的论文边界","textPreview":"P2 的论文边界","textChars":8,"textLines":1,"bbox":[712,212,520,32]}
+{"kind":"textbox","id":"sh/d43itsfi","slide":14,"name":"text","text":"资源泄漏本身较清晰，但它更适合作为 SE-EOD baseline，还是纳入元数据 residual claim？","textPreview":"资源泄漏本身较清晰，但它更适合作为 SE-EOD baseline，还是纳入元数据 residual claim？","textChars":57,"textLines":1,"bbox":[712,255,520,74]}
+{"kind":"textbox","id":"sh/s3u1knex","slide":14,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[48,388,38,22]}
+{"kind":"shape","id":"sh/3e10nyxg","slide":14,"name":"rect","bbox":[48,418,520,2]}
+{"kind":"textbox","id":"sh/idsjetwv","slide":14,"name":"text","text":"P3 的完整回滚","textPreview":"P3 的完整回滚","textChars":8,"textLines":1,"bbox":[48,436,520,32]}
+{"kind":"textbox","id":"sh/5gjip8fm","slide":14,"name":"text","text":"销毁 target device 是否足够？mark_block_group_to_copy() 已设置的部分 TO_COPY bits 是否也要恢复？","textPreview":"销毁 target device 是否足够？mark_block_group_to_copy() 已设置的部分 TO_COPY bits 是否也要恢复？","textChars":76,"textLines":1,"bbox":[48,479,520,74]}
+{"kind":"textbox","id":"sh/4fa1g3e1","slide":14,"name":"text","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[712,388,38,22]}
+{"kind":"shape","id":"sh/nalkz2xk","slide":14,"name":"rect","bbox":[712,418,520,2]}
+{"kind":"textbox","id":"sh/29cjqxwz","slide":14,"name":"text","text":"候选口径","textPreview":"候选口径","textChars":4,"textLines":1,"bbox":[712,436,520,32]}
+{"kind":"textbox","id":"sh/y5g3i1g7","slide":14,"name":"text","text":"在完成 duplicate search、定向 fault injection 与 owner-state 检查前，统一保持 pending review。","textPreview":"在完成 duplicate search、定向 fault injection 与 owner-state 检查前，统一保持 pending review。","textChars":78,"textLines":1,"bbox":[712,479,520,74]}
+{"kind":"shape","id":"sh/z6p4r6hs","slide":14,"name":"panel-汇报结论","bbox":[48,558,1184,108]}
+{"kind":"textbox","id":"sh/krylkbyd","slide":14,"name":"text","text":"汇报结论","textPreview":"汇报结论","textChars":4,"textLines":1,"bbox":[68,574,1144,30]}
+{"kind":"textbox","id":"sh/ls7mtgzy","slide":14,"name":"text","text":"架构的价值不是找到可疑 return，而是区分写入阶段、owner 身份、清理范围和证据强度。","textPreview":"架构的价值不是找到可疑 return，而是区分写入阶段、owner 身份、清理范围和证据强度。","textChars":47,"textLines":1,"bbox":[68,613,1144,40]}
+{"kind":"notes","id":"nt/gl7lej","slide":14,"text":"结束时把讨论引向三个具体判断：P1影响、P2 scope、P3 partial rollback。\n\n[Sources]\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/outputs/btrfs_tool_findings_pending_review_2026-07-23.md\n- E:/yanjiusheng/阅读论文/file_system/SE_EOD/docs/METADATA_RESIDUAL_ARCHITECTURE.md"}

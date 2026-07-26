@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import re
 
-from .metadata_residual import FailureDomainKind, MetadataEffect
+from .metadata_residual import (
+    EffectVisibility,
+    EscapeState,
+    FailureDomainKind,
+    FailureDomainScope,
+    MetadataEffect,
+    MetadataPlane,
+)
 
 
 # These are terminal kernel primitives, not report/function suppressions.  A
@@ -33,6 +40,37 @@ TRANSACTION_CANCEL_PRIMITIVES = {
 }
 
 
+FAILURE_DOMAIN_SCOPES = {
+    FailureDomainKind.TRANSACTION_ABORT: FailureDomainScope(
+        action=FailureDomainKind.TRANSACTION_ABORT,
+        allowed_planes=tuple(MetadataPlane),
+        allowed_visibility=(EffectVisibility.TRANSACTION_LOCAL,),
+        forbidden_categories=("transaction_external", "escaped_owner"),
+        required_owner_relation=True,
+    ),
+    FailureDomainKind.FATAL_SHUTDOWN: FailureDomainScope(
+        action=FailureDomainKind.FATAL_SHUTDOWN,
+        allowed_planes=(MetadataPlane.STRUCTURAL, MetadataPlane.ACCOUNTING),
+        allowed_visibility=(
+            EffectVisibility.PRIVATE_RUNTIME,
+            EffectVisibility.OWNER_LOCAL,
+            EffectVisibility.TRANSACTION_LOCAL,
+        ),
+        forbidden_categories=("recovery_visible", "persistent_external"),
+    ),
+    FailureDomainKind.CHECKPOINT_STOP: FailureDomainScope(
+        action=FailureDomainKind.CHECKPOINT_STOP,
+        allowed_planes=(MetadataPlane.STRUCTURAL, MetadataPlane.ACCOUNTING),
+        allowed_visibility=(
+            EffectVisibility.PRIVATE_RUNTIME,
+            EffectVisibility.OWNER_LOCAL,
+            EffectVisibility.TRANSACTION_LOCAL,
+        ),
+        forbidden_categories=("recovery_visible", "persistent_external"),
+    ),
+}
+
+
 def failure_domain_kind(name: str) -> FailureDomainKind | None:
     return FAILURE_DOMAIN_PRIMITIVES.get(name)
 
@@ -53,6 +91,10 @@ def transaction_cancel_owner_index(name: str) -> int | None:
     return TRANSACTION_CANCEL_PRIMITIVES.get(name)
 
 
+def failure_domain_scope(kind: FailureDomainKind) -> FailureDomainScope | None:
+    return FAILURE_DOMAIN_SCOPES.get(kind)
+
+
 def covered_effects_for_action(
     action: MetadataEffect,
     effects: tuple[MetadataEffect, ...],
@@ -63,22 +105,39 @@ def covered_effects_for_action(
         kind = FailureDomainKind(action.value)
     except ValueError:
         return ()
-    if kind is not FailureDomainKind.TRANSACTION_ABORT:
-        # M33's accepted shutdown/checkpoint contract is intentionally kept
-        # unchanged until recovery scope is modeled as a separate milestone.
-        return effects
-    transaction = _exact_symbol(action.root)
-    if not transaction:
+    scope = failure_domain_scope(kind)
+    if scope is None:
         return ()
-    token = rf"\b{re.escape(transaction)}\b"
+    transaction = _exact_symbol(action.root)
+    if kind is FailureDomainKind.TRANSACTION_ABORT:
+        if not transaction:
+            return ()
+        return tuple(
+            effect
+            for effect in effects
+            if effect.plane in scope.allowed_planes
+            and _transaction_relation_matches(effect, transaction)
+        )
     return tuple(
         effect
         for effect in effects
-        if any(
-            re.search(token, value) is not None
-            for value in (effect.root, effect.key, effect.value)
+        if (
+            effect.plane in scope.allowed_planes
+            or effect.visibility is EffectVisibility.TRANSACTION_LOCAL
         )
+        and effect.visibility in scope.allowed_visibility
     )
+
+
+def _transaction_relation_matches(effect: MetadataEffect, transaction: str) -> bool:
+    relation = effect.transaction_ownership
+    if relation is not None:
+        return (
+            relation.transaction_root == transaction
+            and relation.escape_state is EscapeState.PRIVATE
+            and effect.plane in relation.abort_footprint
+        )
+    return _exact_symbol(effect.root) == transaction
 
 
 def _exact_symbol(text: str) -> str:

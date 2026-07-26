@@ -95,6 +95,11 @@ static int init_device(struct fs_info *fs_info, struct device **device_out)
 
     assert residual_slice.state is ResidualState.CLOSED
     assert residual_slice.reaching_effects == ()
+    assert residual_slice.out_of_scope_effects
+    assert (
+        residual_slice.out_of_scope_effects[0].semantic_provenance[0].kind.value
+        == "PRIVATE_OWNER"
+    )
 
 
 def test_published_fresh_local_initialization_remains_reaching(tmp_path: Path):
@@ -275,7 +280,9 @@ int work(struct trans *trans, struct root *root)
     assert len(residual_slice.protections) == 1
 
 
-def test_error_path_transaction_abort_protects_transaction_bound_effect(tmp_path: Path):
+def test_error_path_transaction_abort_does_not_contain_value_related_effect(
+    tmp_path: Path,
+):
     function = _functions(
         tmp_path,
         """
@@ -296,9 +303,9 @@ int work(struct trans *trans, struct root *root)
 
     residual_slice = slice_function_residuals(function).slices[0]
 
-    assert residual_slice.state is ResidualState.CONTAINED
+    assert residual_slice.state is ResidualState.EXPOSED
     assert residual_slice.residuals
-    assert residual_slice.containment_proofs
+    assert residual_slice.containment_proofs == ()
 
 
 def test_conditional_error_path_protection_is_not_treated_as_must_protection(
@@ -325,9 +332,9 @@ int work(struct trans *trans, struct root *root, int abort)
 
     residual_slice = slice_function_residuals(function).slices[0]
 
-    assert residual_slice.state is ResidualState.UNKNOWN
+    assert residual_slice.state is ResidualState.EXPOSED
     assert residual_slice.residuals[0].key == "last_trans"
-    assert "conditional error-path cancellation/protection" in residual_slice.rationale
+    assert "remain after error-path normalization" in residual_slice.rationale
     assert residual_slice.protections == ()
 
 
@@ -1627,7 +1634,7 @@ int enomem_caller(struct fs *fs, int which)
     eio_slice = slice_function_residuals(eio_caller, summaries=summaries).slices[0]
     enomem_slice = slice_function_residuals(enomem_caller, summaries=summaries).slices[0]
 
-    assert eio_slice.state is ResidualState.CONTAINED
+    assert eio_slice.state is ResidualState.EXPOSED
     assert any(effect.key.startswith("failure_domain:") for effect in eio_slice.protections)
     assert enomem_slice.state is not ResidualState.CONTAINED
     assert not any(
@@ -1636,7 +1643,7 @@ int enomem_caller(struct fs *fs, int which)
     )
 
 
-def test_exact_return_code_uncontained_residual_stays_unknown(tmp_path: Path):
+def test_exact_return_code_keeps_direct_residual_and_identity_diagnostic(tmp_path: Path):
     (caller,) = _functions(
         tmp_path,
         """
@@ -1655,9 +1662,12 @@ int caller(struct fs *fs)
 
     residual_slice = slice_function_residuals(caller).slices[0]
 
-    assert residual_slice.state is ResidualState.UNKNOWN
+    assert residual_slice.state is ResidualState.EXPOSED
     assert residual_slice.residuals
-    assert "exact_return_code_residual_identity_unproven" in residual_slice.rationale
+    assert (
+        "exact_return_code_residual_identity_unproven"
+        in residual_slice.semantic_blockers
+    )
 
 
 def test_exact_ptr_err_partition_selects_err_ptr_exit(tmp_path: Path):
@@ -1688,7 +1698,7 @@ int caller(struct fs *fs, int which)
 
     residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
 
-    assert residual_slice.state is ResidualState.CONTAINED
+    assert residual_slice.state is ResidualState.EXPOSED
 
 
 def test_exact_switch_case_selects_one_error_partition(tmp_path: Path):
@@ -1722,7 +1732,7 @@ int caller(struct fs *fs, int which)
 
     residual_slice = slice_function_residuals(caller, summaries=summaries).slices[0]
 
-    assert residual_slice.state is ResidualState.CONTAINED
+    assert residual_slice.state is ResidualState.EXPOSED
 
 
 def test_symbolic_error_partition_prevents_exact_selection(tmp_path: Path):

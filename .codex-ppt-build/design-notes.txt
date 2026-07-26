@@ -1,0 +1,8 @@
+Communication job: By the end, research collaborators should understand how SE_EOD turns Linux filesystem error paths into evidence-bounded metadata residual reports, how that architecture explains three real bug families, and why the next work should prioritize semantic witness stability and owner-liveness proof.
+
+Narrative arc: current state -> formal method -> architecture -> evidence boundary -> bug cases -> evaluation -> current gate risk -> priorities.
+
+Visual route: bundled Codex Grid. White canvas, black text, pale gray evidence regions, restrained blue highlight, red only for failure/risk, green only for verified success.
+
+Slides: 15. Architecture diagrams use simple native PowerPoint lines and shapes through the exact Codex Grid process layouts. All content remains editable.
+

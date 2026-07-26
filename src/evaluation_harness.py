@@ -104,6 +104,9 @@ class EvaluationResult:
         contained_count = kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value]
         unknown_count = kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value]
         out_of_scope_count = kind_counts[ReportKind.OUT_OF_SCOPE.value]
+        live_count = classification_counts[
+            ResidualClassification.LIVE_METADATA_RESIDUAL.value
+        ]
         return {
             "schema_version": EVALUATION_SCHEMA_VERSION,
             "source_file": self.source_file,
@@ -116,13 +119,17 @@ class EvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": candidate_count,
-            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
+            "candidate_count_legacy_alias_of": (
+                "function_boundary_residual_count" if not live_count else ""
+            ),
+            "candidate_count_legacy_includes": [
+                "function_boundary_residual_count",
+                "live_metadata_residual_count",
+            ],
             "function_boundary_residual_count": classification_counts[
                 ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL.value
             ],
-            "live_metadata_residual_count": classification_counts[
-                ResidualClassification.LIVE_METADATA_RESIDUAL.value
-            ],
+            "live_metadata_residual_count": live_count,
             "contained_count": contained_count,
             "unknown_count": unknown_count,
             "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
@@ -138,6 +145,7 @@ class EvaluationResult:
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
             "unknown_proof_gap_counts": dict(sorted(unknown_proof_gap_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
+            "semantic_family_metrics": _semantic_family_metrics(self.analyses),
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "configuration_note": (
                 "uses filesystem metadata scope plus source-derived summaries; "
@@ -212,6 +220,9 @@ class BatchEvaluationResult:
         classification_counts = Counter(
             report.report.classification.value for report in self.reports
         )
+        live_count = classification_counts[
+            ResidualClassification.LIVE_METADATA_RESIDUAL.value
+        ]
         return {
             "schema_version": EVALUATION_SCHEMA_VERSION,
             "source_path": self.source_path,
@@ -227,13 +238,17 @@ class BatchEvaluationResult:
             ),
             "reports_written": len(self.reports),
             "candidate_count": kind_counts[ReportKind.UNCLOSED_METADATA_RESIDUAL.value],
-            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
+            "candidate_count_legacy_alias_of": (
+                "function_boundary_residual_count" if not live_count else ""
+            ),
+            "candidate_count_legacy_includes": [
+                "function_boundary_residual_count",
+                "live_metadata_residual_count",
+            ],
             "function_boundary_residual_count": classification_counts[
                 ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL.value
             ],
-            "live_metadata_residual_count": classification_counts[
-                ResidualClassification.LIVE_METADATA_RESIDUAL.value
-            ],
+            "live_metadata_residual_count": live_count,
             "contained_count": kind_counts[ReportKind.CONTAINED_METADATA_RESIDUAL.value],
             "unknown_count": kind_counts[ReportKind.METADATA_RESIDUAL_UNKNOWN.value],
             "review_count": kind_counts[ReportKind.METADATA_RESIDUAL_REVIEW.value],
@@ -249,6 +264,7 @@ class BatchEvaluationResult:
             "unknown_taxonomy_counts": dict(sorted(unknown_taxonomy_counts.items())),
             "unknown_proof_gap_counts": dict(sorted(unknown_proof_gap_counts.items())),
             "unknown_taxonomy_category_counts": unknown_taxonomy_category_counts,
+            "semantic_family_metrics": _semantic_family_metrics(self.analyses),
             "confirmed_bug_records": len(self.confirmed_bug_records),
             "configuration_note": (
                 "batch run using filesystem metadata scope plus source-derived "
@@ -426,6 +442,59 @@ def _unknown_taxonomy_category_counts(
     return {
         taxonomy: dict(sorted(category_counts.items()))
         for taxonomy, category_counts in sorted(counts.items())
+    }
+
+
+def _semantic_family_metrics(
+    analyses: Iterable[ResidualAnalysisResult],
+) -> dict[str, object]:
+    family_counts: Counter[str] = Counter()
+    owner_scope_counts: Counter[str] = Counter()
+    failure_domain_counts: Counter[str] = Counter()
+    provenance_counts: Counter[str] = Counter()
+    visibility_counts: Counter[str] = Counter()
+    for analysis in analyses:
+        for residual_slice in analysis.slicing_result.slices:
+            family_counts["owner_teardown_proofs"] += len(
+                residual_slice.owner_teardown_proofs
+            )
+            family_counts["owner_teardown_closed_effects"] += sum(
+                len(proof.closed_effects)
+                for proof in residual_slice.owner_teardown_proofs
+            )
+            family_counts["owner_liveness_proofs"] += len(
+                residual_slice.owner_liveness_proofs
+            )
+            family_counts["demand_summary_requests"] += len(
+                residual_slice.demand_summary_requests
+            )
+            family_counts["lexical_suppression_audits"] += len(
+                residual_slice.lexical_suppressions
+            )
+            for proof in residual_slice.owner_scope_proofs:
+                owner_scope_counts[proof.kind.value] += 1
+            for proof in residual_slice.containment_proofs:
+                failure_domain_counts[proof.kind.value] += 1
+                family_counts["failure_domain_covered_effects"] += len(
+                    proof.covered_effects
+                )
+            effects = tuple(dict.fromkeys((
+                *residual_slice.reaching_effects,
+                *residual_slice.residuals,
+                *residual_slice.out_of_scope_effects,
+            )))
+            for effect in effects:
+                visibility_counts[effect.visibility.value] += 1
+                for proof in effect.semantic_provenance:
+                    provenance_counts[proof.kind.value] += 1
+    return {
+        **dict(sorted(family_counts.items())),
+        "owner_scope_proof_counts": dict(sorted(owner_scope_counts.items())),
+        "failure_domain_proof_counts": dict(
+            sorted(failure_domain_counts.items())
+        ),
+        "effect_provenance_counts": dict(sorted(provenance_counts.items())),
+        "effect_visibility_counts": dict(sorted(visibility_counts.items())),
     }
 
 

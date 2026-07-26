@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -40,6 +41,7 @@ class EffectEvidence(str, Enum):
 
 class ResidualState(str, Enum):
     EXPOSED = "EXPOSED"
+    LIVE = "LIVE"
     CONTAINED = "CONTAINED"
     PROTECTED = "PROTECTED"
     CLOSED = "CLOSED"
@@ -76,6 +78,57 @@ class OwnerLivenessState(str, Enum):
     OWNER_LIFETIME_UNKNOWN = "OWNER_LIFETIME_UNKNOWN"
 
 
+class OwnershipRelation(str, Enum):
+    EMBEDDED = "EMBEDDED"
+    UNIQUE_POINTER = "UNIQUE_POINTER"
+    CONTAINER_OWNED = "CONTAINER_OWNED"
+    ARRAY_ELEMENT = "ARRAY_ELEMENT"
+
+
+class EscapeState(str, Enum):
+    PRIVATE = "PRIVATE"
+    PUBLISHED = "PUBLISHED"
+    ESCAPED = "ESCAPED"
+    UNKNOWN = "UNKNOWN"
+
+
+class EffectProvenanceKind(str, Enum):
+    PRIVATE_OWNER = "PRIVATE_OWNER"
+    WRITE_ONLY_OUTPUT = "WRITE_ONLY_OUTPUT"
+    OPERATION_DESCRIPTOR = "OPERATION_DESCRIPTOR"
+    PROGRESS_CURSOR = "PROGRESS_CURSOR"
+    RETRY_STATE = "RETRY_STATE"
+
+
+class EffectVisibility(str, Enum):
+    PRIVATE_RUNTIME = "PRIVATE_RUNTIME"
+    OWNER_LOCAL = "OWNER_LOCAL"
+    TRANSACTION_LOCAL = "TRANSACTION_LOCAL"
+    RECOVERY_VISIBLE = "RECOVERY_VISIBLE"
+    PERSISTENT_EXTERNAL = "PERSISTENT_EXTERNAL"
+    UNKNOWN = "UNKNOWN"
+
+
+class OwnerScopeKind(str, Enum):
+    PRIVATE_OWNER = "PRIVATE_OWNER"
+    FAILED_CONSTRUCTION = "FAILED_CONSTRUCTION"
+    UNPUBLISHED_MOUNT_CONSTRUCTION = "UNPUBLISHED_MOUNT_CONSTRUCTION"
+    WRITE_ONLY_OUTPUT = "WRITE_ONLY_OUTPUT"
+    OPERATION_DESCRIPTOR = "OPERATION_DESCRIPTOR"
+
+
+class DemandSummaryRequirement(str, Enum):
+    MUST_CANCEL = "MUST_CANCEL"
+    MUST_PROTECT = "MUST_PROTECT"
+    OWNER_BINDING = "OWNER_BINDING"
+    RETURN_BINDING = "RETURN_BINDING"
+    ERROR_PARTITION = "ERROR_PARTITION"
+    TERMINAL_ACTION = "TERMINAL_ACTION"
+    READ_ONLY = "READ_ONLY"
+    CONTAINER_DRAIN = "CONTAINER_DRAIN"
+    OWNER_TEARDOWN = "OWNER_TEARDOWN"
+
+
 class FailureDomainKind(str, Enum):
     """Why a real function-boundary residual cannot remain live."""
 
@@ -87,6 +140,64 @@ class FailureDomainKind(str, Enum):
 
 
 @dataclass(frozen=True)
+class EffectSemanticProvenance:
+    kind: EffectProvenanceKind
+    subject: str
+    site: "SourceSite"
+    source_identity: str
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind.value,
+            "subject": self.subject,
+            "site": self.site.to_dict(),
+            "source_identity": self.source_identity,
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class OwnershipEdge:
+    child: str
+    parent: str
+    relation: OwnershipRelation
+    acquisition_site: "SourceSite"
+    publication_sites: tuple["SourceSite", ...] = ()
+    escape_state: EscapeState = EscapeState.UNKNOWN
+    source_identity: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "child": self.child,
+            "parent": self.parent,
+            "relation": self.relation.value,
+            "acquisition_site": self.acquisition_site.to_dict(),
+            "publication_sites": [item.to_dict() for item in self.publication_sites],
+            "escape_state": self.escape_state.value,
+            "source_identity": self.source_identity,
+        }
+
+
+@dataclass(frozen=True)
+class FailureDomainScope:
+    action: FailureDomainKind
+    allowed_planes: tuple[MetadataPlane, ...]
+    allowed_visibility: tuple[EffectVisibility, ...]
+    forbidden_categories: tuple[str, ...] = ()
+    required_owner_relation: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "action": self.action.value,
+            "allowed_planes": [item.value for item in self.allowed_planes],
+            "allowed_visibility": [item.value for item in self.allowed_visibility],
+            "forbidden_categories": list(self.forbidden_categories),
+            "required_owner_relation": self.required_owner_relation,
+        }
+
+
+@dataclass(frozen=True)
 class FailureDomainProof:
     kind: FailureDomainKind
     site: "SourceSite"
@@ -94,6 +205,7 @@ class FailureDomainProof:
     via_function: str = ""
     evidence: str = ""
     covered_effects: tuple["MetadataEffect", ...] = ()
+    scope: FailureDomainScope | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -103,6 +215,7 @@ class FailureDomainProof:
             "via_function": self.via_function,
             "evidence": self.evidence,
             "covered_effects": [item.to_dict() for item in self.covered_effects],
+            "scope": self.scope.to_dict() if self.scope else None,
         }
 
 
@@ -121,8 +234,110 @@ class SourceSite:
 
 
 @dataclass(frozen=True)
+class OwnerScopeProof:
+    kind: OwnerScopeKind
+    owner: str
+    site: SourceSite
+    covered_effects: tuple["MetadataEffect", ...] = ()
+    ownership_edges: tuple[OwnershipEdge, ...] = ()
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind.value,
+            "owner": self.owner,
+            "site": self.site.to_dict(),
+            "covered_effects": [item.to_dict() for item in self.covered_effects],
+            "ownership_edges": [item.to_dict() for item in self.ownership_edges],
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class OwnerLivenessProof:
+    owner: str
+    site: SourceSite
+    continuation_site: SourceSite
+    covered_effects: tuple["MetadataEffect", ...] = ()
+    via_function: str = ""
+    state: OwnerLivenessState = OwnerLivenessState.OWNER_LIVE
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "owner": self.owner,
+            "site": self.site.to_dict(),
+            "continuation_site": self.continuation_site.to_dict(),
+            "covered_effects": [item.to_dict() for item in self.covered_effects],
+            "via_function": self.via_function,
+            "state": self.state.value,
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class DemandSummaryRequest:
+    report_id: str
+    helper: str
+    call_site: SourceSite
+    expected_root: str
+    required_semantics: DemandSummaryRequirement
+    transitive_body_budget: int = 3
+    reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "report_id": self.report_id,
+            "helper": self.helper,
+            "call_site": self.call_site.to_dict(),
+            "expected_root": self.expected_root,
+            "required_semantics": self.required_semantics.value,
+            "transitive_body_budget": self.transitive_body_budget,
+            "reason": self.reason,
+        }
+
+
+@dataclass(frozen=True)
+class IndirectTargetSet:
+    call_site: SourceSite
+    receiver_type: str
+    ops_table: str
+    possible_targets: tuple[str, ...]
+    complete: bool
+    source_evidence: tuple[SourceSite, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "call_site": self.call_site.to_dict(),
+            "receiver_type": self.receiver_type,
+            "ops_table": self.ops_table,
+            "possible_targets": list(self.possible_targets),
+            "complete": self.complete,
+            "source_evidence": [item.to_dict() for item in self.source_evidence],
+        }
+
+
+@dataclass(frozen=True)
+class LexicalSuppressionEvidence:
+    helper: str
+    lexical_rule: str
+    suppressed_expression: str
+    site: SourceSite
+    source_body_available: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "helper": self.helper,
+            "lexical_rule": self.lexical_rule,
+            "suppressed_expression": self.suppressed_expression,
+            "site": self.site.to_dict(),
+            "source_body_available": self.source_body_available,
+        }
+
+
+@dataclass(frozen=True)
 class AggregateSnapshotRelation:
-    """Source proof that an aggregate restore covers a residual field."""
+    """Source proof that a saved owner field is restored on an error path."""
 
     snapshot_root: str
     owner_root: str
@@ -195,6 +410,13 @@ class TransactionOwnershipRelation:
     primitive: str
     site: SourceSite
     source_identity: str
+    visibility: EffectVisibility = EffectVisibility.TRANSACTION_LOCAL
+    escape_state: EscapeState = EscapeState.PRIVATE
+    abort_footprint: tuple[MetadataPlane, ...] = (
+        MetadataPlane.STRUCTURAL,
+        MetadataPlane.ACCOUNTING,
+        MetadataPlane.RECOVERY,
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -203,6 +425,9 @@ class TransactionOwnershipRelation:
             "primitive": self.primitive,
             "site": self.site.to_dict(),
             "source_identity": self.source_identity,
+            "visibility": self.visibility.value,
+            "escape_state": self.escape_state.value,
+            "abort_footprint": [item.value for item in self.abort_footprint],
         }
 
 
@@ -243,6 +468,8 @@ class MetadataEffect:
     transaction_ownership: TransactionOwnershipRelation | None = None
     percpu_slot_relation: PerCpuSlotRelation | None = None
     transient_provenance: tuple["TransientArgumentProvenance", ...] = ()
+    semantic_provenance: tuple[EffectSemanticProvenance, ...] = ()
+    visibility: EffectVisibility = EffectVisibility.UNKNOWN
 
     def identity(self) -> tuple[str, str, MetadataPlane]:
         return (self.root, self.key, self.plane)
@@ -278,6 +505,11 @@ class MetadataEffect:
             data["transient_provenance"] = [
                 item.to_dict() for item in self.transient_provenance
             ]
+        if self.semantic_provenance:
+            data["semantic_provenance"] = [
+                item.to_dict() for item in self.semantic_provenance
+            ]
+        data["visibility"] = self.visibility.value
         return data
 
 
@@ -293,6 +525,9 @@ class OwnerTeardown:
     state: OwnerLivenessState = OwnerLivenessState.OWNER_DESTROYED
     closed_effects: tuple[MetadataEffect, ...] = ()
     evidence: str = ""
+    ownership_edges: tuple[OwnershipEdge, ...] = ()
+    transitively_destroyed_children: tuple[str, ...] = ()
+    nonclosable_effects: tuple[MetadataEffect, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -306,6 +541,13 @@ class OwnerTeardown:
             "state": self.state.value,
             "closed_effects": [effect.to_dict() for effect in self.closed_effects],
             "evidence": self.evidence,
+            "ownership_edges": [item.to_dict() for item in self.ownership_edges],
+            "transitively_destroyed_children": list(
+                self.transitively_destroyed_children
+            ),
+            "nonclosable_effects": [
+                effect.to_dict() for effect in self.nonclosable_effects
+            ],
         }
 
 
@@ -322,6 +564,11 @@ class ResidualSlice:
     out_of_scope_effects: tuple[MetadataEffect, ...] = ()
     containment_proofs: tuple[FailureDomainProof, ...] = ()
     owner_teardown_proofs: tuple[OwnerTeardown, ...] = ()
+    owner_scope_proofs: tuple[OwnerScopeProof, ...] = ()
+    owner_liveness_proofs: tuple[OwnerLivenessProof, ...] = ()
+    demand_summary_requests: tuple[DemandSummaryRequest, ...] = ()
+    lexical_suppressions: tuple[LexicalSuppressionEvidence, ...] = ()
+    semantic_blockers: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -342,6 +589,19 @@ class ResidualSlice:
             "owner_teardown_proofs": [
                 item.to_dict() for item in self.owner_teardown_proofs
             ],
+            "owner_scope_proofs": [
+                item.to_dict() for item in self.owner_scope_proofs
+            ],
+            "owner_liveness_proofs": [
+                item.to_dict() for item in self.owner_liveness_proofs
+            ],
+            "demand_summary_requests": [
+                item.to_dict() for item in self.demand_summary_requests
+            ],
+            "lexical_suppressions": [
+                item.to_dict() for item in self.lexical_suppressions
+            ],
+            "semantic_blockers": list(self.semantic_blockers),
         }
 
 
@@ -378,9 +638,18 @@ def residual_report(
         kind = ReportKind.METADATA_RESIDUAL_UNKNOWN
     elif residual_slice.residuals and residual_slice.state is ResidualState.CONTAINED:
         kind = ReportKind.CONTAINED_METADATA_RESIDUAL
-    elif residual_slice.residuals and residual_slice.state is ResidualState.EXPOSED:
+    elif residual_slice.residuals and residual_slice.state in {
+        ResidualState.EXPOSED,
+        ResidualState.LIVE,
+    }:
         uncontained = _uncontained_residuals(residual_slice)
+        review_owners = _semantic_review_owners(residual_slice)
         kind = (
+            ReportKind.METADATA_RESIDUAL_REVIEW
+            if residual_slice.state is ResidualState.EXPOSED
+            and uncontained
+            and all(_leading_effect_owner(effect.root) in review_owners for effect in uncontained)
+            else
             ReportKind.UNCLOSED_METADATA_RESIDUAL
             if any(
                 effect.evidence is not EffectEvidence.NAME_INFERRED
@@ -402,6 +671,24 @@ def residual_report(
     )
 
 
+def _semantic_review_owners(residual_slice: ResidualSlice) -> set[str]:
+    prefixes = (
+        "owner_scope_escape_review:",
+        "conditional_shutdown_review:",
+    )
+    return {
+        blocker.removeprefix(prefix)
+        for blocker in residual_slice.semantic_blockers
+        for prefix in prefixes
+        if blocker.startswith(prefix)
+    }
+
+
+def _leading_effect_owner(root: str) -> str:
+    match = re.match(r"[&*()\s]*([A-Za-z_]\w*)", root)
+    return match.group(1) if match else ""
+
+
 def _uncontained_residuals(
     residual_slice: ResidualSlice,
 ) -> tuple[MetadataEffect, ...]:
@@ -420,8 +707,8 @@ def _residual_classification(
     kind: ReportKind,
 ) -> ResidualClassification:
     if kind is ReportKind.UNCLOSED_METADATA_RESIDUAL:
-        # Owner liveness is intentionally not inferred until M35b.  EXPOSED
-        # proves only that R_f crosses this function's error boundary.
+        if residual_slice.state is ResidualState.LIVE:
+            return ResidualClassification.LIVE_METADATA_RESIDUAL
         return ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL
     if kind is ReportKind.CONTAINED_METADATA_RESIDUAL:
         return ResidualClassification.CONTAINED_METADATA_RESIDUAL

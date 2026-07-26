@@ -36,11 +36,21 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _analysis(function: str, index: int, state: str) -> dict[str, object]:
+def _analysis(
+    function: str,
+    index: int,
+    state: str,
+    *,
+    semantic_blockers=None,
+) -> dict[str, object]:
     report = _report(function, index)
     residual_slice = report["residual_slice"]
     assert isinstance(residual_slice, dict)
-    residual_slice = {**residual_slice, "state": state}
+    residual_slice = {
+        **residual_slice,
+        "state": state,
+        "semantic_blockers": semantic_blockers or [],
+    }
     return {
         "function": function,
         "slicing_result": {"slices": [residual_slice]},
@@ -69,9 +79,10 @@ def _gate_artifacts(tmp_path: Path):
         _write_json(
             comparison / "report_transition_matrix.json",
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "new_candidate_count": 0,
                 "unmatched_baseline_witness_count": 0,
+                "compatibility_match_count": 0,
             },
         )
         comparisons[filesystem] = comparison
@@ -82,7 +93,7 @@ def _gate_artifacts(tmp_path: Path):
         {
             "schema_version": 2,
             "summary": {
-                "new_safety_regression_count": 0,
+                "safety_regression_count": 0,
                 "manual_live_residuals_retained": 6,
                 "manual_live_residuals_lost": 0,
                 "unmatched_oracle_entries": 0,
@@ -152,6 +163,34 @@ def test_m35_gate_rejects_m33_xfs_slice_that_becomes_exposed(tmp_path: Path):
     )
 
 
+def test_m35_gate_accepts_xfs_review_with_conditional_shutdown_proof(tmp_path: Path):
+    runs, comparisons, oracle, baseline = _gate_artifacts(tmp_path)
+    _write_json(runs["xfs"] / "reports/all_reports.json", [])
+    _write_json(
+        runs["xfs"] / "evaluation.json",
+        {
+            "summary": {"schema_version": 4, "zero_residual_finding_count": 0},
+            "analyses": [
+                _analysis(
+                    f"xfs_contained_{index}",
+                    index,
+                    "EXPOSED" if index in {7, 8} else "PROTECTED",
+                    semantic_blockers=(
+                        ["conditional_shutdown_review:ip"]
+                        if index in {7, 8}
+                        else []
+                    ),
+                )
+                for index in range(9)
+            ],
+        },
+    )
+
+    result = check_m35_regression_gate(runs, comparisons, oracle, baseline)
+
+    assert result["passed"] is True
+
+
 def test_m35_gate_accepts_complete_structured_contract(tmp_path: Path):
     result = check_m35_regression_gate(*_gate_artifacts(tmp_path))
 
@@ -164,9 +203,10 @@ def test_m35_gate_reports_all_independent_contract_failures(tmp_path: Path):
     _write_json(
         comparisons["btrfs"] / "report_transition_matrix.json",
         {
-            "schema_version": 3,
+            "schema_version": 4,
             "new_candidate_count": 1,
             "unmatched_baseline_witness_count": 2,
+            "compatibility_match_count": 0,
         },
     )
     oracle_payload = json.loads(oracle.read_text(encoding="utf-8"))

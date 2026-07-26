@@ -81,6 +81,32 @@ def report_to_markdown(report: ResidualWitnessReport) -> str:
             f"`{teardown.owner}` via {_site_text(teardown.teardown_site)}; "
             f"closes {len(teardown.closed_effects)} embedded effect(s)"
         )
+    for proof in residual_slice.owner_scope_proofs:
+        lines.append(
+            f"- Owner scope: `{proof.kind.value}` owner `{proof.owner}` via "
+            f"{_site_text(proof.site)}; covers {len(proof.covered_effects)} effect(s)"
+        )
+    for proof in residual_slice.owner_liveness_proofs:
+        lines.append(
+            f"- Owner liveness: `{proof.state.value}` owner `{proof.owner}` via "
+            f"`{proof.via_function}` at {_site_text(proof.continuation_site)}; "
+            f"covers {len(proof.covered_effects)} residual effect(s)"
+        )
+    if residual_slice.semantic_blockers:
+        lines.append(
+            f"- Semantic blockers: {'; '.join(residual_slice.semantic_blockers)}"
+        )
+    for request in residual_slice.demand_summary_requests:
+        lines.append(
+            f"- Demand summary: `{request.helper}` needs "
+            f"`{request.required_semantics.value}` for `{request.expected_root}` "
+            f"at {_site_text(request.call_site)}"
+        )
+    if residual_slice.lexical_suppressions:
+        lines.append(
+            f"- Lexical suppressions (audit-only): "
+            f"{len(residual_slice.lexical_suppressions)}"
+        )
     if data.mdr_evidence:
         lines.append(f"- MDR evidence: {data.mdr_evidence}")
 
@@ -108,7 +134,8 @@ def _effect_lines(effects) -> list[str]:
         (
             f"- `{effect.plane.value}` `{effect.delta.value}` "
             f"`{effect.root}.{effect.key}` value `{effect.value}` "
-            f"at `{effect.site.file}:{effect.site.line}` `{effect.site.expression}`"
+            f"visibility `{effect.visibility.value}` at "
+            f"`{effect.site.file}:{effect.site.line}` `{effect.site.expression}`"
         )
         for effect in effects
     ]

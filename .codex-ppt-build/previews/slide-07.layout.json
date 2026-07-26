@@ -1,0 +1,1359 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/87x7o3",
+    "id": "87x7o3",
+    "slide": 7,
+    "layoutId": "6c645985-5f0f-43c0-a144-ebf1673c6c64",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ca2a6a21-82cf-492e-b888-da3af7baef31",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Consolas",
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6c645985-5f0f-43c0-a144-ebf1673c6c64",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ca2a6a21-82cf-492e-b888-da3af7baef31",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ca2a6a21-82cf-492e-b888-da3af7baef31",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szehgzqx",
+      "id": "1",
+      "name": "Google-Shape-532-p58-2",
+      "bbox": [
+        1184.18,
+        659.24,
+        54.48,
+        25.33
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 13.33,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "fontSize": 13.33,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "right",
+        "verticalAlignment": "bottom",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "fontSize": 13.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "right",
+            "verticalAlignment": "bottom",
+            "wrap": "square",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "fontSize": 13.33,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rylg7u9s",
+      "id": "2",
+      "name": "Google-Shape-533-p58-3",
+      "bbox": [
+        41.33,
+        36.17,
+        1197.33,
+        67.64
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+      "textPreview": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+      "resolvedFontSize": 38.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 38.67,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 38.67,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+              "fontSize": 38.67,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6dcfeps7",
+      "id": "3",
+      "name": "Rounded-Rectangle-1-4",
+      "bbox": [
+        41.68,
+        350.56,
+        580.99,
+        138.67
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5c3y5krm",
+      "id": "4",
+      "name": "Content-Placeholder-10-5",
+      "bbox": [
+        72.89,
+        376.69,
+        523.56,
+        92.16
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+      "textPreview": "fs_root->reloc_root = | btrfs_grab_root(reloc_root);",
+      "resolvedFontSize": 32,
+      "resolvedTextStyle": {
+        "fontSize": 32,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "fs_root->reloc_root ="
+          },
+          {
+            "index": 2,
+            "text": "btrfs_grab_root(reloc_root);"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 32,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+              "fontSize": 21,
+              "typeface": "Consolas",
+              "color": "#3D8DFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4buxcfa1",
+      "id": "5",
+      "name": "Content-Placeholder-15-6",
+      "bbox": [
+        72.89,
+        506.94,
+        549.78,
+        102.67
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "写入：relocation-root 引用\n位置：relocation.c:4213\n发生在失败提交之前",
+      "textPreview": "写入：relocation-root 引用 | 位置：relocation.c:4213 | 发生在失败提交之前",
+      "resolvedFontSize": 21.33,
+      "resolvedTextStyle": {
+        "fontSize": 21.33,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "写入：relocation-root 引用"
+          },
+          {
+            "index": 2,
+            "text": "位置：relocation.c:4213"
+          },
+          {
+            "index": 3,
+            "text": "发生在失败提交之前"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "写入：relocation-root 引用",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "写入：relocation-root 引用",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "位置：relocation.c:4213",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "位置：relocation.c:4213",
+              "fontSize": 18,
+              "typeface": "Consolas",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "发生在失败提交之前",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "发生在失败提交之前",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jalg3a9g",
+      "id": "6",
+      "name": "Rounded-Rectangle-7-7",
+      "bbox": [
+        657.3,
+        350.56,
+        580.99,
+        138.67
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i9cfapsv",
+      "id": "7",
+      "name": "Content-Placeholder-10-8",
+      "bbox": [
+        688.51,
+        376.69,
+        523.56,
+        92.16
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "rect",
+      "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+      "textPreview": "ret = btrfs_commit_transaction(trans); | if (ret) goto out_unset;",
+      "resolvedFontSize": 32,
+      "resolvedTextStyle": {
+        "fontSize": 32,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ret = btrfs_commit_transaction(trans);"
+          },
+          {
+            "index": 2,
+            "text": "if (ret) goto out_unset;"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 32,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+              "fontSize": 21,
+              "typeface": "Consolas",
+              "color": "#D94841",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p87yhorq",
+      "id": "8",
+      "name": "Content-Placeholder-15-9",
+      "bbox": [
+        688.51,
+        506.94,
+        549.78,
+        102.67
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "rect",
+      "text": "出口：out_unset → out\n位置：relocation.c:4217–4241\n缺少对挂接引用的局部逆操作",
+      "textPreview": "出口：out_unset → out | 位置：relocation.c:4217–4241 | 缺少对挂接引用的局部逆操作",
+      "resolvedFontSize": 21.33,
+      "resolvedTextStyle": {
+        "fontSize": 21.33,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "出口：out_unset → out"
+          },
+          {
+            "index": 2,
+            "text": "位置：relocation.c:4217–4241"
+          },
+          {
+            "index": 3,
+            "text": "缺少对挂接引用的局部逆操作"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "出口：out_unset → out",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "出口：out_unset → out",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "位置：relocation.c:4217–4241",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "位置：relocation.c:4217–4241",
+              "fontSize": 18,
+              "typeface": "Consolas",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "缺少对挂接引用的局部逆操作",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "缺少对挂接引用的局部逆操作",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/o7yhojq5",
+      "id": "9",
+      "name": "Content-Placeholder-15-10",
+      "bbox": [
+        42.09,
+        121.52,
+        1197.33,
+        171.05
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.8"
+      },
+      "geometry": "rect",
+      "text": "btrfs_recover_relocation() · Linux 6.14\n恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。\n局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+      "textPreview": "btrfs_recover_relocation() · Linux 6.14 | 恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。 | 局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 f...",
+      "resolvedFontSize": 21.33,
+      "resolvedTextStyle": {
+        "fontSize": 21.33,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "btrfs_recover_relocation() · Linux 6.14"
+          },
+          {
+            "index": 2,
+            "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。"
+          },
+          {
+            "index": 3,
+            "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "btrfs_recover_relocation() · Linux 6.14",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "btrfs_recover_relocation() · Linux 6.14",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#3D8DFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left",
+            "autoFit": "none",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "codex-grid-layout-library#slide-11",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1239.42,
+          "height": 684.57
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "Google-Shape-532-p58-2",
+            "position": {
+              "left": 1184.18,
+              "top": 659.24
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 54.48
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 25.33
+              }
+            },
+            "intrinsicSize": {
+              "width": 54.48,
+              "height": 25.33
+            },
+            "frame": {
+              "left": 1184.18,
+              "top": 659.24,
+              "width": 54.48,
+              "height": 25.33
+            },
+            "snappedFrame": {
+              "left": 1184.18,
+              "top": 659.24,
+              "width": 54.48,
+              "height": 25.33
+            },
+            "children": [],
+            "text": "07",
+            "transform": "none",
+            "element": {
+              "aid": "sh/szehgzqx",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "Google-Shape-533-p58-3",
+            "position": {
+              "left": 41.33,
+              "top": 36.17
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1197.33
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 67.64
+              }
+            },
+            "intrinsicSize": {
+              "width": 1197.33,
+              "height": 67.64
+            },
+            "frame": {
+              "left": 41.33,
+              "top": 36.17,
+              "width": 1197.33,
+              "height": 67.64
+            },
+            "snappedFrame": {
+              "left": 41.33,
+              "top": 36.17,
+              "width": 1197.33,
+              "height": 67.64
+            },
+            "children": [],
+            "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+            "transform": "none",
+            "element": {
+              "aid": "sh/rylg7u9s",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "Rounded-Rectangle-1-4",
+            "position": {
+              "left": 41.68,
+              "top": 350.56
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 580.99
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 138.67
+              }
+            },
+            "intrinsicSize": {
+              "width": 580.99,
+              "height": 138.67
+            },
+            "frame": {
+              "left": 41.68,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            },
+            "snappedFrame": {
+              "left": 41.68,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            },
+            "children": [],
+            "geometry": "roundRect",
+            "element": {
+              "aid": "sh/6dcfeps7",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "Content-Placeholder-10-5",
+            "position": {
+              "left": 72.89,
+              "top": 376.69
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 523.56
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 92.16
+              }
+            },
+            "intrinsicSize": {
+              "width": 523.56,
+              "height": 92.16
+            },
+            "frame": {
+              "left": 72.89,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            },
+            "snappedFrame": {
+              "left": 72.89,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            },
+            "children": [],
+            "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+            "transform": "none",
+            "element": {
+              "aid": "sh/5c3y5krm",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "Content-Placeholder-15-6",
+            "position": {
+              "left": 72.89,
+              "top": 506.94
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 549.78
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 102.67
+              }
+            },
+            "intrinsicSize": {
+              "width": 549.78,
+              "height": 102.67
+            },
+            "frame": {
+              "left": 72.89,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            },
+            "snappedFrame": {
+              "left": 72.89,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            },
+            "children": [],
+            "text": "写入：relocation-root 引用\n位置：relocation.c:4213\n发生在失败提交之前",
+            "transform": "none",
+            "element": {
+              "aid": "sh/4buxcfa1",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "shape",
+            "name": "Rounded-Rectangle-7-7",
+            "position": {
+              "left": 657.3,
+              "top": 350.56
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 580.99
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 138.67
+              }
+            },
+            "intrinsicSize": {
+              "width": 580.99,
+              "height": 138.67
+            },
+            "frame": {
+              "left": 657.3,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            },
+            "snappedFrame": {
+              "left": 657.3,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            },
+            "children": [],
+            "geometry": "roundRect",
+            "element": {
+              "aid": "sh/jalg3a9g",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "text",
+            "name": "Content-Placeholder-10-8",
+            "position": {
+              "left": 688.51,
+              "top": 376.69
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 523.56
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 92.16
+              }
+            },
+            "intrinsicSize": {
+              "width": 523.56,
+              "height": 92.16
+            },
+            "frame": {
+              "left": 688.51,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            },
+            "snappedFrame": {
+              "left": 688.51,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            },
+            "children": [],
+            "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+            "transform": "none",
+            "element": {
+              "aid": "sh/i9cfapsv",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "text",
+            "name": "Content-Placeholder-15-9",
+            "position": {
+              "left": 688.51,
+              "top": 506.94
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 549.78
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 102.67
+              }
+            },
+            "intrinsicSize": {
+              "width": 549.78,
+              "height": 102.67
+            },
+            "frame": {
+              "left": 688.51,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            },
+            "snappedFrame": {
+              "left": 688.51,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            },
+            "children": [],
+            "text": "出口：out_unset → out\n位置：relocation.c:4217–4241\n缺少对挂接引用的局部逆操作",
+            "transform": "none",
+            "element": {
+              "aid": "sh/p87yhorq",
+              "id": "8",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.8",
+            "kind": "text",
+            "name": "Content-Placeholder-15-10",
+            "position": {
+              "left": 42.09,
+              "top": 121.52
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1197.33
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 171.05
+              }
+            },
+            "intrinsicSize": {
+              "width": 1197.33,
+              "height": 171.05
+            },
+            "frame": {
+              "left": 42.09,
+              "top": 121.52,
+              "width": 1197.33,
+              "height": 171.05
+            },
+            "snappedFrame": {
+              "left": 42.09,
+              "top": 121.52,
+              "width": 1197.33,
+              "height": 171.05
+            },
+            "children": [],
+            "text": "btrfs_recover_relocation() · Linux 6.14\n恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。\n局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+            "transform": "none",
+            "element": {
+              "aid": "sh/o7yhojq5",
+              "id": "9",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 1184.18,
+              "top": 659.24,
+              "width": 54.48,
+              "height": 25.33
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 41.33,
+              "top": 36.17,
+              "width": 1197.33,
+              "height": 67.64
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 41.68,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 72.89,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 72.89,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 657.3,
+              "top": 350.56,
+              "width": 580.99,
+              "height": 138.67
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 688.51,
+              "top": 376.69,
+              "width": 523.56,
+              "height": 92.16
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 688.51,
+              "top": 506.94,
+              "width": 549.78,
+              "height": 102.67
+            }
+          },
+          {
+            "path": "0.8",
+            "frame": {
+              "left": 42.09,
+              "top": 121.52,
+              "width": 1197.33,
+              "height": 171.05
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

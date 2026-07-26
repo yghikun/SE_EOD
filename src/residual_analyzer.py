@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable
 
 from .function_summary import FunctionSummary, build_same_file_summaries
@@ -12,12 +12,18 @@ from .frontend.model import FunctionIR
 from .metadata_residual import (
     MetadataResidualReport,
     ReportKind,
+    ResidualClassification,
     ResidualSlice,
     ResidualState,
     residual_report,
 )
+from .owner_liveness import refine_source_visible_owner_liveness
 from .residual_report import ResidualWitnessReport
-from .residual_slicer import ResidualSlicingResult, slice_function_residuals
+from .residual_slicer import (
+    ResidualSlicingResult,
+    _conditional_shutdown_review_blockers,
+    slice_function_residuals,
+)
 from .transient_provenance import TransientArgumentProvenance
 
 
@@ -44,13 +50,30 @@ class ResidualAnalysisResult:
         )
 
     def to_dict(self) -> dict[str, object]:
+        function_boundary_count = sum(
+            report.report.classification
+            is ResidualClassification.FUNCTION_BOUNDARY_RESIDUAL
+            for report in self.reports
+        )
+        live_count = sum(
+            report.report.classification
+            is ResidualClassification.LIVE_METADATA_RESIDUAL
+            for report in self.reports
+        )
         return {
             "function": self.function,
             "source_version": self.source_version,
             "reports": [report.to_dict() for report in self.reports],
             "candidate_count": len(self.candidates),
-            "candidate_count_legacy_alias_of": "function_boundary_residual_count",
-            "function_boundary_residual_count": len(self.candidates),
+            "candidate_count_legacy_includes": [
+                "function_boundary_residual_count",
+                "live_metadata_residual_count",
+            ],
+            "candidate_count_legacy_alias_of": (
+                "function_boundary_residual_count" if not live_count else ""
+            ),
+            "function_boundary_residual_count": function_boundary_count,
+            "live_metadata_residual_count": live_count,
             "unknown_count": sum(
                 report.kind is ReportKind.METADATA_RESIDUAL_UNKNOWN
                 for report in self.reports
@@ -98,6 +121,27 @@ def _analysis_from_slicing(
 ) -> ResidualAnalysisResult:
     source_version = source_version_for(function)
     reports: list[ResidualWitnessReport] = []
+
+    reviewed_slices = []
+    for residual_slice in slicing.slices:
+        blockers = _conditional_shutdown_review_blockers(
+            tuple(
+                dict.fromkeys(
+                    (*residual_slice.reaching_effects, *residual_slice.protections)
+                )
+            ),
+            residual_slice.cancellations,
+            residual_slice.residuals,
+        )
+        reviewed_slices.append(
+            replace(
+                residual_slice,
+                semantic_blockers=tuple(
+                    dict.fromkeys((*residual_slice.semantic_blockers, *blockers))
+                ),
+            )
+        )
+    slicing = replace(slicing, slices=tuple(reviewed_slices))
 
     for residual_slice in slicing.slices:
         report = residual_report(
@@ -155,6 +199,7 @@ def analyze_functions(
         slicings,
         summaries,
     )
+    slicings = refine_source_visible_owner_liveness(function_tuple, slicings)
     return tuple(
         _analysis_from_slicing(
             function,
@@ -196,6 +241,11 @@ def _scope_rationale_for(
         return (
             "a source-visible residual remains, but source-proven teardown or a "
             "terminal failure domain prevents ordinary live continuation"
+        )
+    if residual_slice.state is ResidualState.LIVE:
+        return (
+            "source-visible caller evidence proves the residual owner survives "
+            "and ordinary metadata work continues after the handled failure"
         )
     return default
 

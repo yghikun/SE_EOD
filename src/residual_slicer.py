@@ -11,13 +11,24 @@ from .aggregate_snapshot import aggregate_snapshot_restore_cancellations
 from .cfg import build_cfg
 from .effect_extractor import (
     effect_targets_transient_object,
-    extract_metadata_effects,
+    extract_metadata_effects_with_skips,
     looks_like_metadata_reader,
     write_only_output_parameters,
+)
+from .owner_scope import (
+    effect_with_visibility,
+    embedded_children,
+    fresh_owner_descriptor_effect,
+    infer_ownership_edges,
+    operation_descriptor_effect,
+    output_effect,
+    owner_scope_proofs,
+    private_owner_effect,
 )
 from .failure_points import FailurePoint, find_failure_points
 from .failure_domain_primitives import (
     covered_effects_for_action,
+    failure_domain_scope,
     is_failure_domain_key,
     transaction_cancel_owner_index,
 )
@@ -34,12 +45,19 @@ from .function_summary import (
     extract_owner_teardowns,
 )
 from .metadata_residual import (
+    DemandSummaryRequest,
+    DemandSummaryRequirement,
     EffectEvidence,
+    EffectProvenanceKind,
+    EffectVisibility,
     FailureDomainKind,
     FailureDomainProof,
     MetadataDelta,
     MetadataEffect,
+    MetadataPlane,
     OwnerTeardown,
+    OwnershipEdge,
+    OwnershipRelation,
     ResidualSlice,
     ResidualState,
     SourceSite,
@@ -88,16 +106,24 @@ def slice_function_residuals(
     for item in transient_provenance:
         provenance_by_parameter.setdefault(item.parameter, ())
         provenance_by_parameter[item.parameter] += (item,)
+    extraction = extract_metadata_effects_with_skips(function)
     local_effects_list: list[_LocatedEffect] = []
     transient_effects_list: list[_LocatedEffect] = []
-    for effect in extract_metadata_effects(function):
+    for effect in extraction.effects:
         evidence = (
             provenance_by_parameter.get(effect.root, ())
             if effect.evidence is EffectEvidence.DIRECT_SOURCE
             else ()
         )
+        enriched = (
+            operation_descriptor_effect(
+                replace(effect, transient_provenance=evidence), effect.root
+            )
+            if evidence
+            else effect_with_visibility(effect)
+        )
         located = _LocatedEffect(
-            replace(effect, transient_provenance=evidence) if evidence else effect,
+            enriched,
             _block_for_site(cfg, effect.site),
         )
         if evidence:
@@ -107,6 +133,18 @@ def slice_function_residuals(
     local_effects = tuple(local_effects_list)
     transient_effects = tuple(transient_effects_list)
     local_lifecycles = build_local_lifecycle_bindings(function, summaries)
+    local_effects = tuple(
+        replace(
+            item,
+            effect=_fresh_local_descriptor_effect(
+                function,
+                item.effect,
+                local_lifecycles,
+            ),
+        )
+        for item in local_effects
+    )
+    ownership_edges = infer_ownership_edges(function, local_lifecycles)
     output_parameters = write_only_output_parameters(function)
     call_apps = tuple(_summary_applications(function, cfg, summaries))
     local_effects = _drop_summarized_name_inferred_call_effects(
@@ -138,6 +176,8 @@ def slice_function_residuals(
             and teardown.teardown_site.line >= point.check_site.line
         ]
         unknown_causes: list[str] = []
+        diagnostic_blockers: list[str] = []
+        exact_partition_complete = False
         error_path_unknown_causes: list[str] = []
         unknown_influences: list[_UnknownInfluence] = []
         out_of_scope_effects = [
@@ -153,10 +193,27 @@ def slice_function_residuals(
                 continue
             if _effect_is_failure_call(item.effect, point):
                 continue
-            if _effect_targets_unpublished_fresh_local(item.effect, point, local_lifecycles):
+            if _is_runtime_progress_effect(item.effect):
+                out_of_scope_effects.append(item.effect)
+                continue
+            if _effect_targets_unpublished_fresh_local(
+                item.effect,
+                point,
+                local_lifecycles,
+                tuple(must_owner_teardowns),
+                ownership_edges,
+            ):
+                out_of_scope_effects.append(
+                    private_owner_effect(
+                        item.effect,
+                        _leading_symbol(item.effect.root),
+                    )
+                )
                 continue
             if _leading_symbol(item.effect.root) in output_parameters:
-                out_of_scope_effects.append(item.effect)
+                out_of_scope_effects.append(
+                    output_effect(item.effect, _leading_symbol(item.effect.root))
+                )
                 continue
             if item.effect.delta in _CANCEL_DELTAS:
                 cancellations.append(item.effect)
@@ -185,6 +242,22 @@ def slice_function_residuals(
                     )
                 )
 
+        for item in local_effects:
+            if not (
+                point.call_site.line < item.effect.site.line < point.check_site.line
+                and item.block_id is not None
+                and _block_dominates(
+                    cfg,
+                    item.block_id,
+                    point.error_edge.source_block,
+                )
+            ):
+                continue
+            if item.effect.delta in _CANCEL_DELTAS:
+                cancellations.append(item.effect)
+            elif item.effect.delta in _PROTECT_DELTAS:
+                protections.append(item.effect)
+
         for app in call_apps:
             is_failure_call = _is_failure_call_application(app, point)
             selected_partition = (
@@ -196,6 +269,8 @@ def slice_function_residuals(
                 if is_failure_call
                 else None
             )
+            if selected_partition is not None and selected_partition.complete:
+                exact_partition_complete = True
             failure_effects_complete = (
                 selected_partition.complete
                 if selected_partition is not None
@@ -208,7 +283,14 @@ def slice_function_residuals(
             )
             if (
                 is_failure_call
-                and app.may_fail
+                and (
+                    app.may_fail
+                    or app.failure_effects_complete
+                    or _selected_partition_proves_success_only_effects(
+                        selected_partition,
+                        app,
+                    )
+                )
                 and app.block_id in reaching_blocks
                 and app.site.line <= point.call_site.line
             ):
@@ -254,16 +336,44 @@ def slice_function_residuals(
                     if selected_partition is not None
                     else app.failure_unknown_causes
                 )
-                reaching_effects.extend(failure_opens)
+                reaching_effects.extend(
+                    effect
+                    for effect in failure_opens
+                    if not _is_runtime_progress_effect(effect)
+                )
+                out_of_scope_effects.extend(
+                    effect
+                    for effect in failure_opens
+                    if _is_runtime_progress_effect(effect)
+                )
                 cancellations.extend(failure_cancels)
                 protections.extend(failure_protects)
                 if failure_unknown_causes:
-                    unknown_causes.extend(failure_unknown_causes)
+                    identity_diagnostics = tuple(
+                        cause
+                        for cause in failure_unknown_causes
+                        if cause
+                        == "selected_error_partition_residual_identity_unproven"
+                    )
+                    state_unknowns = tuple(
+                        cause
+                        for cause in failure_unknown_causes
+                        if cause not in identity_diagnostics
+                    )
+                    diagnostic_blockers.extend(identity_diagnostics)
+                    unknown_causes.extend(state_unknowns)
                     unknown_influences.extend(
                         _influences_for_app(
                             app,
-                            failure_unknown_causes,
+                            state_unknowns,
                             phase="failure_call",
+                        )
+                    )
+                    unknown_influences.extend(
+                        _influences_for_app(
+                            app,
+                            identity_diagnostics,
+                            phase="proof_diagnostic",
                         )
                     )
                 continue
@@ -272,7 +382,16 @@ def slice_function_residuals(
                 and app.site.line <= point.call_site.line
                 and not transfer_order_unknown
             ):
-                reaching_effects.extend(app.opens)
+                reaching_effects.extend(
+                    effect
+                    for effect in app.opens
+                    if not _is_runtime_progress_effect(effect)
+                )
+                out_of_scope_effects.extend(
+                    effect
+                    for effect in app.opens
+                    if _is_runtime_progress_effect(effect)
+                )
                 cancellations.extend(app.cancels_before_failure)
                 protections.extend(app.protects_before_failure)
             if app.block_id in error_blocks and app.site.line >= point.check_site.line:
@@ -314,6 +433,7 @@ def slice_function_residuals(
                     _influences_for_app(app, app.unknown_causes, phase="error_path")
                 )
 
+        reaching_effects = [effect_with_visibility(effect) for effect in reaching_effects]
         protections.extend(
             _aborted_transaction_protections(
                 tuple(reaching_effects),
@@ -346,11 +466,19 @@ def slice_function_residuals(
             )
             unknown_causes.extend(error_path_unknown_causes)
         residuals = normalized.residuals
+        lifecycle_unsafe_lines = _lifecycle_events_reachable_on_failure(
+            cfg,
+            local_lifecycles,
+            point,
+            error_blocks,
+        )
         owner_teardown_proofs = _owner_teardown_proofs(
             tuple(residuals),
             tuple(must_owner_teardowns),
             point,
             local_lifecycles,
+            ownership_edges,
+            lifecycle_unsafe_lines,
         )
         owner_closed_effects = {
             effect
@@ -359,6 +487,13 @@ def slice_function_residuals(
         }
         residuals = tuple(
             effect for effect in residuals if effect not in owner_closed_effects
+        )
+        owner_scope_reviews = _owner_scope_review_blockers(
+            tuple(residuals),
+            tuple(must_owner_teardowns),
+            owner_teardown_proofs,
+            local_lifecycles,
+            lifecycle_unsafe_lines,
         )
         containment_candidates = tuple(residuals)
         certain_residuals = tuple(
@@ -382,10 +517,21 @@ def slice_function_residuals(
             unknown_causes = []
         elif residuals:
             unknown_causes = blocking_causes or unknown_causes
+        demand_requests = _demand_summary_requests(
+            function,
+            point,
+            tuple(unknown_influences),
+            tuple(residuals),
+        )
         containment_proofs = _explicit_failure_domain_proofs(
             tuple(reaching_effects),
             tuple(cancellations),
             tuple(protections),
+            containment_candidates,
+        )
+        conditional_shutdown_reviews = _conditional_shutdown_review_blockers(
+            tuple(dict.fromkeys((*reaching_effects, *protections))),
+            tuple(cancellations),
             containment_candidates,
         )
         containment_covered = {
@@ -396,12 +542,12 @@ def slice_function_residuals(
         if (
             residuals
             and point.check_kind.startswith(("eq:", "ne:"))
+            and not exact_partition_complete
             and not all(effect in containment_covered for effect in residuals)
         ):
-            unknown_causes = sorted({
-                *unknown_causes,
-                "exact_return_code_residual_identity_unproven",
-            })
+            diagnostic_blockers.append(
+                "exact_return_code_residual_identity_unproven"
+            )
         state = (
             ResidualState.UNKNOWN
             if unknown_causes
@@ -414,6 +560,7 @@ def slice_function_residuals(
             else ResidualState.CLOSED
         )
         exit_site = point.error_edge.exit_site
+        scope_proofs = owner_scope_proofs(function, owner_teardown_proofs)
         slices.append(
             ResidualSlice(
                 failure_site=point.call_site,
@@ -427,6 +574,19 @@ def slice_function_residuals(
                 out_of_scope_effects=tuple(out_of_scope_effects),
                 containment_proofs=containment_proofs,
                 owner_teardown_proofs=owner_teardown_proofs,
+                owner_scope_proofs=scope_proofs,
+                demand_summary_requests=demand_requests,
+                lexical_suppressions=extraction.lexical_suppressions,
+                semantic_blockers=tuple(
+                    sorted(
+                        {
+                            *unknown_causes,
+                            *diagnostic_blockers,
+                            *owner_scope_reviews,
+                            *conditional_shutdown_reviews,
+                        }
+                    )
+                ),
             )
         )
         all_unknown_causes.extend(unknown_causes)
@@ -452,6 +612,10 @@ _CANCEL_DELTAS = {
     MetadataDelta.CLOSE,
 }
 _PROTECT_DELTAS = {MetadataDelta.PROTECT}
+_RUNTIME_PROGRESS_KINDS = {
+    EffectProvenanceKind.PROGRESS_CURSOR,
+    EffectProvenanceKind.RETRY_STATE,
+}
 
 
 @dataclass(frozen=True)
@@ -681,7 +845,73 @@ def _drop_summarized_name_inferred_call_effects(
                 compact_ws(item.effect.site.expression),
             )
             in summarized_sites
+            and not _retain_summarized_lifecycle_marker(
+                item,
+                local_effects,
+                call_apps,
+            )
         )
+    )
+
+
+def _retain_summarized_lifecycle_marker(
+    item: _LocatedEffect,
+    local_effects: tuple[_LocatedEffect, ...],
+    call_apps: tuple[_SummaryApp, ...],
+) -> bool:
+    effect = item.effect
+    prior = tuple(
+        candidate.effect
+        for candidate in local_effects
+        if candidate.effect.site.line <= effect.site.line
+    )
+    if effect.delta is MetadataDelta.RELEASE:
+        prior_summary_opens = tuple(
+            candidate
+            for app in call_apps
+            if app.site.line <= effect.site.line
+            for candidate in app.opens
+        )
+        return any(
+            candidate.delta is MetadataDelta.RESERVE
+            and effects_cancel(candidate, effect)
+            for candidate in (*prior, *prior_summary_opens)
+        )
+    if effect.delta is not MetadataDelta.CLOSE or re.search(
+        r"(?:^|_)(?:trans|transaction)(?:_|$)",
+        effect.key.lower(),
+    ) is None:
+        return False
+    return any(
+        candidate.delta is MetadataDelta.SET
+        and candidate.evidence is EffectEvidence.DIRECT_SOURCE
+        and effects_cancel(candidate, effect)
+        for candidate in prior
+    )
+
+
+def _selected_partition_proves_success_only_effects(
+    partition: ErrorExitPartition | None,
+    app: _SummaryApp,
+) -> bool:
+    """Use a non-failing summary only to remove source-proven success effects."""
+
+    selected_is_empty = (
+        partition is not None
+        and partition.complete
+        and not _selected_partition_opens(partition)
+    )
+    every_error_exit_is_empty = bool(app.error_exit_partitions) and all(
+        item.complete and not _selected_partition_opens(item)
+        for item in app.error_exit_partitions
+    )
+    opens_are_success_markers = bool(app.opens) and all(
+        effect.delta is MetadataDelta.ADD
+        and effect.evidence is EffectEvidence.NAME_INFERRED
+        for effect in app.opens
+    )
+    return opens_are_success_markers and (
+        selected_is_empty or every_error_exit_is_empty
     )
 
 
@@ -1003,7 +1233,20 @@ def _influences_for_app(
     phase: str,
 ) -> tuple[_UnknownInfluence, ...]:
     return tuple(
-        _UnknownInfluence(cause, app.site, phase)
+        _UnknownInfluence(
+            cause,
+            app.site,
+            (
+                "conditional_cleanup"
+                if cause.endswith(": unbound_callee_local_identity")
+                else phase
+            ),
+            (
+                app.cancels + app.protects
+                if cause.endswith(": unbound_callee_local_identity")
+                else ()
+            ),
+        )
         for cause in causes
     )
 
@@ -1044,6 +1287,8 @@ def _unknown_influence_blocks_effect(
     must not downgrade a source-proven residual.
     """
 
+    if influence.phase == "proof_diagnostic":
+        return False
     if influence.phase == "conditional_cleanup":
         return _conditional_effect_can_affect(
             effect,
@@ -1063,6 +1308,15 @@ def _conditional_effect_can_affect(
     conditional_effects: tuple[MetadataEffect, ...],
 ) -> bool:
     for effect in conditional_effects:
+        if (
+            residual.delta is MetadataDelta.SET
+            and residual.evidence is EffectEvidence.DIRECT_SOURCE
+            and effect.delta is MetadataDelta.CLOSE
+            and _leading_symbol(residual.root) == _leading_symbol(effect.root)
+        ):
+            # A conditional owner close is not a MUST cleanup. Retain the
+            # source-visible descriptor residual on the path that skips it.
+            continue
         if effects_cancel(residual, effect) or effect_protected_by(residual, effect):
             return True
         if is_failure_domain_key(effect.key):
@@ -1132,6 +1386,33 @@ def _reverse_reachable(cfg: ControlFlowGraphIR, target: int) -> set[int]:
         seen.add(block_id)
         pending.extend(edge.source for edge in cfg.predecessors(block_id))
     return seen
+
+
+def _block_dominates(
+    cfg: ControlFlowGraphIR,
+    dominator: int,
+    target: int,
+) -> bool:
+    nodes = set(cfg.blocks)
+    dominators = {
+        block_id: ({cfg.entry} if block_id == cfg.entry else set(nodes))
+        for block_id in nodes
+    }
+    changed = True
+    while changed:
+        changed = False
+        for block_id in nodes - {cfg.entry}:
+            parents = [edge.source for edge in cfg.predecessors(block_id)]
+            updated = (
+                {block_id}
+                if not parents
+                else {block_id}
+                | set.intersection(*(dominators[parent] for parent in parents))
+            )
+            if updated != dominators[block_id]:
+                dominators[block_id] = updated
+                changed = True
+    return dominator in dominators.get(target, set())
 
 
 def _forward_reachable_until_returns(
@@ -1347,6 +1628,7 @@ def _explicit_failure_domain_proofs(
                     "failure-domain primitive on the must-execute error path"
                 ),
                 covered_effects=covered_effects,
+                scope=failure_domain_scope(kind),
             )
         )
     for cancellation in cancellations:
@@ -1358,6 +1640,8 @@ def _explicit_failure_domain_proofs(
             continue
         transaction = _exact_transaction_identity(cancellation.root)
         if not transaction:
+            continue
+        if not _transaction_has_dirty_evidence(transaction, reaching_effects):
             continue
         covered = _transaction_cancel_covered_residuals(
             transaction,
@@ -1376,9 +1660,77 @@ def _explicit_failure_domain_proofs(
                     "its source contract forces shutdown when that state cannot be restored"
                 ),
                 covered_effects=covered,
+                scope=failure_domain_scope(FailureDomainKind.FATAL_SHUTDOWN),
             )
         )
     return tuple(dict.fromkeys(proofs))
+
+
+def _conditional_shutdown_review_blockers(
+    reaching_effects: tuple[MetadataEffect, ...],
+    cancellations: tuple[MetadataEffect, ...],
+    residuals: tuple[MetadataEffect, ...],
+) -> tuple[str, ...]:
+    """Keep transaction-bound recovery residuals in Review without dirty proof."""
+
+    blockers: list[str] = []
+    for cancellation in cancellations:
+        name, _ = call_name_and_args(compact_ws(cancellation.site.expression))
+        if (
+            transaction_cancel_owner_index(name) is None
+            and transaction_cancel_owner_index(cancellation.key) is None
+        ):
+            continue
+        transaction = _exact_transaction_identity(cancellation.root)
+        if not transaction or _transaction_has_dirty_evidence(
+            transaction, reaching_effects
+        ):
+            continue
+        for effect in residuals:
+            if not any(
+                _transaction_relation_covers_effect(
+                    relation_effect, transaction, effect
+                )
+                for relation_effect in reaching_effects
+            ):
+                continue
+            owner = _leading_symbol(effect.root)
+            if owner:
+                blockers.append(f"conditional_shutdown_review:{owner}")
+    return tuple(dict.fromkeys(blockers))
+
+
+def _transaction_has_dirty_evidence(
+    transaction: str,
+    reaching_effects: tuple[MetadataEffect, ...],
+) -> bool:
+    """Require source-visible log/dirty state before applying XFS shutdown semantics."""
+
+    for effect in reaching_effects:
+        relation = effect.transaction_ownership
+        if (
+            relation is not None
+            and compact_ws(relation.transaction_root) == transaction
+            and relation.primitive == "xfs_trans_log_inode"
+        ):
+            return True
+        if effect.delta not in {
+            MetadataDelta.ADD,
+            MetadataDelta.SET,
+            MetadataDelta.INC,
+            MetadataDelta.RESERVE,
+        }:
+            continue
+        if not _effect_mentions_transaction(effect, transaction):
+            continue
+        dirty_text = compact_ws(
+            f"{effect.key} {effect.value} {effect.site.expression}"
+        ).lower()
+        if "xfs_trans_dirty" in dirty_text or re.search(
+            r"(?:^|[^a-z0-9])dirty(?:$|[^a-z0-9])", dirty_text
+        ):
+            return True
+    return False
 
 
 def _transaction_cancel_covered_residuals(
@@ -1427,6 +1779,8 @@ def _effect_targets_unpublished_fresh_local(
     effect: MetadataEffect,
     point: FailurePoint,
     lifecycles: tuple[LocalLifecycleBinding, ...],
+    teardowns: tuple[OwnerTeardown, ...] = (),
+    ownership_edges: tuple[OwnershipEdge, ...] = (),
 ) -> bool:
     root = _leading_symbol(effect.root)
     binding = next(
@@ -1435,9 +1789,118 @@ def _effect_targets_unpublished_fresh_local(
     )
     if binding is None or effect.site.line < binding.allocation_line:
         return False
+    if any(_exact_owner_symbol(teardown.owner) == root for teardown in teardowns):
+        return False
+    teardown_owners = {
+        _exact_owner_symbol(teardown.owner)
+        for teardown in teardowns
+        if _exact_owner_symbol(teardown.owner)
+    }
+    if any(
+        edge.child == root
+        and edge.parent in teardown_owners
+        and edge.relation is not OwnershipRelation.EMBEDDED
+        for edge in ownership_edges
+    ):
+        return False
     if any(line <= point.call_site.line for line in binding.rebind_lines):
         return False
     return not any(line <= point.call_site.line for line in binding.publication_lines)
+
+
+def _lifecycle_events_reachable_on_failure(
+    cfg: ControlFlowGraphIR,
+    lifecycles: tuple[LocalLifecycleBinding, ...],
+    point: FailurePoint,
+    error_blocks: set[int],
+) -> dict[str, set[int]]:
+    """Return lifecycle events that can occur on this checked failure path.
+
+    Lifecycle bindings are function-wide facts.  A publication located solely
+    on the normal-success continuation must not invalidate a teardown that is
+    proved on the alternate error edge (a common ``goto out`` shape).
+    """
+
+    result: dict[str, set[int]] = {}
+    for binding in lifecycles:
+        unsafe: set[int] = set()
+        for line in (
+            *binding.publication_lines,
+            *binding.escape_lines,
+            *binding.rebind_lines,
+        ):
+            if line <= point.call_site.line:
+                unsafe.add(line)
+                continue
+            block = cfg.block_at_line(line)
+            if block is not None and block.id in error_blocks:
+                unsafe.add(line)
+        result[binding.local_identity] = unsafe
+    return result
+
+
+def _fresh_local_descriptor_effect(
+    function: FunctionIR,
+    effect: MetadataEffect,
+    lifecycles: tuple[LocalLifecycleBinding, ...],
+) -> MetadataEffect:
+    """Refine caller-field copies into a fresh owner as private descriptors."""
+
+    owner = _leading_symbol(effect.root)
+    binding = next(
+        (item for item in lifecycles if item.local_identity == owner),
+        None,
+    )
+    if (
+        binding is None
+        or effect.site.line < binding.allocation_line
+        or effect.delta is not MetadataDelta.SET
+    ):
+        return effect
+    value_root = _leading_symbol(effect.value)
+    parameter_names = set(function.parameters) | {
+        symbol.name for symbol in function.symbols if symbol.kind == "parameter"
+    }
+    value = compact_ws(effect.value)
+    if value_root not in parameter_names or not re.search(r"(?:->|\.)", value):
+        return effect
+    return fresh_owner_descriptor_effect(effect, owner)
+
+
+def _is_runtime_progress_effect(effect: MetadataEffect) -> bool:
+    return any(
+        provenance.kind in _RUNTIME_PROGRESS_KINDS
+        for provenance in effect.semantic_provenance
+    )
+
+
+def _owner_scope_review_blockers(
+    residuals: tuple[MetadataEffect, ...],
+    teardowns: tuple[OwnerTeardown, ...],
+    proofs: tuple[OwnerTeardown, ...],
+    lifecycles: tuple[LocalLifecycleBinding, ...],
+    lifecycle_unsafe_lines: dict[str, set[int]],
+) -> tuple[str, ...]:
+    """Audit owner-scope ambiguity without turning a visible residual UNKNOWN."""
+
+    proved = {proof.owner for proof in proofs}
+    teardown_owners = {
+        owner
+        for teardown in teardowns
+        if (owner := _exact_owner_symbol(teardown.owner))
+    }
+    escape_lines = {
+        binding.local_identity: set(binding.escape_lines)
+        for binding in lifecycles
+    }
+    owners = {
+        owner
+        for effect in residuals
+        if (owner := _leading_symbol(effect.root)) in teardown_owners - proved
+        and lifecycle_unsafe_lines.get(owner, set())
+        & escape_lines.get(owner, set())
+    }
+    return tuple(f"owner_scope_escape_review:{owner}" for owner in sorted(owners))
 
 
 def _owner_teardown_proofs(
@@ -1445,6 +1908,8 @@ def _owner_teardown_proofs(
     teardowns: tuple[OwnerTeardown, ...],
     point: FailurePoint,
     lifecycles: tuple[LocalLifecycleBinding, ...],
+    ownership_edges: tuple[OwnershipEdge, ...],
+    lifecycle_unsafe_lines: dict[str, set[int]],
 ) -> tuple[OwnerTeardown, ...]:
     proofs: list[OwnerTeardown] = []
     already_closed: set[MetadataEffect] = set()
@@ -1458,17 +1923,21 @@ def _owner_teardown_proofs(
         )
         if binding is None or binding.allocation_line > point.call_site.line:
             continue
-        if any(line <= teardown.teardown_site.line for line in binding.publication_lines):
+        if any(
+            line <= teardown.teardown_site.line
+            for line in lifecycle_unsafe_lines.get(owner, set())
+        ):
             continue
-        if any(line <= teardown.teardown_site.line for line in binding.escape_lines):
-            continue
-        if any(line <= teardown.teardown_site.line for line in binding.rebind_lines):
-            continue
+        children = embedded_children(owner, ownership_edges)
+        covered_roots = (owner, *children)
         closed = tuple(
             effect
             for effect in residuals
             if effect not in already_closed
-            and _teardown_covers_embedded_effect(owner, effect)
+            and any(
+                _teardown_covers_embedded_effect(covered_owner, effect)
+                for covered_owner in covered_roots
+            )
         )
         if not closed:
             continue
@@ -1479,6 +1948,18 @@ def _owner_teardown_proofs(
                 owner=owner,
                 allocation_site=binding.allocation_site,
                 closed_effects=closed,
+                ownership_edges=tuple(
+                    edge
+                    for edge in ownership_edges
+                    if edge.parent in covered_roots or edge.child in children
+                ),
+                transitively_destroyed_children=children,
+                nonclosable_effects=tuple(
+                    effect
+                    for effect in residuals
+                    if effect not in closed
+                    and _leading_symbol(effect.root) in set(children)
+                ),
                 evidence=(
                     f"{teardown.evidence}; owner is source-proven fresh, remains "
                     "unpublished, unescaped, and never rebound, and teardown must execute before "
@@ -1493,6 +1974,17 @@ def _teardown_covers_embedded_effect(
     owner: str,
     effect: MetadataEffect,
 ) -> bool:
+    descriptor_provenance = any(
+        item.kind is EffectProvenanceKind.OPERATION_DESCRIPTOR
+        for item in effect.semantic_provenance
+    )
+    if effect.visibility is EffectVisibility.PERSISTENT_EXTERNAL:
+        return False
+    if (
+        effect.plane is MetadataPlane.RECOVERY
+        or effect.visibility is EffectVisibility.RECOVERY_VISIBLE
+    ) and not descriptor_provenance:
+        return False
     root = compact_ws(effect.root)
     if not (
         root == owner
@@ -1553,6 +2045,57 @@ def _looks_like_metadata_helper(name: str) -> bool:
             "device",
         )
     )
+
+
+def _demand_summary_requests(
+    function: FunctionIR,
+    point: FailurePoint,
+    influences: tuple[_UnknownInfluence, ...],
+    residuals: tuple[MetadataEffect, ...],
+) -> tuple[DemandSummaryRequest, ...]:
+    """Describe the exact missing semantics for residual-blocking calls."""
+
+    if not residuals:
+        return ()
+    requests: list[DemandSummaryRequest] = []
+    report_id = (
+        f"{function.name}:{point.call_site.file}:{point.call_site.line}:"
+        f"{point.error_edge.exit_site.line}"
+    )
+    for influence in influences:
+        if not any(
+            _unknown_influence_blocks_effect(function, influence, effect)
+            for effect in residuals
+        ):
+            continue
+        helper, args = call_name_and_args(compact_ws(influence.site.expression))
+        if not helper:
+            helper = influence.cause.split(":", 1)[0].strip()
+        if not helper or helper in {"if", "switch", "return"}:
+            continue
+        requirement = {
+            "failure_call": DemandSummaryRequirement.ERROR_PARTITION,
+            "error_path": DemandSummaryRequirement.MUST_CANCEL,
+            "conditional_cleanup": DemandSummaryRequirement.MUST_CANCEL,
+            "reaching": DemandSummaryRequirement.OWNER_BINDING,
+        }.get(influence.phase, DemandSummaryRequirement.OWNER_BINDING)
+        expected_root = (
+            influence.conditional_effects[0].root
+            if influence.conditional_effects
+            else compact_ws(args[0]).strip("&() ") if args else residuals[0].root
+        )
+        requests.append(
+            DemandSummaryRequest(
+                report_id=report_id,
+                helper=helper,
+                call_site=influence.site,
+                expected_root=expected_root,
+                required_semantics=requirement,
+                transitive_body_budget=3,
+                reason=influence.cause,
+            )
+        )
+    return tuple(dict.fromkeys(requests))
 
 
 def _rationale(

@@ -1,0 +1,730 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/gnmp4jqx",
+    "id": "gnmp4jqx",
+    "slide": 7,
+    "layoutId": "/ppt/slideLayouts/slideLayout1.xml",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "fontScheme": {
+      "name": "Office",
+      "majorFont": {
+        "latinTypeface": "Calibri Light",
+        "eastAsianTypeface": "Calibri Light",
+        "complexScriptTypeface": "Calibri Light"
+      },
+      "minorFont": {
+        "latinTypeface": "Calibri",
+        "eastAsianTypeface": "Calibri",
+        "complexScriptTypeface": "Calibri"
+      }
+    },
+    "typefaces": [
+      "Calibri",
+      "Calibri Light",
+      "Consolas",
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/baxkjqlk",
+      "id": "10",
+      "name": "Google-Shape-532-p58-2",
+      "bbox": [
+        1184.18,
+        659.24,
+        54.48,
+        25.33
+      ],
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "bottom",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 13.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "fontSize": 13.33,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cb2tkvap",
+      "id": "2",
+      "name": "Google-Shape-533-p58-3",
+      "bbox": [
+        41.33,
+        36.17,
+        1197.33,
+        67.64
+      ],
+      "geometry": "rect",
+      "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+      "textPreview": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 38.67,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Bug #7：一次失败提交让 reloc_root 引用越过错误出口",
+              "fontSize": 38.67,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dcbud0ra",
+      "id": "3",
+      "name": "Rounded-Rectangle-1-4",
+      "bbox": [
+        41.68,
+        350.56,
+        580.99,
+        138.67
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ydkbm5sv",
+      "id": "4",
+      "name": "Content-Placeholder-10-5",
+      "bbox": [
+        72.89,
+        376.69,
+        523.56,
+        92.16
+      ],
+      "geometry": "rect",
+      "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+      "textPreview": "fs_root->reloc_root = | btrfs_grab_root(reloc_root);",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "fs_root->reloc_root ="
+          },
+          {
+            "index": 2,
+            "text": "btrfs_grab_root(reloc_root);"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 32,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "fs_root->reloc_root =\nbtrfs_grab_root(reloc_root);",
+              "fontSize": 21,
+              "typeface": "Consolas",
+              "color": "#3D8DFF",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zedcfa9g",
+      "id": "5",
+      "name": "Content-Placeholder-15-6",
+      "bbox": [
+        72.89,
+        506.94,
+        549.78,
+        102.67
+      ],
+      "geometry": "rect",
+      "text": "写入：relocation-root 引用\n位置：relocation.c:4213\n发生在失败提交之前",
+      "textPreview": "写入：relocation-root 引用 | 位置：relocation.c:4213 | 发生在失败提交之前",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "写入：relocation-root 引用"
+          },
+          {
+            "index": 2,
+            "text": "位置：relocation.c:4213"
+          },
+          {
+            "index": 3,
+            "text": "发生在失败提交之前"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "写入：relocation-root 引用",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "写入：relocation-root 引用",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "位置：relocation.c:4213",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "位置：relocation.c:4213",
+              "fontSize": 18,
+              "typeface": "Consolas",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "发生在失败提交之前",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "发生在失败提交之前",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kzmdova1",
+      "id": "6",
+      "name": "Rounded-Rectangle-7-7",
+      "bbox": [
+        657.3,
+        350.56,
+        580.99,
+        138.67
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2F2F2"
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l0vuh0rm",
+      "id": "7",
+      "name": "Content-Placeholder-10-8",
+      "bbox": [
+        688.51,
+        376.69,
+        523.56,
+        92.16
+      ],
+      "geometry": "rect",
+      "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+      "textPreview": "ret = btrfs_commit_transaction(trans); | if (ret) goto out_unset;",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "ret = btrfs_commit_transaction(trans);"
+          },
+          {
+            "index": 2,
+            "text": "if (ret) goto out_unset;"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 32,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "ret = btrfs_commit_transaction(trans);\nif (ret) goto out_unset;",
+              "fontSize": 21,
+              "typeface": "Consolas",
+              "color": "#D94841",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/eh0ba1sr",
+      "id": "8",
+      "name": "Content-Placeholder-15-9",
+      "bbox": [
+        688.51,
+        506.94,
+        549.78,
+        102.67
+      ],
+      "geometry": "rect",
+      "text": "出口：out_unset → out\n位置：relocation.c:4217–4241\n缺少对挂接引用的局部逆操作",
+      "textPreview": "出口：out_unset → out | 位置：relocation.c:4217–4241 | 缺少对挂接引用的局部逆操作",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "出口：out_unset → out"
+          },
+          {
+            "index": 2,
+            "text": "位置：relocation.c:4217–4241"
+          },
+          {
+            "index": 3,
+            "text": "缺少对挂接引用的局部逆操作"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "出口：out_unset → out",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "出口：out_unset → out",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "位置：relocation.c:4217–4241",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "位置：relocation.c:4217–4241",
+              "fontSize": 18,
+              "typeface": "Consolas",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "缺少对挂接引用的局部逆操作",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "缺少对挂接引用的局部逆操作",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fi9c369c",
+      "id": "9",
+      "name": "Content-Placeholder-15-10",
+      "bbox": [
+        42.09,
+        121.52,
+        1197.33,
+        171.05
+      ],
+      "geometry": "rect",
+      "text": "btrfs_recover_relocation() · Linux 6.14\n恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。\n局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+      "textPreview": "btrfs_recover_relocation() · Linux 6.14 | 恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。 | 局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 f...",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "btrfs_recover_relocation() · Linux 6.14"
+          },
+          {
+            "index": 2,
+            "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。"
+          },
+          {
+            "index": 3,
+            "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "btrfs_recover_relocation() · Linux 6.14",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "btrfs_recover_relocation() · Linux 6.14",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#3D8DFF",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "恢复循环把 reloc_root 挂到 fs_root；随后第一次事务提交失败会跳到 out_unset。",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+          "lineSpacingPercent": 108000,
+          "resolvedTextStyle": {
+            "fontSize": 21.33,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "局部错误清理只释放 reloc_roots 列表与 path，没有明确清空 fs_root->reloc_root。",
+              "fontSize": 21,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": []
+}

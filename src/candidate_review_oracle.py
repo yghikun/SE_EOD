@@ -259,12 +259,15 @@ def _effect_state(effect: dict[str, Any], residual_slice: dict[str, Any]) -> str
     if key in containment_covered:
         return CONTAINED
     if key in residuals:
+        state = str(residual_slice.get("state", ""))
+        if state == "EXPOSED" and _effect_is_owner_scope_review(effect, residual_slice):
+            return "FUNCTION_BOUNDARY_RESIDUAL_REVIEW"
         return _slice_classification(residual_slice)
     if key in reaching:
         if str(residual_slice.get("state", "")) in {"CLOSED", "PROTECTED"}:
             return CLOSED
         return "RETAINED_REACHING"
-    return "UNMATCHED_EFFECT"
+    return "RETAINED_SLICE"
 
 
 def _transition_status(
@@ -433,7 +436,15 @@ def _slice_classification(residual_slice: dict[str, Any]) -> str:
         return UNKNOWN
     if residuals and state == "CONTAINED":
         return CONTAINED
+    if residuals and state == "LIVE":
+        return LIVE
     if residuals and state == "EXPOSED":
+        review_owners = _owner_scope_review_owners(residual_slice)
+        if review_owners and all(
+            _leading_effect_owner(str(item.get("root", ""))) in review_owners
+            for item in residuals
+        ):
+            return "FUNCTION_BOUNDARY_RESIDUAL_REVIEW"
         covered = {
             _canonical_json(_effect_identity(item))
             for proof in residual_slice.get("containment_proofs", ())
@@ -455,6 +466,28 @@ def _slice_classification(residual_slice: dict[str, Any]) -> str:
     if state in {"CLOSED", "PROTECTED"}:
         return CLOSED
     return OUT_OF_SCOPE
+
+
+def _effect_is_owner_scope_review(
+    effect: dict[str, Any], residual_slice: dict[str, Any]
+) -> bool:
+    return _leading_effect_owner(str(effect.get("root", ""))) in (
+        _owner_scope_review_owners(residual_slice)
+    )
+
+
+def _owner_scope_review_owners(residual_slice: dict[str, Any]) -> set[str]:
+    prefix = "owner_scope_escape_review:"
+    return {
+        str(item).removeprefix(prefix)
+        for item in residual_slice.get("semantic_blockers", ())
+        if str(item).startswith(prefix)
+    }
+
+
+def _leading_effect_owner(root: str) -> str:
+    match = re.match(r"[&*()\s]*([A-Za-z_]\w*)", root)
+    return match.group(1) if match else ""
 
 
 def _effect_identity(value: Any) -> dict[str, Any]:

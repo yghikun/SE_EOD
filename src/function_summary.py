@@ -23,6 +23,7 @@ from .metadata_residual import (
     ContainerIterationCleanup,
     EffectEvidence,
     ExistentialMemberIdentity,
+    IndirectTargetSet,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
@@ -313,6 +314,7 @@ class FunctionSummary:
     unknown_causes: tuple[str, ...] = ()
     source: SummarySource = SummarySource.UNKNOWN
     owner_bindings: tuple[OwnerIdentityBinding, ...] = ()
+    indirect_target_sets: tuple[IndirectTargetSet, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -349,6 +351,9 @@ class FunctionSummary:
             "unknown_causes": list(self.unknown_causes),
             "source": self.source.value,
             "owner_bindings": [item.to_dict() for item in self.owner_bindings],
+            "indirect_target_sets": [
+                item.to_dict() for item in self.indirect_target_sets
+            ],
         }
 
 
@@ -374,6 +379,7 @@ class SummaryApplication:
     unresolved_identities: tuple[str, ...] = ()
     ownership_transfer_roots: tuple[str, ...] = ()
     owner_bindings: tuple[OwnerIdentityBinding, ...] = ()
+    indirect_target_sets: tuple[IndirectTargetSet, ...] = ()
 
     @property
     def unknown(self) -> bool:
@@ -403,6 +409,9 @@ class SummaryApplication:
             "unresolved_identities": list(self.unresolved_identities),
             "ownership_transfer_roots": list(self.ownership_transfer_roots),
             "owner_bindings": [item.to_dict() for item in self.owner_bindings],
+            "indirect_target_sets": [
+                item.to_dict() for item in self.indirect_target_sets
+            ],
             "unknown": self.unknown,
         }
 
@@ -715,7 +724,8 @@ def build_same_file_summaries(
         function_tuple,
         inherited_summaries=inherited,
     )
-    return _resolve_bounded_noop_indirect_unknowns(summaries, function_tuple)
+    summaries = _resolve_bounded_noop_indirect_unknowns(summaries, function_tuple)
+    return _attach_indirect_target_sets(summaries, function_tuple)
 
 
 def build_project_summaries(
@@ -783,7 +793,8 @@ def build_project_summaries(
         if discovered <= fresh_return_helpers:
             break
         fresh_return_helpers.update(discovered)
-    return _resolve_bounded_noop_indirect_unknowns(summaries, function_tuple)
+    summaries = _resolve_bounded_noop_indirect_unknowns(summaries, function_tuple)
+    return _attach_indirect_target_sets(summaries, function_tuple)
 
 
 def _compose_source_visible_exit_partitions(
@@ -1272,6 +1283,7 @@ def instantiate_summary(
         unresolved_identities=unresolved,
         ownership_transfer_roots=transfer_roots,
         owner_bindings=owner_bindings,
+        indirect_target_sets=summary.indirect_target_sets,
     )
 
 
@@ -3449,6 +3461,77 @@ def _with_propagated_cleanup_effects(
     )
 
 
+def _attach_indirect_target_sets(
+    summaries: dict[str, FunctionSummary],
+    functions: Iterable[FunctionIR],
+    *,
+    max_targets: int = 4,
+) -> dict[str, FunctionSummary]:
+    """Serialize exact visible target sets even when their semantics differ."""
+
+    function_map = {function.name: function for function in functions}
+    result = dict(summaries)
+    for name, summary in summaries.items():
+        function = function_map.get(name)
+        if function is None or function.body_node is None:
+            continue
+        sets: list[IndirectTargetSet] = []
+        resolved = _local_indirect_call_targets(function, summaries)
+        pointer_parameters = _called_function_pointer_parameters(function)
+        for node in function.body_node.walk():
+            if node.type != "call_expression":
+                continue
+            call_text = compact_ws(node.text)
+            callee, _ = call_name_and_args(call_text)
+            targets = resolved.get(call_text, ())
+            if not targets and callee in pointer_parameters:
+                targets = _visible_callback_targets(
+                    function.name,
+                    pointer_parameters[callee],
+                    tuple(functions),
+                    summaries,
+                )
+            has_indirect_cause = (
+                f"indirect_call: {call_text}" in summary.unknown_causes
+                or f"function_pointer_parameter_call: {callee}" in summary.unknown_causes
+            )
+            if not targets and not has_indirect_cause:
+                continue
+            callee_node = node.child_by_field_name("function")
+            expression = compact_ws(callee_node.text) if callee_node is not None else callee
+            target_tuple = tuple(sorted(set(targets)))
+            site = SourceSite(function.file.as_posix(), node.start_line, call_text)
+            sets.append(
+                IndirectTargetSet(
+                    call_site=site,
+                    receiver_type=_receiver_type(function, expression),
+                    ops_table=expression,
+                    possible_targets=target_tuple,
+                    complete=(
+                        bool(target_tuple)
+                        and len(target_tuple) <= max_targets
+                        and all(target in summaries for target in target_tuple)
+                    ),
+                    source_evidence=(site,),
+                )
+            )
+        if sets:
+            result[name] = replace(
+                summary,
+                indirect_target_sets=tuple(dict.fromkeys(sets)),
+            )
+    return result
+
+
+def _receiver_type(function: FunctionIR, expression: str) -> str:
+    match = re.match(r"[&*()\s]*([A-Za-z_]\w*)", expression)
+    if not match:
+        return ""
+    root = match.group(1)
+    symbol = next((item for item in function.symbols if item.name == root), None)
+    return compact_ws(symbol.type_spelling) if symbol is not None else ""
+
+
 def _resolve_bounded_noop_indirect_unknowns(
     summaries: dict[str, FunctionSummary],
     functions: Iterable[FunctionIR],
@@ -3482,6 +3565,22 @@ def _resolve_bounded_noop_indirect_unknowns(
             if cause not in causes:
                 continue
             if _targets_are_residual_noop(targets, result, max_targets=max_targets):
+                causes.remove(cause)
+                continue
+            common_cleanup = _common_indirect_cleanup(
+                function,
+                expression,
+                targets,
+                result,
+                max_targets=max_targets,
+            )
+            if common_cleanup:
+                summary = _with_propagated_cleanup_effects(
+                    function,
+                    summary,
+                    common_cleanup,
+                    set(),
+                )
                 causes.remove(cause)
 
         if causes != set(summary.unknown_causes):
@@ -3539,6 +3638,65 @@ def _targets_are_residual_noop(
         (target_summary := summaries.get(target)) is not None
         and _summary_is_residual_noop(target_summary)
         for target in targets
+    )
+
+
+def _common_indirect_cleanup(
+    function: FunctionIR,
+    expression: str,
+    targets: tuple[str, ...],
+    summaries: dict[str, FunctionSummary],
+    *,
+    max_targets: int,
+) -> tuple[MetadataEffect, ...]:
+    if not targets or len(targets) > max_targets or function.body_node is None:
+        return ()
+    call = next(
+        (
+            node
+            for node in function.body_node.walk()
+            if node.type == "call_expression"
+            and compact_ws(node.text) == expression
+        ),
+        None,
+    )
+    if call is None:
+        return ()
+    applications = []
+    for target in targets:
+        summary = summaries.get(target)
+        if summary is None:
+            return ()
+        application = instantiate_summary(summary, call)
+        if (
+            application.unknown
+            or summary.may_fail
+            or application.opens
+            or application.protects
+            or not application.cancels
+        ):
+            return ()
+        applications.append(application)
+    signatures = tuple(
+        tuple(_effect_semantic_key(effect) for effect in application.cancels)
+        for application in applications
+    )
+    if not signatures or any(signature != signatures[0] for signature in signatures[1:]):
+        return ()
+    first_target = targets[0]
+    return tuple(
+        _effect_at_call_site(effect, function, call, first_target)
+        for effect in applications[0].cancels
+    )
+
+
+def _effect_semantic_key(effect: MetadataEffect) -> tuple[str, str, str, str, str]:
+    return (
+        effect.root,
+        effect.key,
+        effect.plane.value,
+        effect.delta.value,
+        effect.value,
     )
 
 
@@ -4814,11 +4972,29 @@ def _unknown_escape_causes(function: FunctionIR) -> tuple[str, ...]:
         if name in UNKNOWN_CALLS:
             causes.append(f"async_or_deferred_handoff: {name}")
         callee_node = node.child_by_field_name("function")
-        if callee_node is not None and callee_node.type != "identifier":
+        if (
+            callee_node is not None
+            and callee_node.type != "identifier"
+            and not _looks_like_scalar_cast_call(compact_ws(node.text))
+        ):
             causes.append(f"indirect_call: {compact_ws(node.text)}")
         if name in function.parameters:
             causes.append(f"function_pointer_parameter_call: {name}")
     return tuple(sorted(set(causes)))
+
+
+def _looks_like_scalar_cast_call(expression: str) -> bool:
+    """Reject tree-sitter call-shaped scalar casts from indirect-call UNKNOWNs."""
+
+    return bool(
+        re.match(
+            r"^\(\s*(?:(?:u|s)(?:8|16|32|64)|size_t|ssize_t|"
+            r"unsigned(?:\s+(?:char|short|int|long))?|"
+            r"signed(?:\s+(?:char|short|int|long))?|"
+            r"char|short|int|long|bool)\s*\)\s*\(",
+            expression,
+        )
+    )
 
 
 def _unresolved_metadata_helper_names(

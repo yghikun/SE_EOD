@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
@@ -16,6 +16,10 @@ from .failure_domain_primitives import (
 )
 from .metadata_residual import (
     EffectEvidence,
+    EffectProvenanceKind,
+    EffectSemanticProvenance,
+    EffectVisibility,
+    LexicalSuppressionEvidence,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
@@ -340,11 +344,15 @@ TREE_REMOVE_CALLS = {
 class EffectExtractionResult:
     effects: tuple[MetadataEffect, ...]
     skipped_expressions: tuple[str, ...] = ()
+    lexical_suppressions: tuple[LexicalSuppressionEvidence, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
             "effects": [item.to_dict() for item in self.effects],
             "skipped_expressions": list(self.skipped_expressions),
+            "lexical_suppressions": [
+                item.to_dict() for item in self.lexical_suppressions
+            ],
         }
 
 
@@ -496,6 +504,7 @@ def extract_metadata_effects_with_skips(function: FunctionIR) -> EffectExtractio
     transient_fields = _transient_field_scope(function)
     effects: list[MetadataEffect] = []
     skipped: list[str] = []
+    lexical_suppressions: list[LexicalSuppressionEvidence] = []
     for node in function.body_node.walk():
         if node.type == "assignment_expression":
             effect = _effect_from_assignment(function, node, aliases, transient_fields)
@@ -506,6 +515,9 @@ def extract_metadata_effects_with_skips(function: FunctionIR) -> EffectExtractio
             if effect is not None:
                 effects.append(effect)
         elif node.type == "call_expression":
+            suppression = _lexical_suppression(function, node)
+            if suppression is not None:
+                lexical_suppressions.append(suppression)
             call_effects = _effects_from_call(function, node, aliases)
             call_name = _call_name(node)
             call_effects = tuple(
@@ -519,7 +531,45 @@ def extract_metadata_effects_with_skips(function: FunctionIR) -> EffectExtractio
             elif _call_name(node) in {"kfree", "kvfree", "brelse", "folio_put"}:
                 skipped.append(compact_ws(node.text))
 
-    return EffectExtractionResult(tuple(_dedupe(effects)), tuple(skipped))
+    return EffectExtractionResult(
+        tuple(_dedupe(effects)),
+        tuple(skipped),
+        tuple(dict.fromkeys(lexical_suppressions)),
+    )
+
+
+def _lexical_suppression(
+    function: FunctionIR,
+    node: FrontendNode,
+) -> LexicalSuppressionEvidence | None:
+    name, _ = call_name_and_args(compact_ws(node.text))
+    if not name or not looks_like_metadata_reader(name):
+        return None
+    lowered = name.lower()
+    tokens = set(_tokens(lowered))
+    would_infer = (
+        any(term in lowered for term in ("quota", "dquot", "qgroup", "reserv"))
+        or bool(tokens & TRANSACTION_HELPER_TOKENS)
+    )
+    if not would_infer:
+        return None
+    if lowered.endswith(READONLY_QUOTA_HELPER_SUFFIXES):
+        rule = "readonly_quota_suffix"
+    elif lowered.endswith(READONLY_TRANSACTION_HELPER_SUFFIXES):
+        rule = "readonly_transaction_suffix"
+    elif _looks_like_accessor_or_validator(lowered):
+        rule = "accessor_or_validator_token"
+    else:
+        rule = "metadata_reader_lexical_rule"
+    return LexicalSuppressionEvidence(
+        helper=name,
+        lexical_rule=rule,
+        suppressed_expression=compact_ws(node.text),
+        site=SourceSite(
+            function.file.as_posix(), node.start_line, compact_ws(node.text)
+        ),
+        source_body_available=False,
+    )
 
 
 def _effect_from_assignment(
@@ -556,7 +606,7 @@ def _effect_from_assignment(
     else:
         return None
 
-    return _effect(
+    effect = _effect(
         function,
         node,
         root=path.root,
@@ -565,6 +615,7 @@ def _effect_from_assignment(
         delta=delta,
         value=_replace_aliases(compact_ws(value_node.text), aliases),
     )
+    return _randomized_progress_effect(effect, value_node)
 
 
 def _effect_from_update(
@@ -755,9 +806,18 @@ def _reservation_effect(
     aliases: dict[str, str],
 ) -> MetadataEffect | None:
     lowered = name.lower()
-    if not any(term in lowered for term in ("reserv", "rsv", "space_info")):
+    releases_resource = any(
+        term in lowered for term in ("release", "unreserve", "free", "drop", "clear")
+    )
+    has_reservation_identity = any(
+        term in lowered for term in ("reserv", "rsv", "space_info")
+    ) or (
+        releases_resource
+        and any(term in lowered for term in ("chunk", "metadata", "space"))
+    )
+    if not has_reservation_identity:
         return None
-    if any(term in lowered for term in ("release", "unreserve", "free", "drop", "clear")):
+    if releases_resource:
         delta = MetadataDelta.RELEASE
     elif any(term in lowered for term in ("reserve", "reserv", "rsv_add", "charge", "alloc")):
         delta = MetadataDelta.RESERVE
@@ -815,7 +875,7 @@ def _transaction_effect(
         return None
     if not (set(_tokens(lowered)) & TRANSACTION_HELPER_TOKENS):
         return None
-    if any(term in lowered for term in ("cancel", "abort", "stop", "end", "release", "forget", "del")):
+    if any(term in lowered for term in ("cancel", "abort", "stop", "end", "release", "forget", "del", "free")):
         delta = MetadataDelta.CLOSE
     elif any(term in lowered for term in ("start", "join", "attach", "record", "add", "reserve", "pin", "protect")):
         delta = MetadataDelta.PROTECT
@@ -831,6 +891,8 @@ def _transaction_effect(
         value=_value_args(args[1:], aliases),
         evidence=EffectEvidence.NAME_INFERRED,
     )
+    if re.fullmatch(r"[A-Za-z_]\w*", compact_ws(effect.root)):
+        effect = replace(effect, visibility=EffectVisibility.TRANSACTION_LOCAL)
     relation = _transaction_ownership_relation(function, node, name, args, aliases)
     return (
         effect
@@ -849,6 +911,8 @@ def _transaction_effect(
             transaction_ownership=relation,
             percpu_slot_relation=effect.percpu_slot_relation,
             transient_provenance=effect.transient_provenance,
+            semantic_provenance=effect.semantic_provenance,
+            visibility=relation.visibility,
         )
     )
 
@@ -1345,6 +1409,40 @@ def _effect(
         value=compact_ws(value),
         site=SourceSite(function.file.as_posix(), node.start_line, compact_ws(node.text)),
         evidence=evidence,
+    )
+
+
+def _randomized_progress_effect(
+    effect: MetadataEffect,
+    value_node: FrontendNode,
+) -> MetadataEffect:
+    """Mark entropy-derived scheduling state as runtime progress, not metadata."""
+
+    providers = []
+    for node in value_node.walk():
+        if node.type != "call_expression":
+            continue
+        name, _ = call_name_and_args(compact_ws(node.text))
+        if name.startswith(("get_random_", "prandom_")):
+            providers.append(name)
+    if not providers or effect.delta is not MetadataDelta.SET:
+        return effect
+    proof = EffectSemanticProvenance(
+        kind=EffectProvenanceKind.PROGRESS_CURSOR,
+        subject=effect.root,
+        site=effect.site,
+        source_identity=(
+            f"{effect.site.file}:{effect.site.line}:random-progress:{effect.key}"
+        ),
+        evidence=(
+            "field value is selected by a source-visible entropy provider and "
+            "controls runtime operation progress rather than durable metadata"
+        ),
+    )
+    return replace(
+        effect,
+        semantic_provenance=tuple(dict.fromkeys((*effect.semantic_provenance, proof))),
+        visibility=EffectVisibility.PRIVATE_RUNTIME,
     )
 
 

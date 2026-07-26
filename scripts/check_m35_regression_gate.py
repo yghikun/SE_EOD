@@ -12,10 +12,16 @@ from typing import Any
 
 FILESYSTEMS = ("btrfs", "ext4", "xfs", "f2fs")
 EVALUATION_SCHEMA_VERSION = 4
-COMPARISON_SCHEMA_VERSION = 3
+COMPARISON_SCHEMA_VERSION = 4
 ORACLE_AUDIT_SCHEMA_VERSION = 2
 GATE_SCHEMA_VERSION = 1
 M33_XFS_CONTAINED_COUNT = 9
+COMPATIBILITY_MATCH_BUDGETS = {
+    "btrfs": 179,
+    "ext4": 95,
+    "xfs": 398,
+    "f2fs": 35,
+}
 M33_XFS_RETAINED_STATES = {"CLOSED", "PROTECTED", "CONTAINED"}
 HIGH_VALUE_FUNCTIONS = {
     "btrfs": {
@@ -121,6 +127,49 @@ def check_m35_regression_gate(
             comparison.get("unmatched_baseline_witness_count") == 0,
             {"actual": comparison.get("unmatched_baseline_witness_count")},
         )
+        compatibility_count = comparison.get("compatibility_match_count")
+        budget = COMPATIBILITY_MATCH_BUDGETS[filesystem]
+        _record(
+            checks,
+            f"{filesystem}_compatibility_match_budget",
+            isinstance(compatibility_count, int) and compatibility_count <= budget,
+            {
+                "actual": compatibility_count,
+                "budget": budget,
+                "policy": (
+                    "Compatibility matches are typed, audited semantic exceptions, "
+                    "not equivalent to exact witness retention."
+                ),
+            },
+        )
+        if isinstance(compatibility_count, int) and compatibility_count:
+            audit_path = (
+                comparisons[filesystem]
+                if comparisons[filesystem].is_file()
+                else comparisons[filesystem] / "comparison_match_audit.json"
+            )
+            match_audit = _load_json(audit_path)
+            matches = _list(_dict(match_audit).get("matches"))
+            compatibility_matches = [
+                _dict(item)
+                for item in matches
+                if _dict(item).get("match_kind")
+                not in {"EXACT_WITNESS", "UNMATCHED"}
+            ]
+            typed = all(
+                item.get("match_kind") and item.get("typed_reason")
+                for item in compatibility_matches
+            )
+            _record(
+                checks,
+                f"{filesystem}_compatibility_matches_typed",
+                typed and len(compatibility_matches) == compatibility_count,
+                {
+                    "declared": compatibility_count,
+                    "audited": len(compatibility_matches),
+                    "all_typed": typed,
+                },
+            )
     _record(
         checks,
         "comparison_schema_consistent",
@@ -140,7 +189,7 @@ def check_m35_regression_gate(
         },
     )
     oracle_contract = {
-        "new_safety_regression_count": 0,
+        "safety_regression_count": 0,
         "manual_live_residuals_retained": 6,
         "manual_live_residuals_lost": 0,
         "unmatched_oracle_entries": 0,
@@ -274,7 +323,15 @@ def _xfs_retained_slice_keys(
             slicing = _dict(_dict(analysis).get("slicing_result"))
             for residual_slice in _list(slicing.get("slices")):
                 residual_slice = _dict(residual_slice)
-                if residual_slice.get("state") not in M33_XFS_RETAINED_STATES:
+                retained = residual_slice.get("state") in M33_XFS_RETAINED_STATES
+                reviewed_without_dirty_proof = (
+                    residual_slice.get("state") == "EXPOSED"
+                    and any(
+                        str(blocker).startswith("conditional_shutdown_review:")
+                        for blocker in _list(residual_slice.get("semantic_blockers"))
+                    )
+                )
+                if not (retained or reviewed_without_dirty_proof):
                     continue
                 keys.add(_slice_key_from_parts(
                     function,

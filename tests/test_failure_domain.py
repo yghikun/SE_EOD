@@ -223,7 +223,7 @@ int work(struct xfs_trans *tp, struct inode *logged, struct inode *other, long n
     assert residual_slice.containment_proofs == ()
 
 
-def test_xfs_trans_ijoin_binds_inode_effect_to_transaction_cancel(tmp_path: Path):
+def test_xfs_trans_ijoin_without_dirty_evidence_requires_review(tmp_path: Path):
     function = _functions(
         tmp_path,
         """
@@ -245,12 +245,9 @@ int work(struct xfs_trans *tp, struct inode *ip, long nr)
 
     residual_slice = slice_function_residuals(function).slices[0]
 
-    assert residual_slice.state is ResidualState.CONTAINED
-    assert any(
-        proof.kind is FailureDomainKind.FATAL_SHUTDOWN
-        and any(effect.root == "ip" for effect in proof.covered_effects)
-        for proof in residual_slice.containment_proofs
-    )
+    assert residual_slice.state is ResidualState.EXPOSED
+    assert residual_slice.containment_proofs == ()
+    assert "conditional_shutdown_review:ip" in residual_slice.semantic_blockers
 
 
 def test_summary_wrapped_xfs_transaction_cancel_contains_bound_state(tmp_path: Path):

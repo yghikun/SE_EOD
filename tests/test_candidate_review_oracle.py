@@ -143,6 +143,16 @@ def test_oracle_audit_keeps_live_residual_visible_and_flags_unknown(tmp_path: Pa
     assert audit["summary"]["safety_regression_count"] == 0
 
     _write_evaluation(
+        tmp_path / "live",
+        _slice("LIVE", residuals=[effect], reaching=[effect]),
+    )
+    completed = audit_oracle([oracle], tmp_path / "live")
+    assert completed["transitions"][0]["current_classification"] == (
+        "LIVE_METADATA_RESIDUAL"
+    )
+    assert completed["summary"]["manual_live_residuals_retained"] == 1
+
+    _write_evaluation(
         tmp_path / "unknown",
         _slice("UNKNOWN", residuals=[effect], reaching=[effect]),
     )

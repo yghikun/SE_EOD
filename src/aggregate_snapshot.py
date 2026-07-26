@@ -1,4 +1,4 @@
-"""Source-proven aggregate snapshot restoration for failure-path slices."""
+"""Source-proven field snapshot restoration for failure-path slices."""
 
 from __future__ import annotations
 
@@ -47,12 +47,11 @@ def aggregate_snapshot_restore_cancellations(
 ) -> tuple[MetadataEffect, ...]:
     """Create exact RESTORE cancellations for field SET effects.
 
-    A relation is accepted only for a local aggregate copied from an owner,
+    A relation is accepted only for a local snapshot copied from an owner,
     restored to that same owner after the failed check, and dominating every
-    feasible error exit. Writes to the copied aggregate are checked per field:
-    an unrelated field's source-visible deep copy cannot invalidate a distinct
-    field snapshot, but a whole-object write, same-field write, or address
-    escape rejects the relation.
+    feasible error exit.  The local may be an aggregate, scalar, or pointer.
+    Writes to an aggregate snapshot are checked per field; a whole-object
+    write, same-field write, or address escape rejects the relation.
     """
 
     if function.body_node is None:
@@ -129,7 +128,7 @@ def _snapshot_assignments(
     cfg: ControlFlowGraphIR,
     macros: dict[str, tuple[tuple[str, ...], str]],
 ) -> tuple[tuple[_SnapshotCapture, ...], tuple[_SnapshotRestore, ...]]:
-    local_aggregates = _local_aggregate_symbols(function)
+    local_snapshots = _local_snapshot_symbols(function)
     captures: list[_SnapshotCapture] = []
     restores: list[_SnapshotRestore] = []
     for node in function.body_node.walk() if function.body_node is not None else ():
@@ -141,13 +140,13 @@ def _snapshot_assignments(
             continue
         site = SourceSite(function.file.as_posix(), node.start_line, compact_ws(node.text))
         block_id = _block_for_node(cfg, node)
-        if left.type == "identifier" and compact_ws(left.text) in local_aggregates:
+        if left.type == "identifier" and compact_ws(left.text) in local_snapshots:
             owner = _canonical_owner(right.text, macros)
             if owner:
                 captures.append(
                     _SnapshotCapture(compact_ws(left.text), owner, site, block_id, node.end_byte)
                 )
-        if right.type == "identifier" and compact_ws(right.text) in local_aggregates:
+        if right.type == "identifier" and compact_ws(right.text) in local_snapshots:
             owner = _canonical_owner(left.text, macros)
             if owner:
                 restores.append(
@@ -156,20 +155,21 @@ def _snapshot_assignments(
     return tuple(captures), tuple(restores)
 
 
-def _local_aggregate_symbols(function: FunctionIR) -> set[str]:
+def _local_snapshot_symbols(function: FunctionIR) -> set[str]:
     if function.body_node is None:
         return set()
     symbols: set[str] = set()
     for node in function.body_node.walk():
         if node.type != "declaration":
             continue
-        type_node = node.child_by_field_name("type")
-        if type_node is None or not re.search(r"\b(?:struct|union)\b", type_node.text):
-            continue
         for declarator in node.children:
-            if declarator.type not in {"init_declarator", "identifier", "array_declarator"}:
-                continue
-            if any(child.type == "pointer_declarator" for child in declarator.walk()):
+            if declarator.type in {
+                "attribute_specifier",
+                "storage_class_specifier",
+                "struct_specifier",
+                "type_identifier",
+                "union_specifier",
+            }:
                 continue
             name = _declarator_name(declarator)
             if name:
@@ -216,7 +216,7 @@ def _effect_belongs_to_owner(
     owner: str,
     macros: dict[str, tuple[tuple[str, ...], str]],
 ) -> bool:
-    root = _canonical_owner(effect.root, macros)
+    root = _canonical_effect_root(effect.root, macros)
     if root == owner:
         return True
     return _join_owner(root, effect.key) == owner
@@ -227,10 +227,21 @@ def _effect_snapshot_field(
     owner: str,
     macros: dict[str, tuple[tuple[str, ...], str]],
 ) -> str:
-    root = _canonical_owner(effect.root, macros)
+    root = _canonical_effect_root(effect.root, macros)
     if root == owner:
         return effect.key
     return ""
+
+
+def _canonical_effect_root(
+    expression: str,
+    macros: dict[str, tuple[tuple[str, ...], str]],
+) -> str:
+    owner = _canonical_owner(expression, macros)
+    if owner:
+        return owner
+    value = _expand_macros(compact_ws(expression), macros).strip("&*() ")
+    return value if re.fullmatch(r"[A-Za-z_]\w*", value) else ""
 
 
 def _owner_parts(owner: str) -> tuple[str, str]:
@@ -283,7 +294,11 @@ def _expand_macros(
                 continue
             expanded = body
             for parameter, argument in zip(parameters, args):
-                expanded = re.sub(rf"\b{re.escape(parameter)}\b", argument, expanded)
+                expanded = re.sub(
+                    rf"\b{re.escape(parameter)}\b",
+                    lambda _match, value=argument: value,
+                    expanded,
+                )
             value = value[: match.start()] + expanded + value[end + 1 :]
             changed = True
             break

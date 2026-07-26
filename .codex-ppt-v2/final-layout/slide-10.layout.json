@@ -1,0 +1,1589 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/32e21d",
+    "id": "32e21d",
+    "slide": 10,
+    "layoutId": "0eebc2cd-9072-495c-a0da-4a15cfbf48bf",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "75a01cd5-4746-426c-90f0-98c7f67ae3fc",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Consolas",
+      "Microsoft YaHei"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "0eebc2cd-9072-495c-a0da-4a15cfbf48bf",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "75a01cd5-4746-426c-90f0-98c7f67ae3fc",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "75a01cd5-4746-426c-90f0-98c7f67ae3fc",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7edwba1s",
+      "id": "1",
+      "name": "kicker",
+      "bbox": [
+        48,
+        24,
+        740,
+        25
+      ],
+      "geometry": "rect",
+      "text": "CASE 01 · SOURCE WALKTHROUGH",
+      "textPreview": "CASE 01 · SOURCE WALKTHROUGH",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "CASE 01 · SOURCE WALKTHROUGH"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "CASE 01 · SOURCE WALKTHROUGH",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "CASE 01 · SOURCE WALKTHROUGH",
+              "fontSize": 13,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8zmxkfid",
+      "id": "2",
+      "name": "title",
+      "bbox": [
+        48,
+        54,
+        1184,
+        62
+      ],
+      "geometry": "rect",
+      "text": "Bug #7 源码：写入发生在循环内，失败边发生在循环之后",
+      "textPreview": "Bug #7 源码：写入发生在循环内，失败边发生在循环之后",
+      "resolvedFontSize": 36,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 36,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Bug #7 源码：写入发生在循环内，失败边发生在循环之后"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Bug #7 源码：写入发生在循环内，失败边发生在循环之后",
+          "resolvedTextStyle": {
+            "fontSize": 36,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Bug #7 源码：写入发生在循环内，失败边发生在循环之后",
+              "fontSize": 36,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/t0fedkzi",
+      "id": "3",
+      "name": "title-rule",
+      "bbox": [
+        48,
+        124,
+        1184,
+        2
+      ],
+      "geometry": "rect",
+      "fillColor": "#000000",
+      "lineColor": "#000000",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u1ofmp03",
+      "id": "4",
+      "name": "page",
+      "bbox": [
+        1178,
+        678,
+        54,
+        20
+      ],
+      "geometry": "rect",
+      "text": "10",
+      "textPreview": "10",
+      "resolvedFontSize": 8.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 12,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.72,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "10"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "10",
+          "resolvedTextStyle": {
+            "fontSize": 12,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "10",
+              "fontSize": 12,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v2xwfuho",
+      "id": "5",
+      "name": "code-fs/btrfs/relocation.c · 4185–4219",
+      "bbox": [
+        48,
+        145,
+        805,
+        512
+      ],
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineColor": "#BDBDBD",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/g36xozi9",
+      "id": "6",
+      "name": "code-bar-fs/btrfs/relocation.c · 4185–4219",
+      "bbox": [
+        48,
+        145,
+        7,
+        512
+      ],
+      "geometry": "rect",
+      "fillColor": "#000000",
+      "lineColor": "#000000",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h4feh4zu",
+      "id": "7",
+      "name": "text",
+      "bbox": [
+        68,
+        159,
+        765,
+        24
+      ],
+      "geometry": "rect",
+      "text": "fs/btrfs/relocation.c · 4185–4219",
+      "textPreview": "fs/btrfs/relocation.c · 4185–4219",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Consolas",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.86,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "fs/btrfs/relocation.c · 4185–4219"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "fs/btrfs/relocation.c · 4185–4219",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "fs/btrfs/relocation.c · 4185–4219",
+              "fontSize": 14,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i5ofq90f",
+      "id": "8",
+      "name": "text",
+      "bbox": [
+        68,
+        191,
+        771,
+        454
+      ],
+      "geometry": "rect",
+      "text": "4185  while (!list_empty(&reloc_roots)) {\n4186      reloc_root = list_entry(reloc_roots.next,\n4187                    struct btrfs_root, root_list);\n4188      list_del(&reloc_root->root_list);\n...\n4196      fs_root = btrfs_get_fs_root(fs_info,\n4197                    reloc_root->root_key.offset, false);\n4198      if (IS_ERR(fs_root)) {\n4199          ret = PTR_ERR(fs_root);\n4200          list_add_tail(&reloc_root->root_list, &reloc_roots);\n4201          btrfs_end_transaction(trans);\n4202          goto out_unset;\n4203      }\n4205      ret = __add_reloc_root(reloc_root);\n4207      if (ret) {\n4208          list_add_tail(&reloc_root->root_list, &reloc_roots);\n4209          btrfs_put_root(fs_root);\n4210          btrfs_end_transaction(trans);\n4211          goto out_unset;\n4212      }\n4213      fs_root->reloc_root = btrfs_grab_root(reloc_root);\n4214      btrfs_put_root(fs_root);\n4215  }\n4217  ret = btrfs_commit_transaction(trans);\n4218  if (ret)\n4219      goto out_unset;",
+      "textPreview": "4185  while (!list_empty(&reloc_roots)) { | 4186      reloc_root = list_entry(reloc_roots.next, | 4187                    struct btrfs_ro...",
+      "resolvedFontSize": 14.24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15.4,
+        "typeface": "Consolas",
+        "color": "#000000",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.92,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 26,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4185  while (!list_empty(&reloc_roots)) {"
+          },
+          {
+            "index": 2,
+            "text": "4186      reloc_root = list_entry(reloc_roots.next,"
+          },
+          {
+            "index": 3,
+            "text": "4187                    struct btrfs_root, root_list);"
+          },
+          {
+            "index": 4,
+            "text": "4188      list_del(&reloc_root->root_list);"
+          },
+          {
+            "index": 5,
+            "text": "..."
+          },
+          {
+            "index": 6,
+            "text": "4196      fs_root = btrfs_get_fs_root(fs_info,"
+          },
+          {
+            "index": 7,
+            "text": "4197                    reloc_root->root_key.offset, false);"
+          },
+          {
+            "index": 8,
+            "text": "4198      if (IS_ERR(fs_root)) {"
+          },
+          {
+            "index": 9,
+            "text": "4199          ret = PTR_ERR(fs_root);"
+          },
+          {
+            "index": 10,
+            "text": "4200          list_add_tail(&reloc_root->root_list, &reloc_roots);"
+          },
+          {
+            "index": 11,
+            "text": "4201          btrfs_end_transaction(trans);"
+          },
+          {
+            "index": 12,
+            "text": "4202          goto out_unset;"
+          },
+          {
+            "index": 13,
+            "text": "4203      }"
+          },
+          {
+            "index": 14,
+            "text": "4205      ret = __add_reloc_root(reloc_root);"
+          },
+          {
+            "index": 15,
+            "text": "4207      if (ret) {"
+          },
+          {
+            "index": 16,
+            "text": "4208          list_add_tail(&reloc_root->root_list, &reloc_roots);"
+          },
+          {
+            "index": 17,
+            "text": "4209          btrfs_put_root(fs_root);"
+          },
+          {
+            "index": 18,
+            "text": "4210          btrfs_end_transaction(trans);"
+          },
+          {
+            "index": 19,
+            "text": "4211          goto out_unset;"
+          },
+          {
+            "index": 20,
+            "text": "4212      }"
+          },
+          {
+            "index": 21,
+            "text": "4213      fs_root->reloc_root = btrfs_grab_root(reloc_root);"
+          },
+          {
+            "index": 22,
+            "text": "4214      btrfs_put_root(fs_root);"
+          },
+          {
+            "index": 23,
+            "text": "4215  }"
+          },
+          {
+            "index": 24,
+            "text": "4217  ret = btrfs_commit_transaction(trans);"
+          },
+          {
+            "index": 25,
+            "text": "4218  if (ret)"
+          },
+          {
+            "index": 26,
+            "text": "4219      goto out_unset;"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4185  while (!list_empty(&reloc_roots)) {",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4185  while (!list_empty(&reloc_roots)) {",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "4186      reloc_root = list_entry(reloc_roots.next,",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4186      reloc_root = list_entry(reloc_roots.next,",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "4187                    struct btrfs_root, root_list);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4187                    struct btrfs_root, root_list);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 4,
+          "text": "4188      list_del(&reloc_root->root_list);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4188      list_del(&reloc_root->root_list);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 5,
+          "text": "...",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "...",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 6,
+          "text": "4196      fs_root = btrfs_get_fs_root(fs_info,",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4196      fs_root = btrfs_get_fs_root(fs_info,",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 7,
+          "text": "4197                    reloc_root->root_key.offset, false);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4197                    reloc_root->root_key.offset, false);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 8,
+          "text": "4198      if (IS_ERR(fs_root)) {",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4198      if (IS_ERR(fs_root)) {",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 9,
+          "text": "4199          ret = PTR_ERR(fs_root);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4199          ret = PTR_ERR(fs_root);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 10,
+          "text": "4200          list_add_tail(&reloc_root->root_list, &reloc_roots);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4200          list_add_tail(&reloc_root->root_list, &reloc_roots);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 11,
+          "text": "4201          btrfs_end_transaction(trans);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4201          btrfs_end_transaction(trans);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 12,
+          "text": "4202          goto out_unset;",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4202          goto out_unset;",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 13,
+          "text": "4203      }",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4203      }",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 14,
+          "text": "4205      ret = __add_reloc_root(reloc_root);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4205      ret = __add_reloc_root(reloc_root);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 15,
+          "text": "4207      if (ret) {",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4207      if (ret) {",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 16,
+          "text": "4208          list_add_tail(&reloc_root->root_list, &reloc_roots);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4208          list_add_tail(&reloc_root->root_list, &reloc_roots);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 17,
+          "text": "4209          btrfs_put_root(fs_root);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4209          btrfs_put_root(fs_root);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 18,
+          "text": "4210          btrfs_end_transaction(trans);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4210          btrfs_end_transaction(trans);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 19,
+          "text": "4211          goto out_unset;",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4211          goto out_unset;",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 20,
+          "text": "4212      }",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4212      }",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 21,
+          "text": "4213      fs_root->reloc_root = btrfs_grab_root(reloc_root);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4213      fs_root->reloc_root = btrfs_grab_root(reloc_root);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 22,
+          "text": "4214      btrfs_put_root(fs_root);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4214      btrfs_put_root(fs_root);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 23,
+          "text": "4215  }",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4215  }",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 24,
+          "text": "4217  ret = btrfs_commit_transaction(trans);",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4217  ret = btrfs_commit_transaction(trans);",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 25,
+          "text": "4218  if (ret)",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4218  if (ret)",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 26,
+          "text": "4219      goto out_unset;",
+          "resolvedTextStyle": {
+            "fontSize": 15.4,
+            "typeface": "Consolas",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4219      goto out_unset;",
+              "fontSize": 15.4,
+              "typeface": "Consolas",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/36xgjuh0",
+      "id": "9",
+      "name": "callout-① 获取 owner",
+      "bbox": [
+        885,
+        145,
+        347,
+        142
+      ],
+      "geometry": "rect",
+      "fillColor": "#F3F3F3",
+      "lineColor": "#DEDEDE",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fydwb2dg",
+      "id": "10",
+      "name": "text",
+      "bbox": [
+        903,
+        160,
+        311,
+        27
+      ],
+      "geometry": "rect",
+      "text": "① 获取 owner",
+      "textPreview": "① 获取 owner",
+      "resolvedFontSize": 14.5,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "① 获取 owner"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "① 获取 owner",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "① 获取 owner",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ex4vixcv",
+      "id": "11",
+      "name": "text",
+      "bbox": [
+        903,
+        195,
+        311,
+        80
+      ],
+      "geometry": "rect",
+      "text": "4196–4203：fs_root 获取失败时，reloc_root 会重新放回本地列表；这条路径有显式回收线索。",
+      "textPreview": "4196–4203：fs_root 获取失败时，reloc_root 会重新放回本地列表；这条路径有显式回收线索。",
+      "resolvedFontSize": 14.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4196–4203：fs_root"
+          },
+          {
+            "index": 2,
+            "text": "获取失败时，reloc_root"
+          },
+          {
+            "index": 3,
+            "text": "会重新放回本地列表；这条路径有显式回收"
+          },
+          {
+            "index": 4,
+            "text": "线索。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4196–4203：fs_root 获取失败时，reloc_root 会重新放回本地列表；这条路径有显式回收线索。",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4196–4203：fs_root 获取失败时，reloc_root 会重新放回本地列表；这条路径有显式回收线索。",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/10vedcvm",
+      "id": "12",
+      "name": "callout-② 发布引用",
+      "bbox": [
+        885,
+        309,
+        347,
+        142
+      ],
+      "geometry": "rect",
+      "fillColor": "#000000",
+      "lineColor": "#000000",
+      "lineWidth": 1
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0zmdk7u1",
+      "id": "13",
+      "name": "text",
+      "bbox": [
+        903,
+        324,
+        311,
+        27
+      ],
+      "geometry": "rect",
+      "text": "② 发布引用",
+      "textPreview": "② 发布引用",
+      "resolvedFontSize": 14.5,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "② 发布引用"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "② 发布引用",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "② 发布引用",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rudw7id4",
+      "id": "14",
+      "name": "text",
+      "bbox": [
+        903,
+        359,
+        311,
+        80
+      ],
+      "geometry": "rect",
+      "text": "4213：grab_root() 增加引用，并把指针存入 fs_root->reloc_root。之后本地 list 已经为空。",
+      "textPreview": "4213：grab_root() 增加引用，并把指针存入 fs_root->reloc_root。之后本地 list 已经为空。",
+      "resolvedFontSize": 14.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4213：grab_root()"
+          },
+          {
+            "index": 2,
+            "text": "增加引用，并把指针存入"
+          },
+          {
+            "index": 3,
+            "text": "fs_root->reloc_root。之后本地 list"
+          },
+          {
+            "index": 4,
+            "text": "已经为空。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4213：grab_root() 增加引用，并把指针存入 fs_root->reloc_root。之后本地 list 已经为空。",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#FFFFFF",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4213：grab_root() 增加引用，并把指针存入 fs_root->reloc_root。之后本地 list 已经为空。",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#FFFFFF",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qt4vexcz",
+      "id": "15",
+      "name": "callout-③ 提交失败",
+      "bbox": [
+        885,
+        473,
+        347,
+        184
+      ],
+      "geometry": "rect",
+      "fillColor": "#F3F3F3",
+      "lineColor": "#DEDEDE",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dwve9sva",
+      "id": "16",
+      "name": "text",
+      "bbox": [
+        903,
+        488,
+        311,
+        27
+      ],
+      "geometry": "rect",
+      "text": "③ 提交失败",
+      "textPreview": "③ 提交失败",
+      "resolvedFontSize": 14.5,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "③ 提交失败"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "③ 提交失败",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "③ 提交失败",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/svmdgnup",
+      "id": "17",
+      "name": "text",
+      "bbox": [
+        903,
+        523,
+        311,
+        122
+      ],
+      "geometry": "rect",
+      "text": "4217–4219：commit 失败时只知道跳到 out_unset；必须检查该出口是否反向清除已挂接引用。",
+      "textPreview": "4217–4219：commit 失败时只知道跳到 out_unset；必须检查该出口是否反向清除已挂接引用。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Microsoft YaHei",
+        "color": "#000000",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4217–4219：commit"
+          },
+          {
+            "index": 2,
+            "text": "失败时只知道跳到"
+          },
+          {
+            "index": 3,
+            "text": "out_unset；必须检查该出口是否反"
+          },
+          {
+            "index": 4,
+            "text": "向清除已挂接引用。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4217–4219：commit 失败时只知道跳到 out_unset；必须检查该出口是否反向清除已挂接引用。",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Microsoft YaHei",
+            "color": "#000000",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "4217–4219：commit 失败时只知道跳到 out_unset；必须检查该出口是否反向清除已挂接引用。",
+              "fontSize": 18,
+              "typeface": "Microsoft YaHei",
+              "color": "#000000",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

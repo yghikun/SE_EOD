@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .metadata_residual import MetadataDelta, MetadataEffect
+from .metadata_residual import EffectEvidence, MetadataDelta, MetadataEffect
 from .smt_solver import counter_balance_proven
 
 
@@ -88,10 +88,7 @@ def normalize_residuals(
         closing = unused_cancellations[match_index]
         # A single whole-aggregate restore covers every earlier SET of the
         # matching field; ordinary inverse effects remain one-to-one.
-        if (
-            closing.delta is not MetadataDelta.RESTORE
-            and closing.container_iteration_cleanup is None
-        ):
+        if not _reusable_cancellation(effect, closing):
             unused_cancellations.pop(match_index)
         remaining.remove(effect)
         cancelled.append(
@@ -162,6 +159,10 @@ def _close_smt_balanced_counters(
 def effects_cancel(opened: MetadataEffect, closed: MetadataEffect) -> bool:
     """Return true when ``closed`` is an identity-compatible inverse effect."""
 
+    if _resource_release_closes_reservation(opened, closed):
+        return True
+    if _owner_lifecycle_closes_descriptor_field(opened, closed):
+        return True
     if opened.plane is not closed.plane:
         return False
     if closed.delta is MetadataDelta.RESTORE:
@@ -206,6 +207,16 @@ def effect_protected_by(effect: MetadataEffect, protection: MetadataEffect) -> b
 
 
 def cancellation_reason(opened: MetadataEffect, closed: MetadataEffect) -> str:
+    if _resource_release_closes_reservation(opened, closed):
+        return (
+            f"resource reservation at {opened.site.line} is released by the "
+            f"same-owner lifecycle helper at {closed.site.line}"
+        )
+    if _owner_lifecycle_closes_descriptor_field(opened, closed):
+        return (
+            f"descriptor field write at {opened.site.line} is closed when its "
+            f"owner lifecycle ends at {closed.site.line}"
+        )
     return (
         f"{opened.delta.value} at {opened.site.line} is cancelled by "
         f"{closed.delta.value} at {closed.site.line}"
@@ -291,3 +302,82 @@ def _norm(value: str) -> str:
 
 def _is_clear_value(value: str) -> bool:
     return value in {"", "0", "0L", "0UL", "NULL", "false", "FALSE"}
+
+
+_RESOURCE_VERBS = {
+    "alloc",
+    "charge",
+    "clear",
+    "drop",
+    "free",
+    "release",
+    "reserve",
+    "reserved",
+    "rsv",
+    "space",
+    "uncharge",
+    "unreserve",
+}
+_GENERIC_OWNER_TOKENS = {
+    "btrfs",
+    "f2fs",
+    "fs",
+    "metadata",
+    "trans",
+    "transaction",
+    "xfs",
+}
+_OWNER_CLOSE_VERBS = {"cancel", "end", "free", "put", "release", "stop"}
+
+
+def _resource_release_closes_reservation(
+    opened: MetadataEffect,
+    closed: MetadataEffect,
+) -> bool:
+    if opened.delta is not MetadataDelta.RESERVE or closed.delta not in {
+        MetadataDelta.CLOSE,
+        MetadataDelta.RELEASE,
+    }:
+        return False
+    if _norm(opened.root) != _norm(closed.root):
+        return False
+    close_tokens = _identifier_tokens(closed.key)
+    if not close_tokens & {"drop", "free", "release", "uncharge", "unreserve"}:
+        return False
+    opened_resource = _identifier_tokens(opened.key) - _RESOURCE_VERBS
+    closed_resource = close_tokens - _RESOURCE_VERBS - _GENERIC_OWNER_TOKENS
+    return bool(opened_resource & closed_resource)
+
+
+def _owner_lifecycle_closes_descriptor_field(
+    opened: MetadataEffect,
+    closed: MetadataEffect,
+) -> bool:
+    return (
+        opened.delta is MetadataDelta.SET
+        and opened.evidence is EffectEvidence.DIRECT_SOURCE
+        and closed.delta is MetadataDelta.CLOSE
+        and _norm(opened.root) == _norm(closed.root)
+        and bool(_identifier_tokens(closed.key) & _OWNER_CLOSE_VERBS)
+    )
+
+
+def _reusable_cancellation(
+    opened: MetadataEffect,
+    closed: MetadataEffect,
+) -> bool:
+    return (
+        closed.delta is MetadataDelta.RESTORE
+        or closed.container_iteration_cleanup is not None
+        or _resource_release_closes_reservation(opened, closed)
+        or _owner_lifecycle_closes_descriptor_field(opened, closed)
+    )
+
+
+def _identifier_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[A-Za-z][A-Za-z0-9]*", value.lower())
+        for token in token.split("_")
+        if token
+    }
