@@ -5,6 +5,7 @@ from src.frontend.tree_sitter_frontend import TreeSitterFrontend
 from src.function_extractor import extract_functions
 from src.function_summary import build_same_file_summaries
 from src.metadata_residual import (
+    EffectEvidence,
     EffectProvenanceKind,
     OwnerScopeKind,
     ReportKind,
@@ -476,6 +477,131 @@ int caller(struct inode *inode)
 
     assert residual_slice.state is ResidualState.EXPOSED
     assert residual_slice.owner_liveness_proofs == ()
+
+
+def test_error_partition_records_checked_constraint_and_effect_order(tmp_path: Path):
+    helper = _legacy_functions(
+        tmp_path,
+        """
+static int mutate(struct inode *inode)
+{
+    int ret;
+
+    ret = fail_metadata();
+    if (ret) {
+        inode->i_blocks += 1;
+        return ret;
+    }
+    return 0;
+}
+""",
+    )[0]
+
+    summary = build_same_file_summaries((helper,))["mutate"]
+    partition = summary.error_exit_partitions[0]
+
+    assert partition.return_constraint == "NONZERO"
+    assert [effect.key for effect in partition.ordered_effects] == ["i_blocks"]
+    assert partition.to_dict()["ordered_effects"][0]["delta"] == "INC"
+
+
+def test_equivalent_indirect_mutation_targets_export_must_open(tmp_path: Path):
+    apply_a, apply_b, worker = _legacy_functions(
+        tmp_path,
+        """
+struct ops { void (*apply)(struct inode *, long); };
+
+static void apply_a(struct inode *inode, long nr)
+{
+    inode->i_blocks += nr;
+}
+
+static void apply_b(struct inode *inode, long nr)
+{
+    inode->i_blocks += nr;
+}
+
+static const struct ops ops_a = { .apply = apply_a };
+static const struct ops ops_b = { .apply = apply_b };
+
+static void worker(struct context *ctx, struct inode *inode, long nr)
+{
+    ctx->ops->apply(inode, nr);
+}
+""",
+    )
+
+    summary = build_same_file_summaries((apply_a, apply_b, worker))["worker"]
+
+    assert summary.unknown_causes == ()
+    assert any(effect.key == "i_blocks" for effect in summary.opens)
+    assert summary.indirect_target_sets[0].complete
+
+
+def test_two_level_failure_propagation_proves_owner_live(tmp_path: Path):
+    functions = _frontend_functions(
+        tmp_path,
+        """
+static int mutate(struct inode *inode)
+{
+    int ret;
+
+    inode->i_blocks += 1;
+    ret = fail_metadata();
+    if (ret)
+        return ret;
+    return 0;
+}
+
+static int wrapper(struct inode *inode)
+{
+    int ret = mutate(inode);
+
+    if (ret)
+        return ret;
+    return 0;
+}
+
+int caller(struct inode *inode)
+{
+    int ret = wrapper(inode);
+
+    if (ret) {
+        inode->i_state = 1;
+        return 0;
+    }
+    return 0;
+}
+""",
+    )
+
+    analyses = {item.function: item for item in analyze_functions(functions)}
+    residual_slice = analyses["mutate"].slicing_result.slices[0]
+
+    assert residual_slice.state is ResidualState.LIVE
+    assert residual_slice.owner_liveness_proofs
+    assert residual_slice.owner_liveness_proofs[0].via_function == "wrapper -> caller"
+
+
+def test_transaction_ownership_primitive_upgrades_existing_effect_evidence(
+    tmp_path: Path,
+):
+    function = _legacy_functions(
+        tmp_path,
+        """
+void join_inode(struct xfs_trans *tp, struct xfs_inode *ip)
+{
+    xfs_trans_ijoin(tp, ip, 0);
+}
+""",
+    )[0]
+
+    effects = extract_metadata_effects_with_skips(function).effects
+
+    assert len(effects) == 1
+    assert effects[0].key == "xfs_trans_ijoin"
+    assert effects[0].evidence is EffectEvidence.EXPLICIT_PRIMITIVE
+    assert effects[0].transaction_ownership is not None
 
 
 def test_same_owner_resource_release_closes_chunk_reservation(tmp_path: Path):

@@ -889,7 +889,12 @@ def _transaction_effect(
         plane=MetadataPlane.RECOVERY,
         delta=delta,
         value=_value_args(args[1:], aliases),
-        evidence=EffectEvidence.NAME_INFERRED,
+        evidence=(
+            EffectEvidence.EXPLICIT_PRIMITIVE
+            if name in TRANSACTION_OWNERSHIP_PRIMITIVES
+            or name in TRANSACTION_OUTPARAM_OWNERSHIP_PRIMITIVES
+            else EffectEvidence.NAME_INFERRED
+        ),
     )
     if re.fullmatch(r"[A-Za-z_]\w*", compact_ws(effect.root)):
         effect = replace(effect, visibility=EffectVisibility.TRANSACTION_LOCAL)

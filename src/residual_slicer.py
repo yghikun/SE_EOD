@@ -785,6 +785,7 @@ def _summary_applications(
                     opens=(),
                     cancels=(),
                     protects=(),
+                    ordered_effects=(),
                     residuals=(),
                     terminal_actions=(),
                 )
@@ -938,6 +939,7 @@ def _partition_at_application_site(
         opens=project(partition.opens),
         cancels=project(partition.cancels),
         protects=project(partition.protects),
+        ordered_effects=project(partition.ordered_effects),
         residuals=project(partition.residuals),
         terminal_actions=project(partition.terminal_actions),
     )
@@ -978,9 +980,10 @@ def _partition_matches_failure_check(
         if point.check_kind not in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
             return None
         return point.error_edge.kind != "false"
-    if constraint == "NEGATIVE":
-        value = "-1"
-    elif constraint.startswith("EXACT:"):
+    abstract = _abstract_constraint_matches(constraint, point.check_kind)
+    if abstract is not None:
+        return abstract if point.error_edge.kind != "false" else not abstract
+    if constraint.startswith("EXACT:"):
         value = constraint[6:]
     else:
         value = _partition_return_value(partition.return_expression)
@@ -1005,6 +1008,46 @@ def _partition_matches_failure_check(
     if result is None:
         return None
     return result if predicate_true else not result
+
+
+def _abstract_constraint_matches(
+    constraint: str,
+    check_kind: str,
+) -> bool | None:
+    known: dict[str, dict[str, bool]] = {
+        "NEGATIVE": {
+            "nonzero": True,
+            "ne:0": True,
+            "eq:0": False,
+            "<0": True,
+            "<=0": True,
+            ">0": False,
+            ">=0": False,
+        },
+        "POSITIVE": {
+            "nonzero": True,
+            "ne:0": True,
+            "eq:0": False,
+            "<0": False,
+            "<=0": False,
+            ">0": True,
+            ">=0": True,
+        },
+        "NONZERO": {
+            "nonzero": True,
+            "ne:0": True,
+            "eq:0": False,
+        },
+        "NONPOSITIVE": {
+            "<=0": True,
+            ">0": False,
+        },
+        "NONNEGATIVE": {
+            ">=0": True,
+            "<0": False,
+        },
+    }
+    return known.get(constraint, {}).get(check_kind)
 
 
 def _selected_partition_opens(

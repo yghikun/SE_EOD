@@ -7,6 +7,11 @@ from dataclasses import replace
 from typing import Iterable
 
 from .effect_extractor import extract_metadata_effects
+from .failure_domain_primitives import (
+    failure_domain_kind,
+    transaction_cancel_owner_index,
+)
+from .failure_points import find_failure_points
 from .frontend.model import FrontendNode, FunctionIR
 from .metadata_residual import (
     MetadataEffect,
@@ -46,14 +51,17 @@ def refine_source_visible_owner_liveness(
                 refined.append(residual_slice)
                 continue
             proofs: list[OwnerLivenessProof] = []
-            for caller, call in callers_by_target.get(target.name, ()):
+            for residual in residual_slice.residuals:
                 proofs.extend(
-                    _call_liveness_proofs(
+                    _residual_liveness_proofs(
                         target,
-                        parameters,
-                        residual_slice.residuals,
-                        caller,
-                        call,
+                        residual,
+                        residual,
+                        callers_by_target,
+                        max_depth=2,
+                        visited=(),
+                        chain=(),
+                        origin_site=None,
                     )
                 )
             covered = {
@@ -131,47 +139,60 @@ def _direct_callers(
     return {name: tuple(items) for name, items in collected.items()}
 
 
-def _call_liveness_proofs(
+def _residual_liveness_proofs(
     target: FunctionIR,
-    parameters: tuple[str, ...],
-    residuals: tuple[MetadataEffect, ...],
-    caller: FunctionIR,
-    call: FrontendNode,
+    residual: MetadataEffect,
+    original_residual: MetadataEffect,
+    callers_by_target: dict[str, tuple[tuple[FunctionIR, FrontendNode], ...]],
+    *,
+    max_depth: int,
+    visited: tuple[tuple[str, str], ...],
+    chain: tuple[str, ...],
+    origin_site: SourceSite | None,
 ) -> tuple[OwnerLivenessProof, ...]:
-    if caller.body_node is None:
-        return ()
-    _, args = call_name_and_args(compact_ws(call.text))
-    mapping = {
-        parameter: compact_ws(args[index]).strip("&() ")
-        for index, parameter in enumerate(parameters)
-        if index < len(args)
-    }
-    if not mapping:
-        return ()
-    result_name = _call_result_lvalue(caller, call)
-    branch = _failure_handling_branch(caller, call, result_name)
-    if branch is None:
-        return ()
-    success_return = _success_return(branch)
-    if success_return is None:
-        return ()
-    branch_effects = tuple(
-        effect
-        for effect in extract_metadata_effects(caller)
-        if branch.start_line <= effect.site.line <= success_return.start_line
-        and effect.site.line >= call.start_line
-    )
-    if not branch_effects:
+    parameters = _ordered_parameters(target)
+    target_owner = _leading_symbol(residual.root)
+    visit_key = (target.function_id, residual.root)
+    if (
+        max_depth <= 0
+        or target_owner not in parameters
+        or visit_key in visited
+    ):
         return ()
     proofs: list[OwnerLivenessProof] = []
-    call_site = SourceSite(
-        caller.file.as_posix(), call.start_line, compact_ws(call.text)
-    )
-    for residual in residuals:
-        target_owner = _leading_symbol(residual.root)
+    next_visited = (*visited, visit_key)
+    for caller, call in callers_by_target.get(target.name, ()):
+        if caller.body_node is None:
+            continue
+        _, args = call_name_and_args(compact_ws(call.text))
+        mapping = {
+            parameter: compact_ws(args[index]).strip("&() ")
+            for index, parameter in enumerate(parameters)
+            if index < len(args)
+        }
         caller_owner = mapping.get(target_owner, "")
         if not caller_owner:
             continue
+        caller_residual = replace(
+            residual,
+            root=_replace_leading_owner(
+                residual.root,
+                target_owner,
+                caller_owner,
+            ),
+        )
+        result_name = _call_result_lvalue(caller, call)
+        branch = _failure_handling_branch(caller, call, result_name)
+        if branch is None:
+            continue
+        success_return = _success_return(branch)
+        branch_effects = tuple(
+            effect
+            for effect in extract_metadata_effects(caller)
+            if success_return is not None
+            and branch.start_line <= effect.site.line <= success_return.start_line
+            and effect.site.line >= call.start_line
+        )
         continuation = next(
             (
                 effect
@@ -180,20 +201,46 @@ def _call_liveness_proofs(
             ),
             None,
         )
-        if continuation is None:
+        call_site = SourceSite(
+            caller.file.as_posix(), call.start_line, compact_ws(call.text)
+        )
+        first_site = origin_site or call_site
+        next_chain = (*chain, caller.name)
+        if continuation is not None and success_return is not None:
+            proofs.append(
+                OwnerLivenessProof(
+                    owner=caller_owner,
+                    site=first_site,
+                    continuation_site=continuation.site,
+                    covered_effects=(original_residual,),
+                    via_function=" -> ".join(next_chain),
+                    evidence=(
+                        f"{' -> '.join(next_chain)} handles the propagated failure, "
+                        f"performs {continuation.site.expression} on the same owner, "
+                        "and returns success"
+                    ),
+                )
+            )
             continue
-        proofs.append(
-            OwnerLivenessProof(
-                owner=caller_owner,
-                site=call_site,
-                continuation_site=continuation.site,
-                covered_effects=(residual,),
-                via_function=caller.name,
-                evidence=(
-                    f"{caller.name} takes the checked failure branch of "
-                    f"{target.name}, performs {continuation.site.expression} on the "
-                    "same caller-owned object, and returns success"
-                ),
+        if (
+            max_depth <= 1
+            or not _propagates_failure(caller, call)
+            or _owner_destroyed_or_terminal(caller, call, caller_owner)
+        ):
+            continue
+        caller_parameter = _leading_symbol(caller_owner)
+        if caller_parameter not in _ordered_parameters(caller):
+            continue
+        proofs.extend(
+            _residual_liveness_proofs(
+                caller,
+                caller_residual,
+                original_residual,
+                callers_by_target,
+                max_depth=max_depth - 1,
+                visited=next_visited,
+                chain=next_chain,
+                origin_site=first_site,
             )
         )
     return tuple(proofs)
@@ -311,3 +358,66 @@ def _same_owner(expected: str, actual: str) -> bool:
     return actual_value == expected_value or actual_value.startswith(
         (f"{expected_value}->", f"{expected_value}.")
     )
+
+
+def _replace_leading_owner(text: str, source: str, target: str) -> str:
+    return re.sub(
+        rf"\b{re.escape(source)}\b",
+        compact_ws(target).strip("&() "),
+        compact_ws(text),
+        count=1,
+    )
+
+
+def _propagates_failure(caller: FunctionIR, call: FrontendNode) -> bool:
+    expression = compact_ws(call.text)
+    return any(
+        point.call_site.line == call.start_line
+        and compact_ws(point.call_site.expression) == expression
+        for point in find_failure_points(caller)
+    )
+
+
+def _owner_destroyed_or_terminal(
+    caller: FunctionIR,
+    call: FrontendNode,
+    owner: str,
+) -> bool:
+    if caller.body_node is None:
+        return True
+    matching = tuple(
+        point
+        for point in find_failure_points(caller)
+        if point.call_site.line == call.start_line
+        and compact_ws(point.call_site.expression) == compact_ws(call.text)
+    )
+    if not matching:
+        return True
+    last_line = max(point.error_edge.exit_site.line for point in matching)
+    deallocators = {
+        "free_percpu": 0,
+        "kfree": 0,
+        "kmem_cache_free": 1,
+        "kvfree": 0,
+        "vfree": 0,
+    }
+    for node in caller.body_node.walk():
+        if (
+            node.type != "call_expression"
+            or node.start_line <= call.start_line
+            or node.start_line > last_line
+        ):
+            continue
+        name, args = call_name_and_args(compact_ws(node.text))
+        if failure_domain_kind(name) is not None:
+            return True
+        owner_index = deallocators.get(name)
+        if owner_index is None:
+            owner_index = transaction_cancel_owner_index(name)
+        if (
+            owner_index is not None
+            and owner_index < len(args)
+            and _same_owner(owner, args[owner_index])
+        ):
+            return True
+    return False

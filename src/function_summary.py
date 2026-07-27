@@ -204,6 +204,7 @@ class ErrorExitPartition:
     opens: tuple[MetadataEffect, ...] = ()
     cancels: tuple[MetadataEffect, ...] = ()
     protects: tuple[MetadataEffect, ...] = ()
+    ordered_effects: tuple[MetadataEffect, ...] = ()
     residuals: tuple[MetadataEffect, ...] = ()
     terminal_actions: tuple[MetadataEffect, ...] = ()
     failed_owner_destructions: tuple[LifecycleFact, ...] = ()
@@ -219,6 +220,7 @@ class ErrorExitPartition:
             "opens": [item.to_dict() for item in self.opens],
             "cancels": [item.to_dict() for item in self.cancels],
             "protects": [item.to_dict() for item in self.protects],
+            "ordered_effects": [item.to_dict() for item in self.ordered_effects],
             "residuals": [item.to_dict() for item in self.residuals],
             "terminal_actions": [item.to_dict() for item in self.terminal_actions],
             "failed_owner_destructions": [
@@ -1021,6 +1023,13 @@ def _return_bound_error_partitions(
                     protects=tuple(
                         effect for effect in residuals if effect.delta in PROTECT_DELTAS
                     ),
+                    ordered_effects=tuple(
+                        _parameterize_effect(
+                            _effect_at_summary_call_site(effect, function, call, callee),
+                            parameters,
+                        )
+                        for effect in partition.ordered_effects
+                    ),
                     residuals=residuals,
                     terminal_actions=actions,
                     failed_owner_destructions=partition.failed_owner_destructions,
@@ -1073,6 +1082,9 @@ def _merge_partition_call_outcome(
         opens=opens,
         cancels=cancels,
         protects=protects,
+        ordered_effects=_ordered_effects(
+            (*partition.ordered_effects, *projected_effects)
+        ),
         residuals=normalized.residuals,
         terminal_actions=tuple(dict.fromkeys((
             *partition.terminal_actions,
@@ -1569,6 +1581,9 @@ def _instantiate_error_exit_partition(
         opens=tuple(_instantiate_effect(item, mapping) for item in partition.opens),
         cancels=tuple(_instantiate_effect(item, mapping) for item in partition.cancels),
         protects=tuple(_instantiate_effect(item, mapping) for item in partition.protects),
+        ordered_effects=tuple(
+            _instantiate_effect(item, mapping) for item in partition.ordered_effects
+        ),
         residuals=tuple(_instantiate_effect(item, mapping) for item in partition.residuals),
         terminal_actions=tuple(
             _instantiate_effect(item, mapping) for item in partition.terminal_actions
@@ -2655,10 +2670,16 @@ def _error_exit_partitions(
             ErrorExitPartition(
                 exit_site=site,
                 return_expression=expression,
-                return_constraint=_return_constraint(expression),
+                return_constraint=_return_constraint_for_exit(
+                    function,
+                    return_node,
+                    expression,
+                    cfg,
+                ),
                 opens=opens,
                 cancels=cancels,
                 protects=protects,
+                ordered_effects=_ordered_effects(must),
                 residuals=normalized.residuals,
                 terminal_actions=terminal_actions,
                 failed_owner_destructions=destructions,
@@ -2745,6 +2766,7 @@ def _conditional_error_exit_partitions(
                 opens=opens,
                 cancels=cancels,
                 protects=protects,
+                ordered_effects=_ordered_effects(must_effects),
                 residuals=normalized.residuals,
                 terminal_actions=terminal_actions,
                 failed_owner_destructions=destructions,
@@ -2887,6 +2909,97 @@ def _return_constraint(expression: str) -> str:
     if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", value):
         return f"EXACT:{value}"
     return ""
+
+
+def _return_constraint_for_exit(
+    function: FunctionIR,
+    return_node: FrontendNode,
+    expression: str,
+    cfg,
+) -> str:
+    """Resolve constants and checked result predicates reaching one return."""
+
+    literal = _return_constraint(expression)
+    if literal:
+        return literal
+    symbol = _bare_owner_symbol(expression)
+    return_block = _block_for_return_node(cfg, return_node)
+    if symbol and return_block is not None and function.body_node is not None:
+        dominators = _dominators(cfg)
+        bindings: list[tuple[int, str]] = []
+        for node in function.body_node.walk():
+            if node.start_byte >= return_node.start_byte:
+                continue
+            value = None
+            target = ""
+            if node.type == "assignment_expression":
+                left = node.child_by_field_name("left")
+                right = node.child_by_field_name("right")
+                target = compact_ws(left.text) if left is not None else ""
+                value = right
+            elif node.type == "init_declarator":
+                declarator = node.child_by_field_name("declarator")
+                target = _declarator_name(declarator) or ""
+                value = node.child_by_field_name("value")
+            if target != symbol or value is None:
+                continue
+            block = _containing_cfg_block(cfg, node)
+            if (
+                block is not None
+                and block.id in dominators.get(return_block.id, set())
+            ):
+                bindings.append((node.start_byte, compact_ws(value.text)))
+        if bindings:
+            bound = _return_constraint(max(bindings)[1])
+            if bound:
+                return bound
+
+    constraints = {
+        _constraint_from_failure_point(point)
+        for point in find_failure_points(function)
+        if point.error_edge.exit_site.line == return_node.start_line
+        and (not symbol or point.result_symbol == symbol)
+    }
+    constraints.discard("")
+    return next(iter(constraints)) if len(constraints) == 1 else ""
+
+
+def _constraint_from_failure_point(point) -> str:
+    check = point.check_kind
+    if check.startswith("eq:"):
+        return f"EXACT:{check[3:]}"
+    if check in {"<0", "0>"}:
+        return "NEGATIVE"
+    if check in {">0", "0<"}:
+        return "POSITIVE"
+    if check in {"<=0", "0>="}:
+        return "NONPOSITIVE"
+    if check in {">=0", "0<="}:
+        return "NONNEGATIVE"
+    if check == "nonzero" or check == "ne:0":
+        return "NONZERO"
+    if check in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
+        return check
+    return ""
+
+
+def _ordered_effects(
+    effects: Iterable[MetadataEffect],
+) -> tuple[MetadataEffect, ...]:
+    unique = tuple(dict.fromkeys(effects))
+    return tuple(
+        sorted(
+            unique,
+            key=lambda effect: (
+                effect.site.file,
+                effect.site.line,
+                effect.site.expression,
+                effect.root,
+                effect.key,
+                effect.delta.value,
+            ),
+        )
+    )
 
 
 def _partitions_cover_error_outcomes(
@@ -3461,6 +3574,62 @@ def _with_propagated_cleanup_effects(
     )
 
 
+def _with_propagated_effects(
+    function: FunctionIR,
+    summary: FunctionSummary,
+    *,
+    opens: tuple[MetadataEffect, ...],
+    cancels: tuple[MetadataEffect, ...],
+    protects: tuple[MetadataEffect, ...],
+) -> FunctionSummary:
+    """Merge one complete indirect target-set contract into a local summary."""
+
+    parameters = _ordered_parameters(function)
+    projected_opens = tuple(
+        _parameterize_effect(effect, parameters) for effect in opens
+    )
+    projected_cancels = tuple(
+        _parameterize_effect(effect, parameters) for effect in cancels
+    )
+    projected_protects = tuple(
+        _parameterize_effect(effect, parameters) for effect in protects
+    )
+    merged_opens = tuple(dict.fromkeys((*summary.opens, *projected_opens)))
+    merged_cancels = tuple(dict.fromkeys((*summary.cancels, *projected_cancels)))
+    merged_protects = tuple(dict.fromkeys((*summary.protects, *projected_protects)))
+    all_effects = (*merged_opens, *merged_cancels, *merged_protects)
+    exit_effects = _exit_sensitive_effects(function, tuple(all_effects))
+    partitions = _error_exit_partitions(
+        function,
+        tuple(all_effects),
+        summary.lifecycle_facts,
+    )
+    error_opens, error_cancels, error_protects = _failure_effect_projection(
+        partitions,
+        exit_effects,
+    )
+    return replace(
+        summary,
+        opens=merged_opens,
+        cancels=merged_cancels,
+        protects=merged_protects,
+        error_opens=error_opens,
+        error_cancels=error_cancels,
+        error_protects=error_protects,
+        failure_effects_complete=exit_effects.error_complete,
+        error_unknown_causes=exit_effects.unknown_causes,
+        cleanup_footprints=tuple(
+            _cleanup_footprint(effect) for effect in merged_cancels
+        ),
+        exit_effects=exit_effects,
+        error_exit_partitions=partitions,
+        error_partitions_exhaustive=_partitions_cover_error_outcomes(
+            function,
+            partitions,
+        ),
+    )
+
+
 def _attach_indirect_target_sets(
     summaries: dict[str, FunctionSummary],
     functions: Iterable[FunctionIR],
@@ -3567,19 +3736,20 @@ def _resolve_bounded_noop_indirect_unknowns(
             if _targets_are_residual_noop(targets, result, max_targets=max_targets):
                 causes.remove(cause)
                 continue
-            common_cleanup = _common_indirect_cleanup(
+            common_effects = _common_indirect_effects(
                 function,
                 expression,
                 targets,
                 result,
                 max_targets=max_targets,
             )
-            if common_cleanup:
-                summary = _with_propagated_cleanup_effects(
+            if common_effects is not None:
+                summary = _with_propagated_effects(
                     function,
                     summary,
-                    common_cleanup,
-                    set(),
+                    opens=common_effects[0],
+                    cancels=common_effects[1],
+                    protects=common_effects[2],
                 )
                 causes.remove(cause)
 
@@ -3641,16 +3811,20 @@ def _targets_are_residual_noop(
     )
 
 
-def _common_indirect_cleanup(
+def _common_indirect_effects(
     function: FunctionIR,
     expression: str,
     targets: tuple[str, ...],
     summaries: dict[str, FunctionSummary],
     *,
     max_targets: int,
-) -> tuple[MetadataEffect, ...]:
+) -> tuple[
+    tuple[MetadataEffect, ...],
+    tuple[MetadataEffect, ...],
+    tuple[MetadataEffect, ...],
+] | None:
     if not targets or len(targets) > max_targets or function.body_node is None:
-        return ()
+        return None
     call = next(
         (
             node
@@ -3661,32 +3835,41 @@ def _common_indirect_cleanup(
         None,
     )
     if call is None:
-        return ()
+        return None
     applications = []
     for target in targets:
         summary = summaries.get(target)
         if summary is None:
-            return ()
+            return None
         application = instantiate_summary(summary, call)
         if (
             application.unknown
             or summary.may_fail
-            or application.opens
-            or application.protects
-            or not application.cancels
+            or application.owner_teardowns
         ):
-            return ()
+            return None
         applications.append(application)
     signatures = tuple(
-        tuple(_effect_semantic_key(effect) for effect in application.cancels)
+        (
+            tuple(_effect_semantic_key(effect) for effect in application.opens),
+            tuple(_effect_semantic_key(effect) for effect in application.cancels),
+            tuple(_effect_semantic_key(effect) for effect in application.protects),
+        )
         for application in applications
     )
     if not signatures or any(signature != signatures[0] for signature in signatures[1:]):
-        return ()
+        return None
     first_target = targets[0]
     return tuple(
-        _effect_at_call_site(effect, function, call, first_target)
-        for effect in applications[0].cancels
+        tuple(
+            _effect_at_call_site(effect, function, call, first_target)
+            for effect in effects
+        )
+        for effects in (
+            applications[0].opens,
+            applications[0].cancels,
+            applications[0].protects,
+        )
     )
 
 
@@ -3774,9 +3957,9 @@ def _local_indirect_call_targets(
         if callee is None:
             continue
         expression = compact_ws(callee.text)
-        target = assignments.get(expression)
-        if target:
-            result[compact_ws(node.text)] = (target,)
+        targets = assignments.get(expression, ())
+        if targets:
+            result[compact_ws(node.text)] = targets
             continue
         targets = _ops_initializer_targets(function, expression, summaries)
         if targets:
@@ -3787,27 +3970,83 @@ def _local_indirect_call_targets(
 def _local_function_pointer_assignments(
     function: FunctionIR,
     summaries: dict[str, FunctionSummary],
-) -> dict[str, str]:
+) -> dict[str, tuple[str, ...]]:
     if function.body_node is None:
         return {}
-    result: dict[str, str] = {}
+    direct: dict[str, set[str]] = {}
+    aliases: list[tuple[str, str]] = []
+    unresolved: set[str] = set()
     for node in function.body_node.walk():
         if node.type == "init_declarator":
             declarator = node.child_by_field_name("declarator")
             value = node.child_by_field_name("value")
             name = _declarator_name(declarator) if declarator is not None else None
-            target = compact_ws(value.text).strip("&()") if value is not None else ""
-            if name and target in summaries:
-                result[name] = target
+            if name and value is not None:
+                _record_function_pointer_binding(
+                    name,
+                    value,
+                    summaries,
+                    direct,
+                    aliases,
+                    unresolved,
+                )
         elif node.type == "assignment_expression":
             left = node.child_by_field_name("left")
             right = node.child_by_field_name("right")
             if left is None or right is None:
                 continue
-            target = compact_ws(right.text).strip("&()")
-            if target in summaries:
-                result[compact_ws(left.text)] = target
-    return result
+            _record_function_pointer_binding(
+                compact_ws(left.text),
+                right,
+                summaries,
+                direct,
+                aliases,
+                unresolved,
+            )
+    changed = True
+    while changed:
+        changed = False
+        for left, right in aliases:
+            targets = direct.get(right, set())
+            if targets - direct.setdefault(left, set()):
+                direct[left].update(targets)
+                changed = True
+    unresolved.update(
+        left for left, right in aliases if not direct.get(right)
+    )
+    return {
+        expression: tuple(sorted(targets))
+        for expression, targets in direct.items()
+        if targets and expression not in unresolved
+    }
+
+
+def _record_function_pointer_binding(
+    left: str,
+    right: FrontendNode,
+    summaries: dict[str, FunctionSummary],
+    direct: dict[str, set[str]],
+    aliases: list[tuple[str, str]],
+    unresolved: set[str],
+) -> None:
+    text = compact_ws(right.text).strip("&() ")
+    if text in summaries:
+        direct.setdefault(left, set()).add(text)
+        return
+    if right.type == "conditional_expression":
+        targets = {
+            compact_ws(node.text)
+            for node in right.walk()
+            if node.type == "identifier" and compact_ws(node.text) in summaries
+        }
+        if targets:
+            direct.setdefault(left, set()).update(targets)
+            return
+    if re.fullmatch(r"[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*", text):
+        aliases.append((left, text))
+        return
+    if any(node.type == "call_expression" for node in right.walk()):
+        unresolved.add(left)
 
 
 def _ops_initializer_targets(
@@ -3823,13 +4062,64 @@ def _ops_initializer_targets(
         text = function.file.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ()
-    matches = re.findall(
-        rf"\.\s*{re.escape(field)}\s*=\s*&?\s*([A-Za-z_]\w*)",
-        text,
-    )
+    tables = _bound_ops_tables(function, expression)
+    matches: list[str] = []
+    if tables:
+        for table in tables:
+            initializer = re.search(
+                rf"\b{re.escape(table)}\b\s*=\s*\{{(?P<body>.*?)\}}\s*;",
+                text,
+                re.DOTALL,
+            )
+            if initializer is None:
+                return ()
+            matches.extend(
+                re.findall(
+                    rf"\.\s*{re.escape(field)}\s*=\s*&?\s*([A-Za-z_]\w*)",
+                    initializer.group("body"),
+                )
+            )
+    else:
+        matches.extend(
+            re.findall(
+                rf"\.\s*{re.escape(field)}\s*=\s*&?\s*([A-Za-z_]\w*)",
+                text,
+            )
+        )
     if not matches or any(item not in summaries for item in matches):
         return ()
     return tuple(sorted(set(matches)))
+
+
+def _bound_ops_tables(
+    function: FunctionIR,
+    expression: str,
+) -> tuple[str, ...]:
+    receiver = re.sub(
+        r"(?:->|\.)\s*[A-Za-z_]\w*$",
+        "",
+        compact_ws(expression),
+    )
+    if not receiver or function.body_node is None:
+        return ()
+    tables: set[str] = set()
+    for node in function.body_node.walk():
+        if node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            target = compact_ws(left.text) if left is not None else ""
+        elif node.type == "init_declarator":
+            declarator = node.child_by_field_name("declarator")
+            right = node.child_by_field_name("value")
+            target = _declarator_name(declarator) or ""
+        else:
+            continue
+        if target != receiver or right is None:
+            continue
+        table = compact_ws(right.text).strip("&() ")
+        if re.fullmatch(r"[A-Za-z_]\w*", table):
+            tables.add(table)
+    return tuple(sorted(tables))
 
 
 def _with_unknown_causes(
@@ -3848,38 +4138,11 @@ def _with_unresolved_calls_and_unknown_causes(
     unresolved_calls: tuple[str, ...],
     unknown_causes: tuple[str, ...],
 ) -> FunctionSummary:
-    return FunctionSummary(
-        function_name=summary.function_name,
-        parameters=summary.parameters,
-        returns=summary.returns,
-        fresh_identities=summary.fresh_identities,
-        has_ownership_transfer=summary.has_ownership_transfer,
-        ownership_transfer_roots=summary.ownership_transfer_roots,
-        returns_fresh_identity=summary.returns_fresh_identity,
-        opens=summary.opens,
-        cancels=summary.cancels,
-        protects=summary.protects,
-        output_identities=summary.output_identities,
-        error_opens=summary.error_opens,
-        error_cancels=summary.error_cancels,
-        error_protects=summary.error_protects,
-        failure_effects_complete=summary.failure_effects_complete,
-        error_unknown_causes=summary.error_unknown_causes,
-        lifecycle_facts=summary.lifecycle_facts,
-        exposure_facts=summary.exposure_facts,
-        cleanup_footprints=summary.cleanup_footprints,
-        owner_teardowns=summary.owner_teardowns,
-        escaping_parameters=summary.escaping_parameters,
-        exit_effects=summary.exit_effects,
-        error_exit_partitions=summary.error_exit_partitions,
-        error_partitions_exhaustive=summary.error_partitions_exhaustive,
+    return replace(
+        summary,
         unresolved_calls=unresolved_calls,
-        source_file=summary.source_file,
-        may_fail=summary.may_fail,
         unknown_escape=bool(unknown_causes),
         unknown_causes=unknown_causes,
-        source=summary.source,
-        owner_bindings=summary.owner_bindings,
     )
 
 
