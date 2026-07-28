@@ -1,0 +1,1 @@
+"""Metadata effect extraction components."""

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Iterable
 
-from .cancellation import effect_protected_by, effects_cancel, normalize_residuals
-from .aggregate_snapshot import aggregate_snapshot_restore_cancellations
+from .semantics.cancellation import effect_protected_by, effects_cancel, normalize_residuals
+from .semantics.aggregate_snapshot import aggregate_snapshot_restore_cancellations
 from .cfg import build_cfg
 from .effect_extractor import (
     effect_targets_transient_object,
@@ -15,7 +15,7 @@ from .effect_extractor import (
     looks_like_metadata_reader,
     write_only_output_parameters,
 )
-from .owner_scope import (
+from .semantics.owner_scope import (
     effect_with_visibility,
     embedded_children,
     fresh_owner_descriptor_effect,
@@ -26,11 +26,9 @@ from .owner_scope import (
     private_owner_effect,
 )
 from .failure_points import FailurePoint, find_failure_points
-from .failure_domain_primitives import (
+from .semantics.failure_domain_primitives import (
     covered_effects_for_action,
-    failure_domain_scope,
     is_failure_domain_key,
-    transaction_cancel_owner_index,
 )
 from .frontend.model import BasicBlockIR, ControlFlowGraphIR, FrontendNode, FunctionIR
 from .function_summary import (
@@ -51,7 +49,6 @@ from .metadata_residual import (
     EffectProvenanceKind,
     EffectVisibility,
     FailureDomainKind,
-    FailureDomainProof,
     MetadataDelta,
     MetadataEffect,
     MetadataPlane,
@@ -63,22 +60,39 @@ from .metadata_residual import (
     SourceSite,
 )
 from .parser import call_name_and_args, compact_ws
-from .smt_solver import SolverResult, failure_branch_feasibility
-from .transient_provenance import TransientArgumentProvenance
+from .slicing.model import (
+    ResidualSlicingResult,
+    _ErrorPathReachability,
+    _LocatedEffect,
+    _SummaryApp,
+    _UnknownInfluence,
+)
+from .slicing.failure_domain import (
+    _aborted_transaction_protections,
+    _conditional_shutdown_review_blockers,
+    _effect_is_failure_call,
+    _effect_mentions_transaction,
+    _explicit_failure_domain_proofs,
+    _is_transaction_abort,
+)
+from .slicing.owner_proofs import (
+    _effect_targets_unpublished_fresh_local,
+    _fresh_local_descriptor_effect,
+    _is_runtime_progress_effect,
+    _leading_symbol,
+    _lifecycle_events_reachable_on_failure,
+    _owner_scope_review_blockers,
+    _owner_teardown_proofs,
+)
+from .slicing.partitions import (
+    _select_exact_error_partition,
+    _selected_partition_needs_identity_proof,
+    _selected_partition_opens,
+)
+from .semantics.smt_solver import SolverResult, failure_branch_feasibility
+from .semantics.transient_provenance import TransientArgumentProvenance
 
 
-@dataclass(frozen=True)
-class ResidualSlicingResult:
-    function: str
-    slices: tuple[ResidualSlice, ...]
-    unknown_causes: tuple[str, ...] = ()
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "function": self.function,
-            "slices": [item.to_dict() for item in self.slices],
-            "unknown_causes": list(self.unknown_causes),
-        }
 
 
 def slice_function_residuals(
@@ -612,62 +626,14 @@ _CANCEL_DELTAS = {
     MetadataDelta.CLOSE,
 }
 _PROTECT_DELTAS = {MetadataDelta.PROTECT}
-_RUNTIME_PROGRESS_KINDS = {
-    EffectProvenanceKind.PROGRESS_CURSOR,
-    EffectProvenanceKind.RETRY_STATE,
-}
 
 
-@dataclass(frozen=True)
-class _LocatedEffect:
-    effect: MetadataEffect
-    block_id: int | None
 
 
-@dataclass(frozen=True)
-class _ErrorPathReachability:
-    reachable: set[int]
-    must_execute: set[int]
 
 
-@dataclass(frozen=True)
-class _UnknownInfluence:
-    cause: str
-    site: SourceSite
-    phase: str
-    conditional_effects: tuple[MetadataEffect, ...] = ()
 
 
-@dataclass(frozen=True)
-class _SummaryApp:
-    function_name: str
-    block_id: int | None
-    site: SourceSite
-    opens: tuple[MetadataEffect, ...]
-    cancels: tuple[MetadataEffect, ...]
-    protects: tuple[MetadataEffect, ...]
-    error_opens: tuple[MetadataEffect, ...]
-    error_cancels: tuple[MetadataEffect, ...]
-    error_protects: tuple[MetadataEffect, ...]
-    unknown: bool
-    unknown_causes: tuple[str, ...]
-    failure_unknown: bool
-    failure_unknown_causes: tuple[str, ...]
-    failure_effects_complete: bool
-    may_fail: bool
-    has_ownership_transfer: bool
-    lifecycle_facts: tuple[LifecycleFact, ...]
-    owner_teardowns: tuple[OwnerTeardown, ...]
-    error_exit_partitions: tuple[ErrorExitPartition, ...]
-    error_partitions_exhaustive: bool
-
-    @property
-    def cancels_before_failure(self) -> tuple[MetadataEffect, ...]:
-        return self.cancels
-
-    @property
-    def protects_before_failure(self) -> tuple[MetadataEffect, ...]:
-        return self.protects
 
 
 def _summary_applications(
@@ -945,178 +911,24 @@ def _partition_at_application_site(
     )
 
 
-def _select_exact_error_partition(
-    partitions: tuple[ErrorExitPartition, ...],
-    point: FailurePoint,
-    *,
-    exhaustive: bool,
-) -> ErrorExitPartition | None:
-    """Select one source-proven callee exit, or preserve aggregate MUST semantics."""
-
-    if not exhaustive or not partitions:
-        return None
-    classifications = tuple(
-        _partition_matches_failure_check(partition, point)
-        for partition in partitions
-    )
-    if any(value is None for value in classifications):
-        return None
-    matches = tuple(
-        partition
-        for partition, matches in zip(partitions, classifications)
-        if matches
-    )
-    if len(matches) != 1 or not matches[0].complete:
-        return None
-    return matches[0]
 
 
-def _partition_matches_failure_check(
-    partition: ErrorExitPartition,
-    point: FailurePoint,
-) -> bool | None:
-    constraint = partition.return_constraint
-    if constraint in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
-        if point.check_kind not in {"IS_ERR", "IS_ERR_OR_NULL", "IS_ERR_VALUE"}:
-            return None
-        return point.error_edge.kind != "false"
-    abstract = _abstract_constraint_matches(constraint, point.check_kind)
-    if abstract is not None:
-        return abstract if point.error_edge.kind != "false" else not abstract
-    if constraint.startswith("EXACT:"):
-        value = constraint[6:]
-    else:
-        value = _partition_return_value(partition.return_expression)
-    if value is None:
-        return None
-    check_kind = point.check_kind
-    predicate_true = point.error_edge.kind != "false"
-    if check_kind == "nonzero":
-        result = _constant_not_equal(value, "0")
-    elif check_kind.startswith("eq:"):
-        result = _constant_equal(value, check_kind[3:])
-    elif check_kind.startswith("ne:"):
-        equal = _constant_equal(value, check_kind[3:])
-        result = None if equal is None else not equal
-    elif check_kind in {"<0", "<=0", ">0", ">=0"}:
-        result = _constant_order_test(value, check_kind)
-    elif check_kind in {"0<", "0<=", "0>", "0>="}:
-        reverse = {"0<": ">0", "0<=": ">=0", "0>": "<0", "0>=": "<=0"}
-        result = _constant_order_test(value, reverse[check_kind])
-    else:
-        return None
-    if result is None:
-        return None
-    return result if predicate_true else not result
 
 
-def _abstract_constraint_matches(
-    constraint: str,
-    check_kind: str,
-) -> bool | None:
-    known: dict[str, dict[str, bool]] = {
-        "NEGATIVE": {
-            "nonzero": True,
-            "ne:0": True,
-            "eq:0": False,
-            "<0": True,
-            "<=0": True,
-            ">0": False,
-            ">=0": False,
-        },
-        "POSITIVE": {
-            "nonzero": True,
-            "ne:0": True,
-            "eq:0": False,
-            "<0": False,
-            "<=0": False,
-            ">0": True,
-            ">=0": True,
-        },
-        "NONZERO": {
-            "nonzero": True,
-            "ne:0": True,
-            "eq:0": False,
-        },
-        "NONPOSITIVE": {
-            "<=0": True,
-            ">0": False,
-        },
-        "NONNEGATIVE": {
-            ">=0": True,
-            "<0": False,
-        },
-    }
-    return known.get(constraint, {}).get(check_kind)
 
 
-def _selected_partition_opens(
-    partition: ErrorExitPartition,
-) -> tuple[MetadataEffect, ...]:
-    """Expose selected branch-local opens only when branch evidence can resolve them."""
-
-    return partition.opens
 
 
-def _selected_partition_needs_identity_proof(
-    partition: ErrorExitPartition,
-) -> bool:
-    return bool(
-        partition.opens
-        and not partition.cancels
-        and not partition.protects
-        and not partition.terminal_actions
-    )
 
 
-def _partition_return_value(expression: str) -> str | None:
-    value = compact_ws(expression).strip()
-    while value.startswith("(") and value.endswith(")"):
-        value = value[1:-1].strip()
-    name, args = call_name_and_args(value)
-    if name in {"ERR_PTR", "PTR_ERR"} and len(args) == 1:
-        value = compact_ws(args[0]).strip("() ")
-    if value in {"NULL", "0L", "0UL"}:
-        return "0"
-    return value if re.fullmatch(r"-?(?:[A-Z_]\w*|\d+)", value) else None
 
 
-def _constant_equal(left: str, right: str) -> bool | None:
-    left_value = _partition_return_value(left)
-    right_value = _partition_return_value(right)
-    if left_value is None or right_value is None:
-        return None
-    return left_value == right_value
 
 
-def _constant_not_equal(left: str, right: str) -> bool | None:
-    equal = _constant_equal(left, right)
-    return None if equal is None else not equal
 
 
-def _constant_order_test(value: str, operation: str) -> bool | None:
-    numeric = _signed_constant_value(value)
-    if numeric is None:
-        return None
-    return {
-        "<0": numeric < 0,
-        "<=0": numeric <= 0,
-        ">0": numeric > 0,
-        ">=0": numeric >= 0,
-    }[operation]
 
 
-def _signed_constant_value(value: str) -> int | None:
-    normalized = _partition_return_value(value)
-    if normalized is None:
-        return None
-    if re.fullmatch(r"-\d+", normalized):
-        return int(normalized)
-    if normalized.isdigit():
-        return int(normalized)
-    if re.fullmatch(r"-[A-Z_]\w*", normalized):
-        return -1
-    return None
 
 
 def _drop_unexposed_fresh_error_effects(
@@ -1219,9 +1031,6 @@ def _caller_local_symbols(function: FunctionIR) -> set[str]:
     return symbols - set(function.parameters)
 
 
-def _leading_symbol(path: str) -> str:
-    match = re.match(r"^([A-Za-z_]\w*)", compact_ws(path).lstrip("&*()"))
-    return match.group(1) if match else ""
 
 
 def _unknown_calls_on_path(
@@ -1569,490 +1378,40 @@ def _effect_before_failure(effect: MetadataEffect, point: FailurePoint) -> bool:
     return effect.site.line <= point.call_site.line
 
 
-def _aborted_transaction_protections(
-    reaching_effects: tuple[MetadataEffect, ...],
-    cancellations: tuple[MetadataEffect, ...],
-) -> tuple[MetadataEffect, ...]:
-    """Bind an explicit error-path transaction abort to its recorded effects.
-
-    An abort is evidence of transaction-owned recovery only for effects that
-    source syntax binds to the same transaction handle.  This deliberately
-    does not protect unrelated inode, device, or reservation mutations.
-    """
-
-    aborts = tuple(
-        effect
-        for effect in cancellations
-        if _is_transaction_abort(effect)
-    )
-    protections: list[MetadataEffect] = []
-    for abort in aborts:
-        transaction = _exact_transaction_identity(abort.root)
-        if not transaction:
-            continue
-        for effect in reaching_effects:
-            if not _effect_mentions_transaction(effect, transaction):
-                continue
-            protections.append(
-                MetadataEffect(
-                    root=effect.root,
-                    key=effect.key,
-                    plane=effect.plane,
-                    delta=MetadataDelta.PROTECT,
-                    value=effect.value,
-                    site=SourceSite(
-                        abort.site.file,
-                        abort.site.line,
-                        f"{abort.site.expression} protects transaction-bound effect",
-                    ),
-                    evidence=EffectEvidence.EXPLICIT_PRIMITIVE,
-                )
-            )
-    return tuple(dict.fromkeys(protections))
 
 
-def _is_transaction_abort(effect: MetadataEffect) -> bool:
-    name, _ = call_name_and_args(compact_ws(effect.site.expression))
-    return effect.delta is MetadataDelta.CLOSE and (
-        transaction_cancel_owner_index(name) is not None
-        or transaction_cancel_owner_index(effect.key) is not None
-    )
 
 
-def _effect_mentions_transaction(effect: MetadataEffect, transaction: str) -> bool:
-    token = rf"(?<![A-Za-z0-9_]){re.escape(transaction)}(?![A-Za-z0-9_])"
-    return any(
-        re.search(token, value) is not None
-        for value in (effect.root, effect.key, effect.value)
-    )
 
 
-def _effect_is_failure_call(effect: MetadataEffect, point: FailurePoint) -> bool:
-    """Exclude unproven helper effects originating at the failing call itself."""
-
-    return (
-        effect.site.line == point.call_site.line
-        and compact_ws(effect.site.expression) == compact_ws(point.call_site.expression)
-    )
 
 
-def _explicit_failure_domain_proofs(
-    reaching_effects: tuple[MetadataEffect, ...],
-    cancellations: tuple[MetadataEffect, ...],
-    protections: tuple[MetadataEffect, ...],
-    residuals: tuple[MetadataEffect, ...],
-) -> tuple[FailureDomainProof, ...]:
-    proofs = []
-    for protection in protections:
-        if not is_failure_domain_key(protection.key):
-            continue
-        try:
-            kind = FailureDomainKind(protection.value)
-        except ValueError:
-            continue
-        coverage_candidates = residuals
-        if kind is FailureDomainKind.TRANSACTION_ABORT:
-            coverage_candidates = tuple(
-                dict.fromkeys((*residuals, *reaching_effects))
-            )
-        covered_effects = covered_effects_for_action(
-            protection,
-            coverage_candidates,
-        )
-        if not covered_effects:
-            continue
-        proofs.append(
-            FailureDomainProof(
-                kind=kind,
-                site=protection.site,
-                owner=protection.root,
-                evidence=(
-                    f"{protection.site.expression} is an explicit terminal "
-                    "failure-domain primitive on the must-execute error path"
-                ),
-                covered_effects=covered_effects,
-                scope=failure_domain_scope(kind),
-            )
-        )
-    for cancellation in cancellations:
-        name, _ = call_name_and_args(compact_ws(cancellation.site.expression))
-        if (
-            transaction_cancel_owner_index(name) is None
-            and transaction_cancel_owner_index(cancellation.key) is None
-        ):
-            continue
-        transaction = _exact_transaction_identity(cancellation.root)
-        if not transaction:
-            continue
-        if not _transaction_has_dirty_evidence(transaction, reaching_effects):
-            continue
-        covered = _transaction_cancel_covered_residuals(
-            transaction,
-            tuple(dict.fromkeys((*reaching_effects, *protections))),
-            residuals,
-        )
-        if not covered:
-            continue
-        proofs.append(
-            FailureDomainProof(
-                kind=FailureDomainKind.FATAL_SHUTDOWN,
-                site=cancellation.site,
-                owner=transaction,
-                evidence=(
-                    "xfs_trans_cancel() observes transaction-owned dirty state; "
-                    "its source contract forces shutdown when that state cannot be restored"
-                ),
-                covered_effects=covered,
-                scope=failure_domain_scope(FailureDomainKind.FATAL_SHUTDOWN),
-            )
-        )
-    return tuple(dict.fromkeys(proofs))
 
 
-def _conditional_shutdown_review_blockers(
-    reaching_effects: tuple[MetadataEffect, ...],
-    cancellations: tuple[MetadataEffect, ...],
-    residuals: tuple[MetadataEffect, ...],
-) -> tuple[str, ...]:
-    """Keep transaction-bound recovery residuals in Review without dirty proof."""
-
-    blockers: list[str] = []
-    for cancellation in cancellations:
-        name, _ = call_name_and_args(compact_ws(cancellation.site.expression))
-        if (
-            transaction_cancel_owner_index(name) is None
-            and transaction_cancel_owner_index(cancellation.key) is None
-        ):
-            continue
-        transaction = _exact_transaction_identity(cancellation.root)
-        if not transaction or _transaction_has_dirty_evidence(
-            transaction, reaching_effects
-        ):
-            continue
-        for effect in residuals:
-            if not any(
-                _transaction_relation_covers_effect(
-                    relation_effect, transaction, effect
-                )
-                for relation_effect in reaching_effects
-            ):
-                continue
-            owner = _leading_symbol(effect.root)
-            if owner:
-                blockers.append(f"conditional_shutdown_review:{owner}")
-    return tuple(dict.fromkeys(blockers))
 
 
-def _transaction_has_dirty_evidence(
-    transaction: str,
-    reaching_effects: tuple[MetadataEffect, ...],
-) -> bool:
-    """Require source-visible log/dirty state before applying XFS shutdown semantics."""
-
-    for effect in reaching_effects:
-        relation = effect.transaction_ownership
-        if (
-            relation is not None
-            and compact_ws(relation.transaction_root) == transaction
-            and relation.primitive == "xfs_trans_log_inode"
-        ):
-            return True
-        if effect.delta not in {
-            MetadataDelta.ADD,
-            MetadataDelta.SET,
-            MetadataDelta.INC,
-            MetadataDelta.RESERVE,
-        }:
-            continue
-        if not _effect_mentions_transaction(effect, transaction):
-            continue
-        dirty_text = compact_ws(
-            f"{effect.key} {effect.value} {effect.site.expression}"
-        ).lower()
-        if "xfs_trans_dirty" in dirty_text or re.search(
-            r"(?:^|[^a-z0-9])dirty(?:$|[^a-z0-9])", dirty_text
-        ):
-            return True
-    return False
 
 
-def _transaction_cancel_covered_residuals(
-    transaction: str,
-    reaching_effects: tuple[MetadataEffect, ...],
-    residuals: tuple[MetadataEffect, ...],
-) -> tuple[MetadataEffect, ...]:
-    directly_bound = tuple(
-        effect for effect in residuals if _effect_mentions_transaction(effect, transaction)
-    )
-    relation_bound = tuple(
-        effect
-        for effect in residuals
-        if any(
-            _transaction_relation_covers_effect(relation_effect, transaction, effect)
-            for relation_effect in reaching_effects
-        )
-    )
-    return tuple(dict.fromkeys((*directly_bound, *relation_bound)))
 
 
-def _transaction_relation_covers_effect(
-    relation_effect: MetadataEffect,
-    transaction: str,
-    effect: MetadataEffect,
-) -> bool:
-    relation = relation_effect.transaction_ownership
-    if relation is None:
-        return False
-    if compact_ws(relation.transaction_root) != transaction:
-        return False
-    owned = compact_ws(relation.owned_root)
-    root = compact_ws(effect.root)
-    return root == owned or root.startswith((f"{owned}->", f"{owned}."))
 
 
-def _exact_transaction_identity(text: str) -> str:
-    value = compact_ws(text).strip("&*() ")
-    return value if re.fullmatch(
-        r"[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*",
-        value,
-    ) else ""
 
 
-def _effect_targets_unpublished_fresh_local(
-    effect: MetadataEffect,
-    point: FailurePoint,
-    lifecycles: tuple[LocalLifecycleBinding, ...],
-    teardowns: tuple[OwnerTeardown, ...] = (),
-    ownership_edges: tuple[OwnershipEdge, ...] = (),
-) -> bool:
-    root = _leading_symbol(effect.root)
-    binding = next(
-        (item for item in lifecycles if item.local_identity == root),
-        None,
-    )
-    if binding is None or effect.site.line < binding.allocation_line:
-        return False
-    if any(_exact_owner_symbol(teardown.owner) == root for teardown in teardowns):
-        return False
-    teardown_owners = {
-        _exact_owner_symbol(teardown.owner)
-        for teardown in teardowns
-        if _exact_owner_symbol(teardown.owner)
-    }
-    if any(
-        edge.child == root
-        and edge.parent in teardown_owners
-        and edge.relation is not OwnershipRelation.EMBEDDED
-        for edge in ownership_edges
-    ):
-        return False
-    if any(line <= point.call_site.line for line in binding.rebind_lines):
-        return False
-    return not any(line <= point.call_site.line for line in binding.publication_lines)
 
 
-def _lifecycle_events_reachable_on_failure(
-    cfg: ControlFlowGraphIR,
-    lifecycles: tuple[LocalLifecycleBinding, ...],
-    point: FailurePoint,
-    error_blocks: set[int],
-) -> dict[str, set[int]]:
-    """Return lifecycle events that can occur on this checked failure path.
-
-    Lifecycle bindings are function-wide facts.  A publication located solely
-    on the normal-success continuation must not invalidate a teardown that is
-    proved on the alternate error edge (a common ``goto out`` shape).
-    """
-
-    result: dict[str, set[int]] = {}
-    for binding in lifecycles:
-        unsafe: set[int] = set()
-        for line in (
-            *binding.publication_lines,
-            *binding.escape_lines,
-            *binding.rebind_lines,
-        ):
-            if line <= point.call_site.line:
-                unsafe.add(line)
-                continue
-            block = cfg.block_at_line(line)
-            if block is not None and block.id in error_blocks:
-                unsafe.add(line)
-        result[binding.local_identity] = unsafe
-    return result
 
 
-def _fresh_local_descriptor_effect(
-    function: FunctionIR,
-    effect: MetadataEffect,
-    lifecycles: tuple[LocalLifecycleBinding, ...],
-) -> MetadataEffect:
-    """Refine caller-field copies into a fresh owner as private descriptors."""
-
-    owner = _leading_symbol(effect.root)
-    binding = next(
-        (item for item in lifecycles if item.local_identity == owner),
-        None,
-    )
-    if (
-        binding is None
-        or effect.site.line < binding.allocation_line
-        or effect.delta is not MetadataDelta.SET
-    ):
-        return effect
-    value_root = _leading_symbol(effect.value)
-    parameter_names = set(function.parameters) | {
-        symbol.name for symbol in function.symbols if symbol.kind == "parameter"
-    }
-    value = compact_ws(effect.value)
-    if value_root not in parameter_names or not re.search(r"(?:->|\.)", value):
-        return effect
-    return fresh_owner_descriptor_effect(effect, owner)
 
 
-def _is_runtime_progress_effect(effect: MetadataEffect) -> bool:
-    return any(
-        provenance.kind in _RUNTIME_PROGRESS_KINDS
-        for provenance in effect.semantic_provenance
-    )
 
 
-def _owner_scope_review_blockers(
-    residuals: tuple[MetadataEffect, ...],
-    teardowns: tuple[OwnerTeardown, ...],
-    proofs: tuple[OwnerTeardown, ...],
-    lifecycles: tuple[LocalLifecycleBinding, ...],
-    lifecycle_unsafe_lines: dict[str, set[int]],
-) -> tuple[str, ...]:
-    """Audit owner-scope ambiguity without turning a visible residual UNKNOWN."""
-
-    proved = {proof.owner for proof in proofs}
-    teardown_owners = {
-        owner
-        for teardown in teardowns
-        if (owner := _exact_owner_symbol(teardown.owner))
-    }
-    escape_lines = {
-        binding.local_identity: set(binding.escape_lines)
-        for binding in lifecycles
-    }
-    owners = {
-        owner
-        for effect in residuals
-        if (owner := _leading_symbol(effect.root)) in teardown_owners - proved
-        and lifecycle_unsafe_lines.get(owner, set())
-        & escape_lines.get(owner, set())
-    }
-    return tuple(f"owner_scope_escape_review:{owner}" for owner in sorted(owners))
 
 
-def _owner_teardown_proofs(
-    residuals: tuple[MetadataEffect, ...],
-    teardowns: tuple[OwnerTeardown, ...],
-    point: FailurePoint,
-    lifecycles: tuple[LocalLifecycleBinding, ...],
-    ownership_edges: tuple[OwnershipEdge, ...],
-    lifecycle_unsafe_lines: dict[str, set[int]],
-) -> tuple[OwnerTeardown, ...]:
-    proofs: list[OwnerTeardown] = []
-    already_closed: set[MetadataEffect] = set()
-    for teardown in teardowns:
-        owner = _exact_owner_symbol(teardown.owner)
-        if not owner:
-            continue
-        binding = next(
-            (item for item in lifecycles if item.local_identity == owner),
-            None,
-        )
-        if binding is None or binding.allocation_line > point.call_site.line:
-            continue
-        if any(
-            line <= teardown.teardown_site.line
-            for line in lifecycle_unsafe_lines.get(owner, set())
-        ):
-            continue
-        children = embedded_children(owner, ownership_edges)
-        covered_roots = (owner, *children)
-        closed = tuple(
-            effect
-            for effect in residuals
-            if effect not in already_closed
-            and any(
-                _teardown_covers_embedded_effect(covered_owner, effect)
-                for covered_owner in covered_roots
-            )
-        )
-        if not closed:
-            continue
-        already_closed.update(closed)
-        proofs.append(
-            replace(
-                teardown,
-                owner=owner,
-                allocation_site=binding.allocation_site,
-                closed_effects=closed,
-                ownership_edges=tuple(
-                    edge
-                    for edge in ownership_edges
-                    if edge.parent in covered_roots or edge.child in children
-                ),
-                transitively_destroyed_children=children,
-                nonclosable_effects=tuple(
-                    effect
-                    for effect in residuals
-                    if effect not in closed
-                    and _leading_symbol(effect.root) in set(children)
-                ),
-                evidence=(
-                    f"{teardown.evidence}; owner is source-proven fresh, remains "
-                    "unpublished, unescaped, and never rebound, and teardown must execute before "
-                    "the verified error exit"
-                ),
-            )
-        )
-    return tuple(proofs)
 
 
-def _teardown_covers_embedded_effect(
-    owner: str,
-    effect: MetadataEffect,
-) -> bool:
-    descriptor_provenance = any(
-        item.kind is EffectProvenanceKind.OPERATION_DESCRIPTOR
-        for item in effect.semantic_provenance
-    )
-    if effect.visibility is EffectVisibility.PERSISTENT_EXTERNAL:
-        return False
-    if (
-        effect.plane is MetadataPlane.RECOVERY
-        or effect.visibility is EffectVisibility.RECOVERY_VISIBLE
-    ) and not descriptor_provenance:
-        return False
-    root = compact_ws(effect.root)
-    if not (
-        root == owner
-        or root.startswith(f"{owner}->")
-        or root.startswith(f"{owner}.")
-    ):
-        return False
-    if effect.key in {"list_membership", "tree_membership"} or effect.key.startswith(
-        ("xarray:", "radix_tree:")
-    ):
-        return False
-    return (
-        effect.evidence is EffectEvidence.DIRECT_SOURCE
-        or (
-            effect.evidence is EffectEvidence.EXPLICIT_PRIMITIVE
-            and effect.key.startswith("bit:")
-        )
-    )
 
 
-def _exact_owner_symbol(text: str) -> str:
-    value = compact_ws(text).strip()
-    while match := re.fullmatch(r"\(\s*([A-Za-z_]\w*)\s*\)", value):
-        value = match.group(1)
-    return value if re.fullmatch(r"[A-Za-z_]\w*", value) else ""
 
 
 def _known_error_path_effect_sites(

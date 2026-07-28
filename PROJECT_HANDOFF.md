@@ -28,14 +28,15 @@ or full filesystem protocol verifier.
 ## 2. Current Accepted State
 
 ```text
-implementation: M43-M46, final2 accepted
-code baseline: working tree after 18c0de9
+implementation: M43-M48 accepted
+semantic baseline: M43-M46 final2
+code baseline: current working tree after the M47 structural refactor
 comparison baseline: M38-M41 final8
 M37: rejected experiment; excluded from baselines and claims
 evaluation schema: 4
 oracle records: 539
 tests: 329 passed
-regression gate: 39 / 39
+regression gate: 38 / 38
 ```
 
 M43-M46 final2 Linux v6.14 result:
@@ -197,6 +198,26 @@ M46, direct source evidence:
   promoted into new metadata effects;
 - this evidence-only policy prevents Candidate surface expansion.
 
+M47, structural refactor only:
+
+- split summary construction into `src/summary/` by model, syntax, control
+  flow, partitions, indirect targets, identity, per-CPU, and containers;
+- split residual slicing support into `src/slicing/` by model, exact return
+  partitions, failure-domain proofs, and owner proofs;
+- moved effect vocabulary and primitive tables to `src/effects/vocabulary.py`;
+- retained `src.function_summary`, `src.residual_slicer`, and
+  `src.effect_extractor` as the stable import paths;
+- no extraction rule, proof rule, classification, report, or witness changed.
+
+M48, package layout only:
+
+- moved evaluation, triage, oracle, and blocker-impact implementations into
+  `src/evaluation/`;
+- moved cancellation, failure-domain primitives, owner proofs, transient
+  provenance, aggregate snapshots, and SMT helpers into `src/semantics/`;
+- retained the former root module names as thin compatibility entry points;
+- internal imports use the new canonical package paths.
+
 ## 6. Contained Audit
 
 The remaining 13 Contained reports are reviewed fail-stop cases:
@@ -241,6 +262,40 @@ shutdown without preceding dirty or log evidence is not Contained.
 
 ## 7. Acceptance Gates
 
+M48 verification against M47:
+
+```text
+329 / 329 tests passed
+6063 / 6063 EXACT_WITNESS matches
+0 compatibility matches
+0 new Candidate witnesses
+0 unmatched baseline witnesses
+539 / 539 oracle entries matched
+0 safety regressions
+38 / 38 regression checks passed
+```
+
+M47 verification against M43-M46 final2:
+
+```text
+329 / 329 tests passed
+6063 / 6063 EXACT_WITNESS matches
+0 compatibility matches
+0 new Candidate witnesses
+0 unmatched baseline witnesses
+539 / 539 oracle entries matched
+6 / 6 manual live residuals retained
+0 safety regressions
+38 / 38 regression checks passed
+```
+
+The gate has 38 checks because all four comparisons have zero compatibility
+matches. The compatibility-match typing check is conditional and is therefore
+not emitted. M47 preserves the accepted aggregate exactly: Boundary 613,
+Contained 13, UNKNOWN 380, Review 415, and Reports 1421.
+
+Historical M43-M46 final2 verification against final8:
+
 M43-M46 final2 verification against final8:
 
 ```text
@@ -281,9 +336,14 @@ Required invariants:
 ```text
 src/frontend/                  C frontend-neutral IR
 src/metadata_residual.py      core data model
-src/effect_extractor.py       metadata effect extraction
-src/function_summary.py       interprocedural summaries
-src/residual_slicer.py        failure-local slicing and residual proof
+src/effect_extractor.py       stable effect-extraction entry point
+src/effects/                  effect vocabulary and primitive tables
+src/evaluation/               evaluation, triage, oracle, and impact tooling
+src/function_summary.py       stable interprocedural-summary entry point
+src/semantics/                cancellation, ownership, failure-domain, SMT
+src/summary/                  summary model and focused construction stages
+src/residual_slicer.py        stable failure-local slicing entry point
+src/slicing/                  partition, failure-domain, and owner proof stages
 src/owner_scope.py            owner and visibility semantics
 src/owner_liveness.py         liveness proof
 src/failure_domain_primitives.py
@@ -356,6 +416,17 @@ outputs/residual-evaluation-batch/linux-v6.14-fs-f2fs-m43-m46-final2
 outputs/residual-evaluation-batch/m43-m46-final2-vs-final8/
 outputs/residual-evaluation-batch/m43-m46-final2-oracle-audit.json
 outputs/residual-evaluation-batch/m43-m46-final2-regression-gate.json
+outputs/residual-evaluation-batch/linux-v6.14-fs-btrfs-m47-refactor-final
+outputs/residual-evaluation-batch/linux-v6.14-fs-ext4-m47-refactor
+outputs/residual-evaluation-batch/linux-v6.14-fs-xfs-m47-refactor
+outputs/residual-evaluation-batch/linux-v6.14-fs-f2fs-m47-refactor
+outputs/residual-evaluation-batch/m47-refactor-vs-m43-m46-final2/
+outputs/residual-evaluation-batch/m47-refactor-oracle-audit.json
+outputs/residual-evaluation-batch/m47-refactor-regression-gate.json
+outputs/residual-evaluation-batch/linux-v6.14-fs-*-m48-package-layout
+outputs/residual-evaluation-batch/m48-package-layout-vs-m47/
+outputs/residual-evaluation-batch/m48-package-layout-oracle-audit.json
+outputs/residual-evaluation-batch/m48-package-layout-regression-gate.json
 ```
 
 These directories are generated and ignored. Regenerate them when a milestone
@@ -365,22 +436,161 @@ comparison is required.
 
 Do not add broad helper-name rules or optimize counts directly.
 
-Select the next family from the 535 pending oracle entries. M43-M46 establish
-the partition, target-set, caller-liveness, and evidence infrastructure but do
-not reduce the current Linux aggregate. The next milestone should apply these
-layers to a reviewed oracle family with concrete cross-function identity or
-lifecycle evidence, rather than widening primitive-name extraction.
+The next program is a demand-driven, project-level interprocedural engine.
+M43-M46 provide the partition, target-set, caller-liveness, and evidence data
+models, but the current bounded project summary builder does not close the
+loop from an UNKNOWN demand to source loading, summary solving, call-site
+projection, and reslicing.
+
+Current M48 opportunity, counted by unique UNKNOWN reports:
+
+```text
+total UNKNOWN                              380
+cross-function-related UNKNOWN             359
+cross-function-only UNKNOWN                339
+
+SUMMARY_BODY_UNAVAILABLE                   241
+ERROR_PARTITION_SELECTION_UNPROVEN          93
+INDIRECT_TARGET_SET_UNPROVEN                43
+CONDITIONAL_CONTAINMENT_NOT_MUST            28
+TRANSACTION_OWNERSHIP_UNPROVEN                6
+```
+
+The proof-gap rows overlap and must not be added. Resolving a gap does not
+imply safety: the result may become CLOSED, PROTECTED, Contained, Boundary, or
+Review. The goal is to replace missing semantics with source proof, not to
+force a favorable classification.
+
+### 11.1 Target Architecture
+
+Add a focused package:
+
+```text
+src/interproc/model.py          definition, call-edge, demand, and proof keys
+src/interproc/source_index.py   project/TU/header/linkage-aware definitions
+src/interproc/callgraph.py      direct and indirect call edges
+src/interproc/demand.py         requirement-specific work queue
+src/interproc/solver.py         SCC and finite-lattice fixpoint
+src/interproc/identity.py       must-alias, may-alias, fresh, return, out-param
+src/interproc/projection.py     call-site summary instantiation
+src/interproc/evidence.py       auditable proof chains and incomplete reasons
+```
+
+Required analysis loop:
+
+```text
+local slicing
+  -> DemandSummaryRequest
+  -> exact callee/target resolution
+  -> requirement-specific summary solving
+  -> caller/callee identity binding
+  -> exact error-partition selection
+  -> call-site effect projection
+  -> reslicing
+  -> repeat until fixpoint or a recorded incomplete proof
+```
+
+Function lookup must use file, line, name, linkage, translation unit, and
+configuration rather than name alone. Static functions resolve only inside
+their translation unit; external functions require one exact definition;
+header inline definitions are bound in caller context. Multiple definitions,
+unresolved preprocessor branches, and macros remain incomplete evidence.
+
+Demand solving must be requirement-specific (`MUST_CANCEL`, `MUST_PROTECT`,
+`OWNER_BINDING`, `RETURN_BINDING`, `ERROR_PARTITION`, `TERMINAL_ACTION`,
+`CONTAINER_DRAIN`, or `OWNER_TEARDOWN`). Hitting a depth, target, time, or SCC
+budget produces UNKNOWN and is never a safety proof.
+
+Effects may close a residual only when they are MUST effects on the selected
+error partition and their targets are must-alias. MAY effects, may-alias
+bindings, incomplete indirect target sets, and ambiguous return partitions
+remain UNKNOWN or Review evidence.
+
+### 11.2 Milestones
+
+M49, production source index and direct-call resolution:
+
+- promote the measurement-only source-definition index into `src/interproc`;
+- index `.c` and relevant `.h` definitions with linkage and TU identity;
+- resolve same-TU static calls, unique external definitions, and header inline
+  bodies without helper-name inference;
+- emit typed ambiguity for macros, conditional definitions, and duplicates.
+
+M50, demand-driven cross-TU summaries:
+
+- consume `DemandSummaryRequest` directly from residual slices;
+- load and summarize only callees required by a blocking residual;
+- cache by source hash, configuration, summary schema, function identity, and
+  requested semantic projection;
+- iterate demand, projection, and reslicing until no new demand appears.
+
+M51, recursive fixpoint and exact error exits:
+
+- solve acyclic calls bottom-up and recursive call-graph SCCs by monotone
+  finite-lattice iteration;
+- propagate source-ordered opens, cancels, protects, teardowns, and terminal
+  actions per `ErrorExitPartition`;
+- select a callee exit only when the caller predicate uniquely proves it;
+- keep incomplete or unstable SCC results UNKNOWN.
+
+M52, complete indirect target sets:
+
+- track local function-pointer assignments, conditional assignments, callback
+  arguments, receiver-local ops bindings, and cross-file/header initializers;
+- export a MUST contract only when the target set is complete and every target
+  proves the same contract;
+- preserve target and completeness evidence at each indirect call site.
+
+M53, cross-function identity and lifecycle:
+
+- implement must-alias and may-alias with versioned assignments;
+- bind parameters, aliases, return identities, output parameters, fresh
+  allocation instances, owner fields, container members, and per-CPU slots;
+- propagate publication, escape, rebind, and teardown ordering;
+- allow cancellation or teardown only for the same proven object instance.
+
+M54, cross-function transaction, owner, and continuation proofs:
+
+- propagate transaction ownership and terminal failure-domain coverage;
+- propagate owner teardown only for private, unpublished, unescaped objects;
+- follow failure propagation through callers until a source-proven terminal
+  action or live same-owner continuation, using bounded fixpoint evidence.
+
+M55, production hardening:
+
+- integrate compilation configuration or `compile_commands.json` when
+  available;
+- add deterministic persistent caches, proof-chain serialization, performance
+  budgets, and typed incomplete states;
+- expose per-demand yield and transition audit metrics.
+
+### 11.3 Required Tests
+
+Add focused fixtures for cross-file direct calls, static-name collisions,
+header inline functions, multiple external definitions, recursive SCCs,
+multi-exit callees, complete and incomplete indirect targets, aliases and
+reassignment, return/out-param fresh identities, transaction ownership,
+owner escape, and caller continuation. Every safety test needs a paired
+near-miss that must remain UNKNOWN.
 
 Every accepted change must preserve:
 
 ```text
+329 / 329 tests plus new milestone tests
+6063 baseline witnesses with typed transitions
 0 new unreviewed Boundary witnesses
 0 unmatched baseline witnesses
+539 / 539 oracle entries
 6 / 6 manual live residuals
 the reviewed Contained fail-stop cases
 0 safety regressions
 all schema and zero-residual gates
 ```
+
+Implement M49-M51 before widening indirect-call or identity propagation. They
+target the largest current gaps while keeping the state space bounded. Select
+reviewed families from the 535 pending oracle entries for each accepted
+transition; do not accept a milestone from aggregate count movement alone.
 
 Historical M32-M36 details remain available in Git history. M37 is rejected and
 must not be reused as a baseline.

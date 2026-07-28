@@ -17,14 +17,14 @@ from .metadata_residual import (
     ResidualState,
     residual_report,
 )
-from .owner_liveness import refine_source_visible_owner_liveness
+from .semantics.owner_liveness import refine_source_visible_owner_liveness
 from .residual_report import ResidualWitnessReport
 from .residual_slicer import (
     ResidualSlicingResult,
     _conditional_shutdown_review_blockers,
     slice_function_residuals,
 )
-from .transient_provenance import TransientArgumentProvenance
+from .semantics.transient_provenance import TransientArgumentProvenance
 
 
 DEFAULT_SCOPE_RATIONALE = (
