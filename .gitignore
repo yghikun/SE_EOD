@@ -12,6 +12,7 @@ env/
 .DS_Store
 *.swp
 *.swo
+~$*
 
 # Local secrets
 .env
@@ -28,8 +29,12 @@ env/
 *.iso
 *.vmlinux
 *.bzImage
-outputs/residual-evaluation-batch/
-outputs/residual-evaluation/
+/outputs/residual-evaluation/
+/outputs/residual-evaluation-batch/
+/outputs/real-bug-btrfs-recover-relocation-v6.8/
+/tmp/
+/.codex-tmp/
+/.codex_tmp/
 
 # Presentation build and inspection intermediates
 /.codex-ppt-*/
