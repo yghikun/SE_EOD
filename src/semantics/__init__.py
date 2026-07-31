@@ -1,1 +1,0 @@
-"""Metadata residual proof semantics."""
