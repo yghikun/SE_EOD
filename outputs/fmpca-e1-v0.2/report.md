@@ -1,0 +1,48 @@
+# FMPCA Evaluation Report
+
+Manifest: `configs\evaluation\e1-v0.2.json`
+
+Passed: 14 / 14
+
+| Case | Role | Expected | Actual | Pass |
+|---|---|---|---|---|
+| ras-development-bug | DEVELOPMENT | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| ras-fixed | FIXED | `CONFORMANT_UNDER_LOADED_SPEC` | `CONFORMANT_UNDER_LOADED_SPEC` | PASS |
+| ras-safe-delegated | SAFE_NEGATIVE | `CONFORMANT_UNDER_LOADED_SPEC` | `CONFORMANT_UNDER_LOADED_SPEC` | PASS |
+| ras-owner-termination | DEADLINE_NEGATIVE | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| ras-unknown | UNKNOWN | `INCOMPLETE_UNDER_LOADED_SPEC` | `INCOMPLETE_UNDER_LOADED_SPEC` | PASS |
+| ras-linux-v6.8-source | DEVELOPMENT_REAL_SOURCE | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| dtr-development-bug | DEVELOPMENT | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| dtr-fixed | FIXED | `CONFORMANT_UNDER_LOADED_SPEC` | `CONFORMANT_UNDER_LOADED_SPEC` | PASS |
+| dtr-safe-delegated | SAFE_NEGATIVE | `CONFORMANT_UNDER_LOADED_SPEC` | `CONFORMANT_UNDER_LOADED_SPEC` | PASS |
+| dtr-exposure | EXPOSURE_NEGATIVE | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| dtr-release | DEADLINE_NEGATIVE | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+| dtr-release-fixed | FIXED | `CONFORMANT_UNDER_LOADED_SPEC` | `CONFORMANT_UNDER_LOADED_SPEC` | PASS |
+| dtr-unknown | UNKNOWN | `INCOMPLETE_UNDER_LOADED_SPEC` | `INCOMPLETE_UNDER_LOADED_SPEC` | PASS |
+| dtr-linux-v6.14-source | DEVELOPMENT_REAL_SOURCE | `VIOLATION_UNDER_LOADED_SPEC` | `VIOLATION_UNDER_LOADED_SPEC` | PASS |
+
+## Baseline Comparison
+
+| Case | B1 API pairing | B2 local restoration | B3 single-object typestate |
+|---|---|---|---|
+| ras-development-bug | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| ras-fixed | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| ras-safe-delegated | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| ras-owner-termination | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| ras-unknown | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| ras-linux-v6.8-source | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-development-bug | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-fixed | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-safe-delegated | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-exposure | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-release | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-release-fixed | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-unknown | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+| dtr-linux-v6.14-source | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` | `NO_APPLICABLE_CHECK` |
+
+## Guardrails
+
+- Catalog SHA-256: `83ceec611aaffc6cf8fe901c9f76965fd4753e01ecba768240fd2f92aadfb356`
+- Bug-specific condition count: `0`
+- Held-out checker modifications: `0`
+- Results are relative to the loaded protocol, binding, path model, and assumptions; no absolute SAFE claim is made.

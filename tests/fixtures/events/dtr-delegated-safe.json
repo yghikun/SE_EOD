@@ -1,0 +1,16 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeTopology", "roles": {"operation": "topology:4", "topology": "fs_devices:4"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "active_target_valid", "value": true}},
+    {"event": "SnapshotTopology", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.fsid_identity", "value": "seed_fsid"}},
+    {"event": "TopologyMutation", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.fsid_identity", "value": "sprout_fsid", "deadline": "AT_SETTLEMENT"}},
+    {"event": "SnapshotTopology", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.active_device", "value": "seed_dev"}},
+    {"event": "ActiveDeviceRebind", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.active_device", "value": "new_dev", "deadline": "AT_SETTLEMENT"}},
+    {"event": "FailureObserved", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}},
+    {"event": "DelegateTopologyRollback", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.fsid_identity", "authority": "topology_owner"}},
+    {"event": "DelegateTopologyRollback", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.active_device", "authority": "topology_owner"}},
+    {"event": "AuthorityComplete", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.fsid_identity", "authority": "topology_owner"}},
+    {"event": "AuthorityComplete", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}, "data": {"relation": "topology.active_device", "authority": "topology_owner"}},
+    {"event": "OperationReturn", "roles": {"operation": "topology:4", "topology": "fs_devices:4", "active_device": "active-pointer:latest_dev"}, "epoch": {"operation_root": "topology:4", "retry_generation": 0}}
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.device_shrink_space_accounting",
+  "protocol_version": "0.3.0-draft",
+  "semantic_intent": "A device shrink must adjust free chunk capacity by the writable free-space delta and restore all changed accounting relations with the same guarded delta if the shrink fails.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "device", "kind": "member", "anchor": true, "required": true},
+    {"id": "fs_devices", "kind": "container", "anchor": false, "required": true},
+    {"id": "fs_info", "kind": "owner", "anchor": false, "required": true}
+  ],
+  "epoch_policy": {"include": ["operation_root", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "device"},
+    {"op": "role_bound", "role": "fs_devices"},
+    {"op": "role_bound", "role": "fs_info"}
+  ]},
+  "initial_phase": "STABLE",
+  "phases": ["STABLE", "MUTATING", "ROLLBACK_PENDING", "RESTORED", "SETTLED"],
+  "events": ["ShrinkPolicyCheck", "ShrinkAccountingPrestate", "ShrinkAccountingMutation", "ShrinkFailure", "RestoreShrinkAccounting", "OperationReturn"],
+  "transitions": [
+    {"event": "ShrinkPolicyCheck", "from": ["STABLE"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "shrink_delta_valid", "value": {"from_event": "delta_valid"}},
+      {"op": "set_relation", "name": "rollback_guard_valid", "value": {"from_event": "rollback_guard_valid"}}
+    ]},
+    {"event": "ShrinkAccountingPrestate", "from": ["MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "snapshot_relation_from_event"}
+    ]},
+    {"event": "ShrinkAccountingMutation", "from": ["MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "update_relation_from_event"}
+    ]},
+    {"event": "ShrinkFailure", "from": ["MUTATING", "ROLLBACK_PENDING"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "activate_obligations_for_deltas", "template": "DSSA-O1"}
+    ]},
+    {"event": "RestoreShrinkAccounting", "from": ["ROLLBACK_PENDING", "RESTORED"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "DSSA-O1"}
+    ]},
+    {"event": "OperationReturn", "from": ["MUTATING", "ROLLBACK_PENDING", "RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "DSSA-I1", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "shrink_delta_valid", "value": true}, "evidence": ["trace:DSSA-I1"]},
+    {"id": "DSSA-I2", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "rollback_guard_valid", "value": true}, "evidence": ["trace:DSSA-I2"]}
+  ],
+  "obligation_templates": [
+    {"id": "DSSA-O1", "required_formula": {"op": "relation_matches_prestate", "name": "$obligation.relation"}, "activation_horizon": "ShrinkFailure", "deadline_policy": "MUST_DISCHARGE", "delegation_deadline": "AT_SETTLEMENT", "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": []}
+  ],
+  "allowed_authorities": [],
+  "deadlines": ["ALWAYS", "AT_SETTLEMENT"],
+  "checkpoint_events": ["ShrinkFailure"],
+  "terminal_events": ["OperationReturn"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED", "RESTORED"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["device.bytes_used", "unrelated_device_membership"],
+  "semantic_footprint": ["device_total_bytes", "writable_total_bytes", "free_chunk_space", "device_writable_state", "shrink_failure"],
+  "evidence_references": ["candidate:e9fd2c05239a", "trace:DSSA-I1", "trace:DSSA-I2", "trace:DSSA-O1"]
+}

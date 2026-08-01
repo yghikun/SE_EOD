@@ -1,0 +1,13 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": false, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}, "data": {"relation": "relation_exposed", "value": false}},
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}, "data": {"relation": "active_target_valid", "value": true}},
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}, "data": {"relation": "active_pointer_target", "value": "device:seed"}},
+    {"event": "RelationUpdate", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}, "data": {"relation": "active_pointer_target", "value": "device:new", "deadline": "BEFORE_EXPOSURE"}},
+    {"event": "FailureObserved", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}},
+    {"event": "MarkTargetInvalid", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}, "data": {"relation": "active_target_valid", "value": false}},
+    {"event": "LiveExposure", "roles": {"operation": "sprout:2", "container": "fs_devices:seed", "participant": "device:new", "active_pointer": "latest_dev"}, "epoch": {"operation_root": "sprout:2", "retry_generation": 0}}
+  ]
+}
+

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "readiness_id": "fmpca-rras-v0.3-draft-readiness",
+  "protocol_id": "fmpca.relocation_root_attachment_settlement",
+  "protocol": "configs/protocols/relocation-root-attachment-settlement-v0.3-draft.json",
+  "required_gates": [
+    "confirmed_bug_fix_pair",
+    "design_lifetime_evidence",
+    "selected_origin_identity_chain",
+    "selected_normal_settlement_chain",
+    "rules_not_bug_derived_only",
+    "binding_has_no_case_specialization",
+    "independent_validation_family"
+  ],
+  "gates": {
+    "confirmed_bug_fix_pair": true,
+    "design_lifetime_evidence": true,
+    "selected_origin_identity_chain": true,
+    "selected_normal_settlement_chain": true,
+    "rules_not_bug_derived_only": true,
+    "binding_has_no_case_specialization": true,
+    "independent_validation_family": false
+  },
+  "operation_families": [
+    {
+      "family_id": "runtime-relocation-merge",
+      "role": "DEVELOPMENT",
+      "primary_fix": "83201804efa4a5168be754e1dfc9b2faee760cac",
+      "same_family_support": ["b78fe9563e2d5ae47805f1e5dc722c91fd30e1f8", "51415b6c1b117e223bc083e30af675cb5c5498f3"]
+    }
+  ],
+  "held_out_family_available": false,
+  "freeze_eligible": false,
+  "blocking_constraint": "independent_validation_family",
+  "updated_at": "2026-07-31"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.btrfs_active_attachment",
+  "binding_version": "0.1.0",
+  "protocol_id": "fmpca.failure_rollback_conformance",
+  "kinds": ["guarded_active_attachment"],
+  "field_paths": ["root.reloc_root"],
+  "acquire_primitives": ["btrfs_grab_root"],
+  "release_primitives": ["btrfs_put_root"],
+  "failure_primitives": ["btrfs_commit_transaction"],
+  "error_variables": ["err", "ret", "error"],
+  "relation_deadline": "AT_SETTLEMENT",
+  "role_kinds": {
+    "operation": "selected_operation_root_invocation",
+    "container": "typed_parameter_position_0",
+    "participant": "typed_field_access_path",
+    "owner": "typed_parameter_position_0"
+  },
+  "semantic_footprint": ["active_root_attachment", "root_reference", "checked_transaction_failure", "common_error_cleanup", "operation_settlement"]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "readiness_id": "fmpca-dssa-v0.3-draft-readiness",
+  "protocol_id": "fmpca.device_shrink_space_accounting",
+  "protocol": "configs/protocols/device-shrink-space-accounting-v0.3-draft.json",
+  "required_gates": [
+    "confirmed_bug_fix_pair",
+    "patch_blob_provenance",
+    "paired_semantic_replay",
+    "binding_has_no_case_specialization",
+    "independent_design_evidence",
+    "independent_normal_source",
+    "independent_validation_family"
+  ],
+  "gates": {
+    "confirmed_bug_fix_pair": true,
+    "patch_blob_provenance": true,
+    "paired_semantic_replay": true,
+    "binding_has_no_case_specialization": true,
+    "independent_design_evidence": false,
+    "independent_normal_source": false,
+    "independent_validation_family": false
+  },
+  "operation_families": [
+    {
+      "family_id": "btrfs-device-shrink",
+      "role": "DEVELOPMENT",
+      "primary_fix": "e9fd2c05239ae423af45f99e2964ad086f800e33",
+      "same_family_support": []
+    }
+  ],
+  "held_out_family_available": false,
+  "freeze_eligible": false,
+  "blocking_constraint": "independent_domain_evidence",
+  "updated_at": "2026-07-31"
+}

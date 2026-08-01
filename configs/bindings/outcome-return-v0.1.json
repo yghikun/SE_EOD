@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.structural_outcome_return",
+  "binding_version": "0.1.0",
+  "protocol_id": "fmpca.metadata_transition_outcome",
+  "kinds": ["checked_error_terminal_return", "ignored_nonabsence_error"],
+  "error_variables": ["error", "ret", "err"],
+  "success_literals": ["0"],
+  "allowed_absence_sentinels": ["-ENOENT"],
+  "role_kinds": {
+    "operation": "selected_operation_root_invocation",
+    "metadata_subject": "typed_parameter_position_0",
+    "outcome_owner": "selected_operation_root_invocation"
+  },
+  "semantic_footprint": ["checked_call_result", "failure_branch", "common_cleanup_return", "return_partition"]
+}

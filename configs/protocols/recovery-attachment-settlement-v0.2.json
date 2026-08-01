@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.recovery_attachment_settlement",
+  "protocol_version": "0.2.0",
+  "semantic_intent": "A recovery operation that attaches relocation roots must settle each fs_root to its prestate or complete an explicitly permitted teardown handoff before recovery settlement.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "fs_root", "kind": "container", "anchor": true, "required": true},
+    {"id": "relocation_root", "kind": "member", "anchor": false, "required": false},
+    {"id": "recovery_owner", "kind": "owner", "anchor": false, "required": true},
+    {"id": "teardown_authority", "kind": "authority", "anchor": false, "required": false}
+  ],
+  "epoch_policy": {"include": ["operation_root", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "fs_root"},
+    {"op": "role_bound", "role": "recovery_owner"}
+  ]},
+  "initial_phase": "DETACHED",
+  "phases": ["DETACHED", "ATTACHED", "FAILURE_PENDING", "DELEGATED", "RESTORED", "SETTLED"],
+  "events": ["RecoveryPrestate", "RecoveryAttachment", "RecoveryFailure", "RecoveryDetach", "RecoveryDelegate", "RecoveryAuthorityComplete", "OperationReturn", "OwnerTermination", "ProtocolComplete"],
+  "transitions": [
+    {"event": "RecoveryPrestate", "from": ["DETACHED", "ATTACHED"], "to": "DETACHED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "snapshot_relation_from_event"},
+      {"op": "set_relation", "name": "recovery_attachment_state", "value": "DETACHED"}
+    ]},
+    {"event": "RecoveryAttachment", "from": ["DETACHED", "ATTACHED"], "to": "ATTACHED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "update_relation_from_event"},
+      {"op": "set_relation", "name": "recovery_attachment_state", "value": "ATTACHED"}
+    ]},
+    {"event": "RecoveryFailure", "from": ["ATTACHED", "FAILURE_PENDING"], "to": "FAILURE_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "activate_obligations_for_deltas", "template": "RAS-O1"}
+    ]},
+    {"event": "RecoveryDetach", "from": ["FAILURE_PENDING", "DELEGATED"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "RAS-O1"},
+      {"op": "set_relation", "name": "recovery_attachment_state", "value": "DETACHED"}
+    ]},
+    {"event": "RecoveryDelegate", "from": ["FAILURE_PENDING"], "to": "DELEGATED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "delegate_relation_from_event", "template": "RAS-O1"}
+    ]},
+    {"event": "RecoveryAuthorityComplete", "from": ["DELEGATED", "FAILURE_PENDING"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "RAS-O1"},
+      {"op": "complete_authority", "authority": {"from_event": "authority"}, "relation": "$event.relation"},
+      {"op": "set_relation", "name": "recovery_attachment_state", "value": "DETACHED"}
+    ]},
+    {"event": "OperationReturn", "from": ["ATTACHED", "FAILURE_PENDING", "DELEGATED", "RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OwnerTermination", "from": ["ATTACHED", "FAILURE_PENDING", "DELEGATED", "RESTORED", "SETTLED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "ProtocolComplete", "from": ["RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "RAS-I1", "deadline": "AT_SETTLEMENT", "formula": {"op": "relation_equals", "name": "recovery_attachment_state", "value": "DETACHED"}, "evidence": ["trace:RAS-I1"]}
+  ],
+  "obligation_templates": [
+    {"id": "RAS-O1", "required_formula": {"op": "relation_matches_prestate", "name": "$obligation.relation"}, "activation_horizon": "RecoveryFailure", "deadline_policy": "MAY_DELEGATE_TO", "delegation_deadline": "AT_SETTLEMENT", "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": ["teardown_owner"]}
+  ],
+  "allowed_authorities": ["teardown_owner"],
+  "deadlines": ["ALWAYS", "BEFORE_EXPOSURE", "BEFORE_COMMIT", "AT_SETTLEMENT", "BEFORE_OWNER_TERMINATION"],
+  "checkpoint_events": ["RecoveryFailure", "RecoveryDelegate"],
+  "terminal_events": ["OperationReturn", "OwnerTermination", "ProtocolComplete"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED", "RESTORED"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["unrelated_root_lists", "generic_resource_count"],
+  "semantic_footprint": ["fs_root_reloc_root_attachment", "root_reference_ownership", "recovery_failure", "teardown_authority", "owner_termination"],
+  "evidence_references": ["catalog-v0.2:RecoveryAttachmentSettlement", "dossier:#7", "trace:RAS-I1", "trace:RAS-O1"]
+}

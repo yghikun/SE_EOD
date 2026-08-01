@@ -1,0 +1,4 @@
+[
+  {"event": "ShrinkPolicyCheck", "roles": {"operation": "shrink:unknown", "device": "dev:1", "fs_devices": "devices:1", "fs_info": "fs:1"}, "epoch": {"operation_root": "shrink:unknown", "retry_generation": 0}, "data": {"delta_valid": true, "rollback_guard_valid": true}, "precision": "UNKNOWN"},
+  {"event": "OperationReturn", "roles": {"operation": "shrink:unknown", "device": "dev:1", "fs_devices": "devices:1", "fs_info": "fs:1"}, "epoch": {"operation_root": "shrink:unknown", "retry_generation": 0}}
+]

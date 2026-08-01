@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.failure_rollback_conformance",
+  "protocol_version": "0.1.0",
+  "semantic_intent": "Failure after a cross-object metadata relation mutation restores symbolic prestate or completes a permitted relation-scoped delegation before the original deadline.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "container", "kind": "container", "anchor": true, "required": true},
+    {"id": "participant", "kind": "member", "anchor": false, "required": false},
+    {"id": "active_pointer", "kind": "pointer", "anchor": false, "required": false},
+    {"id": "transaction_context", "kind": "transaction", "anchor": false, "required": false},
+    {"id": "owner", "kind": "owner", "anchor": false, "required": false},
+    {"id": "rollback_authority", "kind": "authority", "anchor": false, "required": false}
+  ],
+  "epoch_policy": {"include": ["operation_root", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "container"}
+  ]},
+  "initial_phase": "STABLE",
+  "phases": ["STABLE", "MUTATING", "FAILURE_OBSERVED", "ROLLBACK_PENDING", "DELEGATED", "RESTORED", "SETTLED"],
+  "events": ["SnapshotPrestate", "RelationUpdate", "MarkTargetInvalid", "FailureObserved", "RestoreRelation", "DelegateRollback", "AuthorityComplete", "ReleaseIsolation", "LiveExposure", "TransactionCommit", "TransactionAbort", "OperationReturn", "OwnerTermination", "FailstopBoundary", "ProtocolComplete"],
+  "transitions": [
+    {"event": "SnapshotPrestate", "from": ["STABLE", "MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "snapshot_relation_from_event"}
+    ]},
+    {"event": "RelationUpdate", "from": ["STABLE", "MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "update_relation_from_event"}
+    ]},
+    {"event": "MarkTargetInvalid", "from": ["MUTATING", "ROLLBACK_PENDING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation_from_event"}
+    ]},
+    {"event": "FailureObserved", "from": ["MUTATING", "FAILURE_OBSERVED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "activate_obligations_for_deltas", "template": "FRC-O1"}
+    ]},
+    {"event": "RestoreRelation", "from": ["ROLLBACK_PENDING", "DELEGATED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "FRC-O1"},
+      {"op": "discharge_obligation", "template": "FRC-O2", "relation": "$event.relation"}
+    ]},
+    {"event": "DelegateRollback", "from": ["ROLLBACK_PENDING"], "to": "DELEGATED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "delegate_relation_from_event", "template": "FRC-O1"},
+      {"op": "activate_obligation", "template": "FRC-O2", "relation": "$event.relation", "deadline_from_event": true}
+    ]},
+    {"event": "AuthorityComplete", "from": ["DELEGATED", "ROLLBACK_PENDING"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "FRC-O1"},
+      {"op": "discharge_obligation", "template": "FRC-O2", "relation": "$event.relation"},
+      {"op": "complete_authority", "authority": {"from_event": "authority"}, "relation": "$event.relation"}
+    ]},
+    {"event": "ReleaseIsolation", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_isolation", "value": "RELEASED"},
+      {"op": "set_escape_closure", "value": {"from_event": "escape_closure"}}
+    ]},
+    {"event": "LiveExposure", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "relation_exposed", "value": true},
+      {"op": "record_irreversible_if_false", "relation": "active_target_valid", "code": "INVALID_ACTIVE_TARGET_EXPOSED"}
+    ]},
+    {"event": "TransactionCommit", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "TransactionAbort", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OperationReturn", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OwnerTermination", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED", "SETTLED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "FailstopBoundary", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "ProtocolComplete", "from": ["RESTORED", "MUTATING"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "FRC-I1", "deadline": "ALWAYS", "formula": {"op": "any", "items": [
+      {"op": "not", "item": {"op": "role_bound", "role": "active_pointer"}},
+      {"op": "not", "item": {"op": "relation_equals", "name": "relation_exposed", "value": true}},
+      {"op": "relation_equals", "name": "active_target_valid", "value": true}
+    ]}, "evidence": ["trace:FRC-I1"]},
+    {"id": "FRC-I2", "deadline": "BEFORE_EXPOSURE", "formula": {"op": "any", "items": [
+      {"op": "not", "item": {"op": "role_bound", "role": "active_pointer"}},
+      {"op": "relation_equals", "name": "active_target_valid", "value": true}
+    ]}, "evidence": ["trace:FRC-I1"]}
+  ],
+  "obligation_templates": [
+    {"id": "FRC-O1", "required_formula": {"op": "relation_matches_prestate", "name": "$obligation.relation"}, "activation_horizon": "FailureObserved", "deadline_policy": "MAY_DELEGATE_TO", "delegation_deadline": "AT_SETTLEMENT", "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": ["teardown_owner", "transaction_owner", "recovery_owner"]},
+    {"id": "FRC-O2", "required_formula": {"op": "obligation_status", "template": "FRC-O1", "relation": "$obligation.relation", "statuses": ["DISCHARGED"]}, "activation_horizon": "DelegateRollback", "deadline_policy": "MUST_DISCHARGE", "delegation_deadline": null, "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": []}
+  ],
+  "allowed_authorities": ["teardown_owner", "transaction_owner", "recovery_owner"],
+  "deadlines": ["ALWAYS", "BEFORE_EXPOSURE", "BEFORE_COMMIT", "AT_SETTLEMENT", "BEFORE_OWNER_TERMINATION"],
+  "checkpoint_events": ["ReleaseIsolation", "LiveExposure", "DelegateRollback", "TransactionCommit", "TransactionAbort"],
+  "terminal_events": ["OperationReturn", "OwnerTermination", "FailstopBoundary", "ProtocolComplete"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED", "RESTORED", "ROLLBACK_PENDING"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["generic_resource_count", "unrelated_transaction_state"],
+  "semantic_footprint": ["container_member_relation", "active_pointer", "transaction_update_ownership", "object_liveness", "rollback_authority", "isolation", "escape"],
+  "evidence_references": ["catalog:FRC", "trace:FRC-I1", "trace:FRC-O1", "trace:FRC-O2", "trace:FRC-D1"]
+}
+

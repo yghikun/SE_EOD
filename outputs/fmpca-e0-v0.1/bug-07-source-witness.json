@@ -1,0 +1,294 @@
+{
+  "binding_id": "fmpca.binding.btrfs_active_attachment",
+  "coverage": {
+    "alias_closed": true,
+    "all_paths_closed": false,
+    "assumptions": [
+      "selected operation return is the settlement deadline for the bound active attachment",
+      "the repair slice is the reached common error-label suffix"
+    ],
+    "escape_closure": "INCOMPLETE",
+    "events": 4,
+    "handled_events": 4,
+    "path_model_closed": true,
+    "reached_deadlines": [
+      "AT_SETTLEMENT"
+    ],
+    "repair_slice_closed": true,
+    "unhandled_events": []
+  },
+  "protocol_id": "fmpca.failure_rollback_conformance",
+  "protocol_version": "0.1.0",
+  "reasons": [
+    "an exact due clause is false and the witness/repair slice is closed"
+  ],
+  "result": "VIOLATION_UNDER_LOADED_SPEC",
+  "source_evidence": [
+    {
+      "acquire_primitive": "btrfs_grab_root",
+      "field_path": "root.reloc_root",
+      "kind": "active_attachment",
+      "line": 4382
+    },
+    {
+      "error_label": "out_unset",
+      "failure_primitive": "btrfs_commit_transaction",
+      "kind": "checked_failure_to_label",
+      "line": 4386
+    },
+    {
+      "kind": "repair_slice",
+      "line": 4404,
+      "release_found": false,
+      "release_primitives": [
+        "btrfs_put_root"
+      ]
+    }
+  ],
+  "state": {
+    "alias_closed": true,
+    "applicable": true,
+    "assumptions": [
+      "selected operation return is the settlement deadline for the bound active attachment",
+      "the repair slice is the reached common error-label suffix"
+    ],
+    "authority_claims": [],
+    "checks": [
+      {
+        "deadline": "ALWAYS",
+        "dependencies": [
+          "relation:active_target_valid",
+          "relation:relation_exposed",
+          "role:active_pointer"
+        ],
+        "event_index": 0,
+        "precision": "UNKNOWN",
+        "rule_id": "FRC-I1",
+        "truth": "TRUE"
+      },
+      {
+        "deadline": "ALWAYS",
+        "dependencies": [
+          "relation:active_target_valid",
+          "relation:relation_exposed",
+          "role:active_pointer"
+        ],
+        "event_index": 1,
+        "precision": "UNKNOWN",
+        "rule_id": "FRC-I1",
+        "truth": "TRUE"
+      },
+      {
+        "deadline": "ALWAYS",
+        "dependencies": [
+          "relation:active_target_valid",
+          "relation:relation_exposed",
+          "role:active_pointer"
+        ],
+        "event_index": 2,
+        "precision": "UNKNOWN",
+        "rule_id": "FRC-I1",
+        "truth": "TRUE"
+      },
+      {
+        "deadline": "ALWAYS",
+        "dependencies": [
+          "relation:active_target_valid",
+          "relation:relation_exposed",
+          "role:active_pointer"
+        ],
+        "event_index": 3,
+        "precision": "UNKNOWN",
+        "rule_id": "FRC-I1",
+        "truth": "TRUE"
+      },
+      {
+        "deadline": "AT_SETTLEMENT",
+        "dependencies": [
+          "relation:fs_root.reloc_root",
+          "prestate:fs_root.reloc_root"
+        ],
+        "event_index": 3,
+        "precision": "EXACT",
+        "rule_id": "FRC-O1",
+        "truth": "FALSE"
+      },
+      {
+        "deadline": "AT_SETTLEMENT",
+        "dependencies": [
+          "irreversible_evidence",
+          "open:FRC-O1:fs_root.reloc_root",
+          "phase"
+        ],
+        "event_index": 3,
+        "precision": "EXACT",
+        "rule_id": "ACCEPTANCE@AT_SETTLEMENT",
+        "truth": "FALSE"
+      }
+    ],
+    "escape_closure": "INCOMPLETE",
+    "event_history": [
+      {
+        "data": {
+          "relation": "fs_root.reloc_root",
+          "value": null
+        },
+        "epoch": {
+          "operation_root": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "retry_generation": 0
+        },
+        "event": "SnapshotPrestate",
+        "precision": "EXACT",
+        "roles": {
+          "container": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "operation": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "owner": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "participant": "typed-field:fs_root->reloc_root"
+        },
+        "source": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "line": 4382
+        }
+      },
+      {
+        "data": {
+          "deadline": "AT_SETTLEMENT",
+          "relation": "fs_root.reloc_root",
+          "value": "acquired:btrfs_grab_root"
+        },
+        "epoch": {
+          "operation_root": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "retry_generation": 0
+        },
+        "event": "RelationUpdate",
+        "precision": "EXACT",
+        "roles": {
+          "container": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "operation": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "owner": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "participant": "typed-field:fs_root->reloc_root"
+        },
+        "source": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "line": 4382
+        }
+      },
+      {
+        "data": {
+          "callee": "btrfs_commit_transaction",
+          "error_variable": "err"
+        },
+        "epoch": {
+          "operation_root": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "retry_generation": 0
+        },
+        "event": "FailureObserved",
+        "precision": "EXACT",
+        "roles": {
+          "container": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "operation": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "owner": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "participant": "typed-field:fs_root->reloc_root"
+        },
+        "source": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "line": 4386
+        }
+      },
+      {
+        "data": {},
+        "epoch": {
+          "operation_root": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "retry_generation": 0
+        },
+        "event": "OperationReturn",
+        "precision": "EXACT",
+        "roles": {
+          "container": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "operation": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+          "owner": "parameter:0:struct/btrfs_fs_info:fs_info",
+          "participant": "typed-field:fs_root->reloc_root"
+        },
+        "source": {
+          "file": "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c",
+          "line": 4421
+        }
+      }
+    ],
+    "irreversible_violation_evidence": [],
+    "isolation_evidence": "UNKNOWN",
+    "obligations": {
+      "FRC-O1:fs_root.reloc_root": {
+        "activation_event": 2,
+        "activation_horizon": "FailureObserved",
+        "allowed_authorities": [
+          "teardown_owner",
+          "transaction_owner",
+          "recovery_owner"
+        ],
+        "authority": null,
+        "completion_deadline": "AT_SETTLEMENT",
+        "deadline_policy": "MAY_DELEGATE_TO",
+        "delegation_deadline": "AT_SETTLEMENT",
+        "discharge_event": null,
+        "relation": "fs_root.reloc_root",
+        "status": "OPEN",
+        "template_id": "FRC-O1"
+      }
+    },
+    "observability": [],
+    "operation_local_deltas": [
+      {
+        "after": "acquired:btrfs_grab_root",
+        "before": null,
+        "deadline": "AT_SETTLEMENT",
+        "precision": "EXACT",
+        "relation": "fs_root.reloc_root",
+        "source": "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c:4382:RelationUpdate"
+      }
+    ],
+    "outcome": "UNKNOWN",
+    "path_feasible": true,
+    "phase": "SETTLED",
+    "precision_provenance": {
+      "fs_root.reloc_root": "EXACT"
+    },
+    "protocol_id": "fmpca.failure_rollback_conformance",
+    "protocol_version": "0.1.0",
+    "reached_deadlines": [
+      "AT_SETTLEMENT"
+    ],
+    "relation_facts": {
+      "fs_root.reloc_root": {
+        "precision": "EXACT",
+        "sources": [
+          "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c:4382:RelationUpdate"
+        ],
+        "value": "acquired:btrfs_grab_root"
+      }
+    },
+    "repair_closed": true,
+    "role_bindings": {
+      "container": "parameter:0:struct/btrfs_fs_info:fs_info",
+      "operation": "operation:linux-v6.8:relocation.c:btrfs_recover_relocation",
+      "owner": "parameter:0:struct/btrfs_fs_info:fs_info",
+      "participant": "typed-field:fs_root->reloc_root"
+    },
+    "symbolic_prestate": {
+      "fs_root.reloc_root": {
+        "precision": "EXACT",
+        "sources": [
+          "linux-sources/linux-v6.8-fs/fs/btrfs/relocation.c:4382:SnapshotPrestate"
+        ],
+        "value": null
+      }
+    },
+    "transaction_context": {},
+    "unhandled_events": []
+  },
+  "unknown_rules": [],
+  "violation_rules": [
+    "ACCEPTANCE@AT_SETTLEMENT",
+    "FRC-O1"
+  ]
+}

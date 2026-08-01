@@ -1,0 +1,15 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": false, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}, "data": {"relation": "device.post_commit_list", "value": false}},
+    {"event": "RelationUpdate", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}, "data": {"relation": "device.post_commit_list", "value": true, "deadline": "BEFORE_OWNER_TERMINATION"}},
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}, "data": {"relation": "new_device.member", "value": false}},
+    {"event": "RelationUpdate", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}, "data": {"relation": "new_device.member", "value": true, "deadline": "AT_SETTLEMENT"}},
+    {"event": "FailureObserved", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}},
+    {"event": "RestoreRelation", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}, "data": {"relation": "new_device.member"}},
+    {"event": "TransactionAbort", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}},
+    {"event": "OperationReturn", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}},
+    {"event": "OwnerTermination", "roles": {"operation": "sprout:1", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:1", "retry_generation": 0}}
+  ]
+}
+

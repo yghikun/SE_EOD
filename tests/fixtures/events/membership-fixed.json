@@ -1,0 +1,10 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "SnapshotPrestate", "roles": {"operation": "fixture:2", "container": "set:1", "member": "member:1"}, "epoch": {"operation_root": "fixture:2", "retry_generation": 0}, "data": {"relation": "membership", "value": false}},
+    {"event": "RelationUpdate", "roles": {"operation": "fixture:2", "container": "set:1", "member": "member:1"}, "epoch": {"operation_root": "fixture:2", "retry_generation": 0}, "data": {"relation": "membership", "value": true, "deadline": "AT_SETTLEMENT"}},
+    {"event": "FailureObserved", "roles": {"operation": "fixture:2", "container": "set:1", "member": "member:1"}, "epoch": {"operation_root": "fixture:2", "retry_generation": 0}},
+    {"event": "RestoreRelation", "roles": {"operation": "fixture:2", "container": "set:1", "member": "member:1"}, "epoch": {"operation_root": "fixture:2", "retry_generation": 0}, "data": {"relation": "membership"}},
+    {"event": "OperationReturn", "roles": {"operation": "fixture:2", "container": "set:1", "member": "member:1"}, "epoch": {"operation_root": "fixture:2", "retry_generation": 0}}
+  ]
+}

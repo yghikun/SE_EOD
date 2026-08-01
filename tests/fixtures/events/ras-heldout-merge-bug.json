@@ -1,0 +1,9 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": false, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "RecoveryPrestate", "roles": {"operation": "runtime-relocation:merge:bug", "fs_root": "fs_root:merge", "recovery_owner": "runtime-relocation:merge:bug", "relocation_root": "root:reloc"}, "epoch": {"operation_root": "runtime-relocation:merge:bug", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "value": null}},
+    {"event": "RecoveryAttachment", "roles": {"operation": "runtime-relocation:merge:bug", "fs_root": "fs_root:merge", "recovery_owner": "runtime-relocation:merge:bug", "relocation_root": "root:reloc"}, "epoch": {"operation_root": "runtime-relocation:merge:bug", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "value": "attached:reloc_root", "deadline": "AT_SETTLEMENT"}},
+    {"event": "RecoveryFailure", "roles": {"operation": "runtime-relocation:merge:bug", "fs_root": "fs_root:merge", "recovery_owner": "runtime-relocation:merge:bug", "relocation_root": "root:reloc"}, "epoch": {"operation_root": "runtime-relocation:merge:bug", "retry_generation": 0}},
+    {"event": "OperationReturn", "roles": {"operation": "runtime-relocation:merge:bug", "fs_root": "fs_root:merge", "recovery_owner": "runtime-relocation:merge:bug", "relocation_root": "root:reloc"}, "epoch": {"operation_root": "runtime-relocation:merge:bug", "retry_generation": 0}}
+  ]
+}

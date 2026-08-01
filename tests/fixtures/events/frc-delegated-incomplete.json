@@ -1,0 +1,11 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": false, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "SnapshotPrestate", "roles": {"operation": "recovery:4", "container": "fs_root:258", "participant": "reloc_root:258", "rollback_authority": "teardown_owner"}, "epoch": {"operation_root": "recovery:4", "retry_generation": 0}, "data": {"relation": "fs_root.reloc_root", "value": null}},
+    {"event": "RelationUpdate", "roles": {"operation": "recovery:4", "container": "fs_root:258", "participant": "reloc_root:258", "rollback_authority": "teardown_owner"}, "epoch": {"operation_root": "recovery:4", "retry_generation": 0}, "data": {"relation": "fs_root.reloc_root", "value": "reloc_root:258", "deadline": "BEFORE_OWNER_TERMINATION"}},
+    {"event": "FailureObserved", "roles": {"operation": "recovery:4", "container": "fs_root:258", "participant": "reloc_root:258", "rollback_authority": "teardown_owner"}, "epoch": {"operation_root": "recovery:4", "retry_generation": 0}},
+    {"event": "DelegateRollback", "roles": {"operation": "recovery:4", "container": "fs_root:258", "participant": "reloc_root:258", "rollback_authority": "teardown_owner"}, "epoch": {"operation_root": "recovery:4", "retry_generation": 0}, "data": {"relation": "fs_root.reloc_root", "authority": "teardown_owner", "deadline": "BEFORE_OWNER_TERMINATION"}},
+    {"event": "OwnerTermination", "roles": {"operation": "recovery:4", "container": "fs_root:258", "participant": "reloc_root:258", "rollback_authority": "teardown_owner"}, "epoch": {"operation_root": "recovery:4", "retry_generation": 0}}
+  ]
+}
+

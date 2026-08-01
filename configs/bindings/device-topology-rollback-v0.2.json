@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.device_topology_rollback",
+  "binding_version": "0.2.0",
+  "protocol_id": "fmpca.device_topology_rollback",
+  "kinds": ["typed_topology_mutation", "checked_transaction_failure", "common_error_cleanup"],
+  "relation_rules": [
+    {"relation": "topology.device_membership", "mutators": ["list_add_rcu", "list_add"], "restorers": ["list_del_rcu", "list_del"], "prestate": "seed_device_members", "deadline": "AT_SETTLEMENT"},
+    {"relation": "transaction.post_commit_membership", "mutators": ["list_add_tail"], "mutator_argument_fragments": ["post_commit_list", "dev_update_list"], "restorers": ["list_del_init"], "restorer_argument_fragments": ["post_commit_list"], "prestate": "not_queued_for_post_commit", "deadline": "AT_SETTLEMENT"},
+    {"relation": "topology.active_device", "mutators": ["btrfs_assign_next_active_device"], "restorers": [], "prestate": "seed_active_device", "deadline": "AT_SETTLEMENT"},
+    {"relation": "topology.fsid_identity", "mutators": ["btrfs_setup_sprout", "btrfs_finish_sprout"], "restorers": [], "prestate": "seed_fsid_identity", "deadline": "AT_SETTLEMENT"}
+  ],
+  "failure_primitives": ["btrfs_abort_transaction", "btrfs_commit_transaction"],
+  "error_variables": ["ret", "err", "error"],
+  "role_kinds": {"operation": "selected_operation_root_invocation", "topology": "typed_parameter_position_0", "seed_container": "typed_field_access_path", "device": "typed_local_device", "active_device": "typed_active_pointer", "transaction_owner": "typed_transaction_owner"},
+  "semantic_footprint": ["device_membership", "post_commit_update_ownership", "active_device_identity", "sprout_container", "fsid_identity", "transaction_failure", "topology_settlement"]
+}

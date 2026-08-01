@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.metadata_transition_outcome",
+  "protocol_version": "0.1.0",
+  "semantic_intent": "The reported binary outcome agrees with the proven completion and active-failure state of one metadata transition at settlement.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "metadata_subject", "kind": "object", "anchor": true, "required": true},
+    {"id": "outcome_owner", "kind": "owner", "anchor": false, "required": true},
+    {"id": "transaction_context", "kind": "transaction", "anchor": false, "required": false}
+  ],
+  "epoch_policy": {"include": ["operation_root", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "metadata_subject"},
+    {"op": "role_bound", "role": "outcome_owner"}
+  ]},
+  "initial_phase": "INITIAL",
+  "phases": ["INITIAL", "IN_PROGRESS", "RETRYING", "FAILED", "COMPLETED", "OUTCOME_REPORTED", "SETTLED"],
+  "events": ["Begin", "MetadataStep", "FailureObserved", "RetryBegin", "FailureSuperseded", "TransitionComplete", "ReportSuccess", "ReportError", "TransactionCommit", "OperationReturn", "ProtocolComplete"],
+  "transitions": [
+    {"event": "Begin", "from": ["INITIAL"], "to": "IN_PROGRESS", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "completion", "value": "NONE"},
+      {"op": "set_relation", "name": "active_failure", "value": false},
+      {"op": "set_outcome", "value": "UNKNOWN"}
+    ]},
+    {"event": "MetadataStep", "from": ["IN_PROGRESS", "RETRYING"], "to": "IN_PROGRESS", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "completion", "value": "PARTIAL"}
+    ]},
+    {"event": "FailureObserved", "from": ["IN_PROGRESS", "RETRYING", "FAILED"], "to": "FAILED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "active_failure", "value": true},
+      {"op": "activate_obligation", "template": "MTO-O1"}
+    ]},
+    {"event": "RetryBegin", "from": ["FAILED"], "to": "RETRYING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_outcome", "value": "RETRY"}
+    ]},
+    {"event": "FailureSuperseded", "from": ["RETRYING"], "to": "RETRYING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "active_failure", "value": false}
+    ]},
+    {"event": "TransitionComplete", "from": ["IN_PROGRESS", "RETRYING"], "to": "COMPLETED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "completion", "value": "COMPLETE"},
+      {"op": "set_relation", "name": "active_failure", "value": false}
+    ]},
+    {"event": "ReportSuccess", "from": ["IN_PROGRESS", "FAILED", "COMPLETED", "RETRYING"], "to": "OUTCOME_REPORTED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_outcome", "value": "SUCCESS"}
+    ]},
+    {"event": "ReportError", "from": ["IN_PROGRESS", "FAILED", "COMPLETED", "RETRYING"], "to": "OUTCOME_REPORTED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_outcome", "value": "ERROR"}
+    ]},
+    {"event": "TransactionCommit", "from": ["IN_PROGRESS", "COMPLETED", "OUTCOME_REPORTED"], "to": "OUTCOME_REPORTED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OperationReturn", "from": ["IN_PROGRESS", "FAILED", "COMPLETED", "OUTCOME_REPORTED", "RETRYING"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "ProtocolComplete", "from": ["COMPLETED", "OUTCOME_REPORTED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "MTO-R1", "deadline": "AT_SETTLEMENT", "formula": {"op": "any", "items": [
+      {"op": "not", "item": {"op": "outcome_in", "values": ["SUCCESS"]}},
+      {"op": "all", "items": [
+        {"op": "relation_equals", "name": "completion", "value": "COMPLETE"},
+        {"op": "relation_equals", "name": "active_failure", "value": false}
+      ]}
+    ]}, "evidence": ["trace:MTO-R1"]},
+    {"id": "MTO-R2", "deadline": "AT_SETTLEMENT", "formula": {"op": "any", "items": [
+      {"op": "not", "item": {"op": "all", "items": [
+        {"op": "relation_equals", "name": "completion", "value": "COMPLETE"},
+        {"op": "relation_equals", "name": "active_failure", "value": false}
+      ]}},
+      {"op": "outcome_in", "values": ["SUCCESS"]}
+    ]}, "evidence": ["trace:MTO-R2"]}
+  ],
+  "obligation_templates": [
+    {"id": "MTO-O1", "required_formula": {"op": "any", "items": [
+      {"op": "outcome_in", "values": ["ERROR"]},
+      {"op": "all", "items": [
+        {"op": "relation_equals", "name": "completion", "value": "COMPLETE"},
+        {"op": "relation_equals", "name": "active_failure", "value": false}
+      ]}
+    ]}, "activation_horizon": "FailureObserved", "deadline_policy": "MUST_DISCHARGE", "delegation_deadline": null, "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": []}
+  ],
+  "allowed_authorities": [],
+  "deadlines": ["ALWAYS", "BEFORE_EXPOSURE", "BEFORE_COMMIT", "AT_SETTLEMENT", "BEFORE_OWNER_TERMINATION"],
+  "checkpoint_events": ["TransactionCommit"],
+  "terminal_events": ["OperationReturn", "ProtocolComplete"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["resource_lifetime", "unrelated_metadata"],
+  "semantic_footprint": ["metadata_transition", "result_provenance", "retry_control", "transaction_outcome", "return_partition"],
+  "evidence_references": ["catalog:MTO", "trace:MTO-R1", "trace:MTO-R2", "trace:MTO-O1", "trace:MTO-D1"]
+}
+

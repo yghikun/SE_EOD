@@ -1,0 +1,7 @@
+[
+  {"event": "RelocationAttachmentPrestate", "roles": {"operation": "op:normal", "fs_root": "fs:root", "relocation_owner": "op:normal"}, "epoch": {"operation_root": "op:normal", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "value": "DETACHED"}},
+  {"event": "RelocationAttachmentObserved", "roles": {"operation": "op:normal", "fs_root": "fs:root", "relocation_owner": "op:normal"}, "epoch": {"operation_root": "op:normal", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "value": "attached:reloc_root"}},
+  {"event": "RelocationFailure", "roles": {"operation": "op:normal", "fs_root": "fs:root", "relocation_owner": "op:normal"}, "epoch": {"operation_root": "op:normal", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "error_variable": "ret", "callee": "merge_reloc_root"}},
+  {"event": "RelocationDetach", "roles": {"operation": "op:normal", "fs_root": "fs:root", "relocation_owner": "op:normal"}, "epoch": {"operation_root": "op:normal", "retry_generation": 0}, "data": {"relation": "root.reloc_root"}},
+  {"event": "OperationReturn", "roles": {"operation": "op:normal", "fs_root": "fs:root", "relocation_owner": "op:normal"}, "epoch": {"operation_root": "op:normal", "retry_generation": 0}}
+]

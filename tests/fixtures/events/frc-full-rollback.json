@@ -1,0 +1,14 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.membership", "value": "seed-members"}},
+    {"event": "RelationUpdate", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.membership", "value": "sprout-members", "deadline": "AT_SETTLEMENT"}},
+    {"event": "SnapshotPrestate", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.fsid", "value": "seed-fsid"}},
+    {"event": "RelationUpdate", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.fsid", "value": "sprout-fsid", "deadline": "AT_SETTLEMENT"}},
+    {"event": "FailureObserved", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}},
+    {"event": "RestoreRelation", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.membership"}},
+    {"event": "RestoreRelation", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}, "data": {"relation": "container.fsid"}},
+    {"event": "OperationReturn", "roles": {"operation": "sprout:4", "container": "fs_devices:seed", "participant": "device:new"}, "epoch": {"operation_root": "sprout:4", "retry_generation": 0}}
+  ]
+}
+
