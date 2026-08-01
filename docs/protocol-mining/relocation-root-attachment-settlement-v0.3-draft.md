@@ -1,6 +1,7 @@
-# RelocationRootAttachmentSettlement v0.3 Draft
+# RelocationRootAttachmentSettlement v0.3
 
-状态：`DRAFT`; 未冻结，不能作为 v0.2 held-out 或泛化结论。
+状态：`FROZEN_NARROW_SCOPE`; 已冻结为 Catalog v0.3，但不是 v0.2 held-out，
+也不支持跨 operation-family 泛化结论。文件名保留 `draft` 仅为兼容旧引用。
 
 ## First-principles scope
 
@@ -44,7 +45,7 @@ The selected normal runtime chain is now source-closed from
 and all-path closure remain incomplete.
 
 Independence screening found no second operation family. Related fixes in
-`merge_reloc_roots()` count as the same family, so the executable readiness
-gate keeps `freeze_eligible=false`. See
+`merge_reloc_roots()` count as the same family. This no longer blocks a narrow
+freeze, but keeps `generalization_eligible=false`. See
 `rras-independence-screening-v0.3-draft.md` and
 `configs/evaluation/rras-v0.3-readiness.json`.

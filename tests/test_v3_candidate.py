@@ -86,14 +86,16 @@ class RelocationRootAttachmentDraftTests(unittest.TestCase):
         order = next(item for item in witness.evidence if item["kind"] == "caller_settlement_order")
         self.assertLess(order["merge_line"], order["cleanup_line"])
 
-    def test_readiness_gate_blocks_freeze_without_independent_family(self):
+    def test_readiness_allows_narrow_freeze_but_blocks_generalization(self):
         readiness = evaluate_readiness(
             str(ROOT / "configs/evaluation/rras-v0.3-readiness.json")
         )
-        self.assertFalse(readiness["freeze_eligible"])
+        self.assertTrue(readiness["freeze_eligible"])
         self.assertEqual(readiness["operation_family_count"], 1)
+        self.assertEqual(readiness["failed_required_gates"], [])
+        self.assertFalse(readiness["generalization_eligible"])
         self.assertEqual(
-            readiness["failed_required_gates"], ["independent_validation_family"]
+            readiness["failed_generalization_gates"], ["independent_validation_family"]
         )
         self.assertFalse(readiness["held_out_family_available"])
 

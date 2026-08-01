@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "protocol_id": "fmpca.device_shrink_space_accounting",
-  "protocol_version": "0.3.0-draft",
+  "protocol_version": "0.3.0",
   "semantic_intent": "A device shrink must adjust free chunk capacity by the writable free-space delta and restore all changed accounting relations with the same guarded delta if the shrink fails.",
   "roles": [
     {"id": "operation", "kind": "operation", "anchor": true, "required": true},

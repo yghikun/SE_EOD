@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.chunk_metadata_reservation_completion",
+  "binding_version": "0.5.0",
+  "protocol_id": "fmpca.chunk_metadata_reservation_completion",
+  "kinds": [
+    "chunk_btree_publication",
+    "transaction_scoped_chunk_reservation",
+    "positive_success_domain_guard"
+  ],
+  "role_kinds": {
+    "operation": "selected_operation_root_invocation",
+    "transaction": "btrfs_trans_handle",
+    "block_group": "btrfs_block_group",
+    "chunk_item": "chunk_btree_item",
+    "chunk_block_rsv": "btrfs_block_rsv"
+  },
+  "semantic_footprint": [
+    "chunk_item_publication",
+    "chunk_tree_metadata_update",
+    "chunk_block_reservation",
+    "transaction_chunk_bytes_reserved",
+    "zoned_activation_result",
+    "chunk_metadata_release",
+    "transaction_commit"
+  ],
+  "chunk_publication_primitives": ["btrfs_chunk_alloc_add_chunk_item"],
+  "reservation_primitives": ["btrfs_block_rsv_add"],
+  "metadata_reservation_primitives": [
+    "btrfs_reserve_chunk_metadata",
+    "check_system_chunk"
+  ],
+  "reservation_accounting_fields": [
+    "trans->chunk_bytes_reserved",
+    "bytes"
+  ],
+  "release_primitives": ["btrfs_block_rsv_release"],
+  "transaction_release_primitives": ["btrfs_trans_release_chunk_metadata"],
+  "chunk_update_primitives": [
+    "btrfs_chunk_alloc_add_chunk_item",
+    "btrfs_update_device",
+    "btrfs_insert_empty_item",
+    "btrfs_del_item",
+    "remove_chunk_item"
+  ],
+  "positive_success_primitives": ["btrfs_zoned_activate_one_bg"],
+  "negative_error_guards": ["$ret < 0"],
+  "reservation_success_guards": ["!$ret"]
+}

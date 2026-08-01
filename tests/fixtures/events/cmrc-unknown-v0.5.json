@@ -1,0 +1,70 @@
+{
+  "events": [
+    {
+      "event": "InitializeChunkMetadataReservation",
+      "roles": {
+        "operation": "operation:reserve_chunk_space:unknown",
+        "transaction": "trans:chunk-allocation",
+        "block_group": "block_group:unknown",
+        "chunk_item": "chunk_item:unknown",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "reserve_chunk_space",
+        "transaction_epoch": "trans:chunk-allocation",
+        "retry_generation": 0
+      },
+      "data": {
+        "success_domain_compatible": true,
+        "source_footprint_closed": true,
+        "reservation_completed": false
+      },
+      "source": {"file": "tests/fixtures/events/cmrc-unknown-v0.5.json", "line": 1}
+    },
+    {
+      "event": "ChunkItemPublication",
+      "roles": {
+        "operation": "operation:reserve_chunk_space:unknown",
+        "transaction": "trans:chunk-allocation",
+        "block_group": "block_group:unknown",
+        "chunk_item": "chunk_item:unknown",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "reserve_chunk_space",
+        "transaction_epoch": "trans:chunk-allocation",
+        "retry_generation": 0
+      },
+      "data": {
+        "relation": "chunk_item.published",
+        "value": true,
+        "before": false,
+        "deadline": "BEFORE_COMMIT",
+        "reservation_completed": false
+      },
+      "source": {"file": "tests/fixtures/events/cmrc-unknown-v0.5.json", "line": 2}
+    },
+    {
+      "event": "OperationReturn",
+      "roles": {
+        "operation": "operation:reserve_chunk_space:unknown",
+        "transaction": "trans:chunk-allocation",
+        "block_group": "block_group:unknown"
+      },
+      "epoch": {
+        "operation_root": "reserve_chunk_space",
+        "transaction_epoch": "trans:chunk-allocation",
+        "retry_generation": 0
+      },
+      "data": {},
+      "source": {"file": "tests/fixtures/events/cmrc-unknown-v0.5.json", "line": 3}
+    }
+  ],
+  "closure": {
+    "path_model_closed": true,
+    "all_paths_closed": false,
+    "repair_slice_closed": true,
+    "alias_closed": true
+  },
+  "expected_result": "INCOMPLETE_UNDER_LOADED_SPEC"
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.chunk_metadata_reservation_completion",
+  "protocol_version": "0.5.0",
+  "semantic_intent": "A chunk-btree metadata update that publishes, inserts, deletes or updates chunk-tree records must complete the companion chunk metadata reservation in the same transaction before commit; nonnegative helper success values must not suppress that reservation.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "transaction", "kind": "transaction", "anchor": true, "required": true},
+    {"id": "block_group", "kind": "metadata_container", "anchor": true, "required": true},
+    {"id": "chunk_item", "kind": "metadata_record", "anchor": false, "required": true},
+    {"id": "chunk_block_rsv", "kind": "reservation_pool", "anchor": false, "required": true}
+  ],
+  "epoch_policy": {"include": ["operation_root", "transaction_epoch", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "transaction"},
+    {"op": "role_bound", "role": "block_group"}
+  ]},
+  "initial_phase": "STABLE",
+  "phases": ["STABLE", "RESERVATION_DUE", "RESERVATION_COMPLETE", "SETTLED"],
+  "events": [
+    "InitializeChunkMetadataReservation",
+    "ChunkItemPublication",
+    "ChunkTreeMetadataUpdate",
+    "ChunkReservationSkipped",
+    "ChunkMetadataReserved",
+    "ChunkMetadataReleased",
+    "TransactionCommit",
+    "OperationReturn"
+  ],
+  "transitions": [
+    {"event": "InitializeChunkMetadataReservation", "from": ["STABLE"], "to": "STABLE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "reservation.success_domain_compatible", "value": {"from_event": "success_domain_compatible"}},
+      {"op": "set_relation", "name": "reservation.source_footprint_closed", "value": {"from_event": "source_footprint_closed"}},
+      {"op": "set_relation", "name": "chunk_metadata_reservation.completed", "value": {"from_event": "reservation_completed"}}
+    ]},
+    {"event": "ChunkItemPublication", "from": ["STABLE", "RESERVATION_COMPLETE"], "to": "RESERVATION_DUE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "update_relation_from_event"},
+      {"op": "set_relation", "name": "chunk_metadata_reservation.completed", "value": {"from_event": "reservation_completed"}},
+      {"op": "activate_obligation", "template": "CMRC-O1", "relation": "chunk_metadata_reservation.completed", "deadline_from_event": true}
+    ]},
+    {"event": "ChunkTreeMetadataUpdate", "from": ["STABLE", "RESERVATION_COMPLETE"], "to": "RESERVATION_DUE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "update_relation_from_event"},
+      {"op": "set_relation", "name": "chunk_metadata_reservation.completed", "value": {"from_event": "reservation_completed"}},
+      {"op": "activate_obligation", "template": "CMRC-O1", "relation": "chunk_metadata_reservation.completed", "deadline_from_event": true}
+    ]},
+    {"event": "ChunkReservationSkipped", "from": ["RESERVATION_DUE"], "to": "RESERVATION_DUE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "chunk_metadata_reservation.completed", "value": false}
+    ]},
+    {"event": "ChunkMetadataReserved", "from": ["STABLE", "RESERVATION_DUE"], "to": "RESERVATION_COMPLETE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "chunk_metadata_reservation.completed", "value": true},
+      {"op": "discharge_obligation", "template": "CMRC-O1", "relation": "chunk_metadata_reservation.completed"}
+    ]},
+    {"event": "ChunkMetadataReleased", "from": ["RESERVATION_COMPLETE", "SETTLED"], "to": "RESERVATION_COMPLETE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "chunk_metadata_reservation.released", "value": true}
+    ]},
+    {"event": "TransactionCommit", "from": ["RESERVATION_DUE", "RESERVATION_COMPLETE"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OperationReturn", "from": ["STABLE", "RESERVATION_DUE", "RESERVATION_COMPLETE"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "CMRC-I1", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "reservation.success_domain_compatible", "value": true}, "evidence": ["source:positive-success-domain"]},
+    {"id": "CMRC-I2", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "reservation.source_footprint_closed", "value": true}, "evidence": ["source:chunk-reservation-footprint"]},
+    {"id": "CMRC-I3", "deadline": "BEFORE_COMMIT", "formula": {"op": "relation_equals", "name": "chunk_metadata_reservation.completed", "value": true}, "evidence": ["source:chunk-metadata-reservation-before-commit"]}
+  ],
+  "obligation_templates": [
+    {"id": "CMRC-O1", "required_formula": {"op": "relation_equals", "name": "$obligation.relation", "value": true}, "activation_horizon": "ChunkItemPublication|ChunkTreeMetadataUpdate", "deadline_policy": "MUST_DISCHARGE", "delegation_deadline": "BEFORE_COMMIT", "completion_deadline": "BEFORE_COMMIT", "allowed_authorities": []}
+  ],
+  "allowed_authorities": [],
+  "deadlines": ["ALWAYS", "BEFORE_COMMIT", "AT_SETTLEMENT"],
+  "checkpoint_events": ["ChunkItemPublication", "TransactionCommit"],
+  "terminal_events": ["TransactionCommit", "OperationReturn"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED", "RESERVATION_COMPLETE"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["device.capacity_contribution", "device.membership", "inode.dentry_alias"],
+  "semantic_footprint": [
+    "chunk_item_publication",
+    "chunk_tree_metadata_update",
+    "chunk_block_reservation",
+    "transaction_chunk_bytes_reserved",
+    "zoned_activation_result",
+    "chunk_metadata_release",
+    "transaction_commit"
+  ],
+  "evidence_references": [
+    "case:#15",
+    "source:reserve_chunk_space",
+    "source:btrfs_zoned_activate_one_bg",
+    "source:btrfs_trans_release_chunk_metadata",
+    "doc:docs/cases/bug-15-btrfs-chunk-reservation.md"
+  ]
+}

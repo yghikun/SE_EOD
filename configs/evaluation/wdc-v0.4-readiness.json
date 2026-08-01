@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "readiness_id": "fmpca-wdc-v0.4-readiness",
+  "protocol_id": "fmpca.writable_device_capacity_contribution",
+  "composition_id": "fmpca.device_topology_capacity_composition",
+  "freeze_required_gates": ["typed_domain_relations", "design_semantics_evidence", "normal_add_remove_source", "confirmed_shrink_bug_fix", "paired_replay", "binding_has_no_case_specialization", "composition_identity_closed"],
+  "cross_family_required_gates": ["independent_membership_family", "independent_resize_family", "shared_contribution_semantics"],
+  "held_out_required_gates": ["post_freeze_held_out_family"],
+  "gates": {
+    "typed_domain_relations": true,
+    "design_semantics_evidence": true,
+    "normal_add_remove_source": true,
+    "confirmed_shrink_bug_fix": true,
+    "paired_replay": true,
+    "binding_has_no_case_specialization": true,
+    "composition_identity_closed": true,
+    "independent_membership_family": true,
+    "independent_resize_family": true,
+    "shared_contribution_semantics": true,
+    "post_freeze_held_out_family": false
+  },
+  "operation_families": [
+    {"family_id": "btrfs-device-membership-change", "role": "DEVELOPMENT_AND_CROSS_FAMILY_VALIDATION"},
+    {"family_id": "btrfs-device-capacity-resize", "role": "DEVELOPMENT_AND_CROSS_FAMILY_VALIDATION"}
+  ],
+  "freeze_eligible": true,
+  "cross_operation_family_validated": true,
+  "held_out_generalization_eligible": false,
+  "updated_at": "2026-08-01"
+}

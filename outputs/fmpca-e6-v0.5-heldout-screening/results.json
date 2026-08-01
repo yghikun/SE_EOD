@@ -1,0 +1,332 @@
+{
+  "bug_specific_condition_count": 0,
+  "candidates": [
+    {
+      "actual_decision": "ELIGIBLE_HELD_OUT_REPLAY",
+      "checks": {
+        "independent_from_v0_5_freeze_families": true,
+        "replay_closure_closed": true,
+        "source_witness_closed_under_frozen_binding": true,
+        "target_semantic_footprint_closed": true
+      },
+      "eligible": true,
+      "expected_decision": "ELIGIBLE_HELD_OUT_REPLAY",
+      "extra_footprint": [],
+      "function": "btrfs_remove_chunk",
+      "id": "btrfs-remove-chunk-v7.1",
+      "missing_footprint": [],
+      "operation_family": "btrfs-chunk-item-removal",
+      "passed": true,
+      "reason": "candidate matches frozen CMRC footprint, remains independent from v0.5 freeze families, and closes source plus replay evidence",
+      "replay": {
+        "cases": [
+          {
+            "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+            "coverage": {
+              "alias_closed": true,
+              "all_paths_closed": true,
+              "assumptions": [],
+              "escape_closure": "INCOMPLETE",
+              "events": 5,
+              "handled_events": 5,
+              "path_model_closed": true,
+              "reached_deadlines": [
+                "BEFORE_COMMIT"
+              ],
+              "repair_slice_closed": true,
+              "unhandled_events": []
+            },
+            "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+            "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json",
+            "id": "remove-chunk-heldout-normal",
+            "passed": true,
+            "role": "NORMAL",
+            "unknown_rules": [],
+            "violation_rules": []
+          },
+          {
+            "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+            "coverage": {
+              "alias_closed": true,
+              "all_paths_closed": true,
+              "assumptions": [],
+              "escape_closure": "INCOMPLETE",
+              "events": 5,
+              "handled_events": 5,
+              "path_model_closed": true,
+              "reached_deadlines": [
+                "BEFORE_COMMIT"
+              ],
+              "repair_slice_closed": true,
+              "unhandled_events": []
+            },
+            "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+            "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-fixed-v0.5.json",
+            "id": "remove-chunk-heldout-fixed",
+            "passed": true,
+            "role": "FIXED_OR_REPAIR",
+            "unknown_rules": [],
+            "violation_rules": []
+          },
+          {
+            "actual": "VIOLATION_UNDER_LOADED_SPEC",
+            "coverage": {
+              "alias_closed": true,
+              "all_paths_closed": true,
+              "assumptions": [],
+              "escape_closure": "INCOMPLETE",
+              "events": 3,
+              "handled_events": 3,
+              "path_model_closed": true,
+              "reached_deadlines": [
+                "BEFORE_COMMIT"
+              ],
+              "repair_slice_closed": true,
+              "unhandled_events": []
+            },
+            "expected": "VIOLATION_UNDER_LOADED_SPEC",
+            "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-negative-v0.5.json",
+            "id": "remove-chunk-heldout-negative",
+            "passed": true,
+            "role": "NEGATIVE",
+            "unknown_rules": [],
+            "violation_rules": [
+              "CMRC-I3",
+              "CMRC-O1"
+            ]
+          },
+          {
+            "actual": "INCOMPLETE_UNDER_LOADED_SPEC",
+            "coverage": {
+              "alias_closed": true,
+              "all_paths_closed": false,
+              "assumptions": [],
+              "escape_closure": "INCOMPLETE",
+              "events": 3,
+              "handled_events": 3,
+              "path_model_closed": true,
+              "reached_deadlines": [
+                "AT_SETTLEMENT"
+              ],
+              "repair_slice_closed": true,
+              "unhandled_events": []
+            },
+            "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+            "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-unknown-v0.5.json",
+            "id": "remove-chunk-heldout-unknown",
+            "passed": true,
+            "role": "UNKNOWN",
+            "unknown_rules": [],
+            "violation_rules": []
+          }
+        ],
+        "failed": 0,
+        "passed": 4,
+        "roles": [
+          "FIXED_OR_REPAIR",
+          "NEGATIVE",
+          "NORMAL",
+          "UNKNOWN"
+        ],
+        "total": 4
+      },
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "source_witness": {
+        "evidence": [
+          {
+            "function": "btrfs_remove_chunk",
+            "kind": "operation_family",
+            "value": "btrfs-chunk-item-removal"
+          },
+          {
+            "found": true,
+            "kind": "metadata_reservation_wrapper",
+            "lines": [
+              3445
+            ],
+            "primitives": [
+              "btrfs_reserve_chunk_metadata",
+              "check_system_chunk"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "chunk_tree_metadata_update",
+            "lines": [
+              3447,
+              3481,
+              3487
+            ],
+            "primitives": [
+              "btrfs_chunk_alloc_add_chunk_item",
+              "btrfs_update_device",
+              "btrfs_insert_empty_item",
+              "btrfs_del_item",
+              "remove_chunk_item"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "transaction_chunk_metadata_release",
+            "lines": [
+              3515
+            ],
+            "primitives": [
+              "btrfs_trans_release_chunk_metadata"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "reservation_update_release_order",
+            "ordered_triple": {
+              "metadata_update": {
+                "line": 3447,
+                "name": "remove_chunk_item",
+                "offset": 1663
+              },
+              "release": {
+                "line": 3515,
+                "name": "btrfs_trans_release_chunk_metadata",
+                "offset": 3732
+              },
+              "reservation": {
+                "line": 3445,
+                "name": "check_system_chunk",
+                "offset": 1617
+              }
+            }
+          }
+        ],
+        "metadata_update_found": true,
+        "operation_family": "btrfs-chunk-item-removal",
+        "order_closed": true,
+        "release_wrapper_found": true,
+        "reservation_wrapper_found": true,
+        "selected_update_path_closed": true
+      }
+    },
+    {
+      "actual_decision": "REJECT_NOT_INDEPENDENT",
+      "checks": {
+        "independent_from_v0_5_freeze_families": false,
+        "replay_closure_closed": false,
+        "source_witness_closed_under_frozen_binding": true,
+        "target_semantic_footprint_closed": true
+      },
+      "eligible": false,
+      "expected_decision": "REJECT_NOT_INDEPENDENT",
+      "extra_footprint": [],
+      "function": "btrfs_add_dev_item",
+      "id": "btrfs-add-dev-item-v7.1",
+      "missing_footprint": [],
+      "operation_family": "btrfs-device-item-update",
+      "passed": true,
+      "reason": "candidate belongs to a family already used for the v0.5 freeze",
+      "replay": {
+        "cases": [],
+        "failed": 0,
+        "passed": 0,
+        "roles": [],
+        "total": 0
+      },
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "source_witness": {
+        "evidence": [
+          {
+            "function": "btrfs_add_dev_item",
+            "kind": "operation_family",
+            "value": "btrfs-device-item-update"
+          },
+          {
+            "found": true,
+            "kind": "metadata_reservation_wrapper",
+            "lines": [
+              2080
+            ],
+            "primitives": [
+              "btrfs_reserve_chunk_metadata",
+              "check_system_chunk"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "chunk_tree_metadata_update",
+            "lines": [
+              2081
+            ],
+            "primitives": [
+              "btrfs_chunk_alloc_add_chunk_item",
+              "btrfs_update_device",
+              "btrfs_insert_empty_item",
+              "btrfs_del_item",
+              "remove_chunk_item"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "transaction_chunk_metadata_release",
+            "lines": [
+              2083
+            ],
+            "primitives": [
+              "btrfs_trans_release_chunk_metadata"
+            ]
+          },
+          {
+            "found": true,
+            "kind": "reservation_update_release_order",
+            "ordered_triple": {
+              "metadata_update": {
+                "line": 2081,
+                "name": "btrfs_insert_empty_item",
+                "offset": 462
+              },
+              "release": {
+                "line": 2083,
+                "name": "btrfs_trans_release_chunk_metadata",
+                "offset": 564
+              },
+              "reservation": {
+                "line": 2080,
+                "name": "btrfs_reserve_chunk_metadata",
+                "offset": 412
+              }
+            }
+          }
+        ],
+        "metadata_update_found": true,
+        "operation_family": "btrfs-device-item-update",
+        "order_closed": true,
+        "release_wrapper_found": true,
+        "reservation_wrapper_found": true,
+        "selected_update_path_closed": true
+      }
+    }
+  ],
+  "checker_modifications_after_freeze": 0,
+  "eligible_candidate_count": 1,
+  "failed": 0,
+  "freeze_id": "fmpca-heldout-semantic-freeze-e6-v0.5",
+  "held_out_operation_families": [
+    "btrfs-chunk-item-removal"
+  ],
+  "interpretation": "E6 is a post-v0.5 held-out applicability screen for CMRC. It keeps the v0.5 protocol and binding frozen, then checks whether a third chunk-tree metadata family can close the same reservation/update/release lifecycle without being one of the two frozen v0.5 families.",
+  "manifest": "configs\\evaluation\\e6-v0.5-heldout-screening.json",
+  "manifest_sha256": "0b7ab20192170ec48b84765bd6afa74629cb5372957ec64ed658e3669470a9b4",
+  "passed": 2,
+  "protocol_acceptance_modifications": 0,
+  "rejected_candidate_count": 1,
+  "schema_version": 1,
+  "screening_rejections": [
+    {
+      "candidate_status": "REJECT_NOT_INDEPENDENT",
+      "operation_family": "btrfs-device-item-update",
+      "reason": "candidate belongs to a family already used for the v0.5 freeze"
+    }
+  ],
+  "semantic_freeze": "configs/freeze/heldout-semantic-freeze-e6-v0.5.json",
+  "semantic_freeze_sha256": "2fbd54b51cefa920ff3711c8fc5484b728e5db55ac6cbdb3586c2a2f917964a9",
+  "total_candidates": 2
+}

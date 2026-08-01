@@ -1,0 +1,2114 @@
+{
+  "cases": [
+    {
+      "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+      "details": {
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 8,
+          "handled_events": 8,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "protocol_id": "fmpca.writable_device_capacity_contribution",
+        "protocol_version": "0.4.0",
+        "reasons": [
+          "all represented relevant paths and due clauses close under the loaded spec"
+        ],
+        "result": "CONFORMANT_UNDER_LOADED_SPEC",
+        "state": {
+          "alias_closed": true,
+          "applicable": true,
+          "assumptions": [],
+          "authority_claims": [],
+          "checks": [
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 4,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 4,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 5,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 5,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 6,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 6,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 7,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 7,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "AT_SETTLEMENT",
+              "dependencies": [
+                "irreversible_evidence",
+                "phase"
+              ],
+              "event_index": 7,
+              "precision": "EXACT",
+              "rule_id": "ACCEPTANCE@AT_SETTLEMENT",
+              "truth": "TRUE"
+            }
+          ],
+          "escape_closure": "INCOMPLETE",
+          "event_history": [
+            {
+              "data": {
+                "allocation_eligible": true,
+                "contributing": "PRESENT",
+                "delta_valid": true,
+                "eligibility_valid": true,
+                "eligible": true,
+                "released_device_capacity_detached": false,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "InitializeCapacityContribution",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "device.total_bytes",
+                "value": 100
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_devices.total_rw_bytes",
+                "value": 1000
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_info.free_chunk_space",
+                "value": 600
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "device.total_bytes",
+                "value": 80
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "fs_devices.total_rw_bytes",
+                "value": 980
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "fs_info.free_chunk_space",
+                "value": 580
+              },
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            },
+            {
+              "data": {},
+              "epoch": {
+                "operation_root": "device-shrink:1",
+                "retry_generation": 0
+              },
+              "event": "OperationReturn",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:1"
+              },
+              "source": {}
+            }
+          ],
+          "irreversible_violation_evidence": [],
+          "isolation_evidence": "UNKNOWN",
+          "obligations": {},
+          "observability": [],
+          "operation_local_deltas": [
+            {
+              "after": 80,
+              "before": 100,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "device.total_bytes",
+              "source": "<events>:?:CapacityMutation"
+            },
+            {
+              "after": 980,
+              "before": 1000,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "fs_devices.total_rw_bytes",
+              "source": "<events>:?:CapacityMutation"
+            },
+            {
+              "after": 580,
+              "before": 600,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "fs_info.free_chunk_space",
+              "source": "<events>:?:CapacityMutation"
+            }
+          ],
+          "outcome": "UNKNOWN",
+          "path_feasible": true,
+          "phase": "SETTLED",
+          "precision_provenance": {
+            "capacity.allocation_eligible": "EXACT",
+            "capacity.contributing": "EXACT",
+            "capacity.delta_valid": "EXACT",
+            "capacity.eligibility_valid": "EXACT",
+            "capacity.eligible": "EXACT",
+            "capacity.writable": "EXACT",
+            "device.total_bytes": "EXACT",
+            "fs_devices.total_rw_bytes": "EXACT",
+            "fs_info.free_chunk_space": "EXACT",
+            "released_device_capacity_detached": "EXACT"
+          },
+          "protocol_id": "fmpca.writable_device_capacity_contribution",
+          "protocol_version": "0.4.0",
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "relation_facts": {
+            "capacity.allocation_eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.contributing": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": "PRESENT"
+            },
+            "capacity.delta_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligibility_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.writable": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "device.total_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:CapacityMutation"
+              ],
+              "value": 80
+            },
+            "fs_devices.total_rw_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:CapacityMutation"
+              ],
+              "value": 980
+            },
+            "fs_info.free_chunk_space": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:CapacityMutation"
+              ],
+              "value": 580
+            },
+            "released_device_capacity_detached": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": false
+            }
+          },
+          "repair_closed": true,
+          "role_bindings": {
+            "device": "device:1",
+            "fs_devices": "fs_devices:1",
+            "fs_info": "fs:1",
+            "operation": "device-shrink:1"
+          },
+          "symbolic_prestate": {
+            "device.total_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 100
+            },
+            "fs_devices.total_rw_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 1000
+            },
+            "fs_info.free_chunk_space": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 600
+            }
+          },
+          "transaction_context": {},
+          "unhandled_events": []
+        },
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+      "id": "wdc-shrink-success",
+      "passed": true,
+      "role": "RESIZE_NORMAL"
+    },
+    {
+      "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+      "details": {
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 12,
+          "handled_events": 12,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "protocol_id": "fmpca.writable_device_capacity_contribution",
+        "protocol_version": "0.4.0",
+        "reasons": [
+          "all represented relevant paths and due clauses close under the loaded spec"
+        ],
+        "result": "CONFORMANT_UNDER_LOADED_SPEC",
+        "state": {
+          "alias_closed": true,
+          "applicable": true,
+          "assumptions": [],
+          "authority_claims": [],
+          "checks": [
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 4,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 4,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 5,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 5,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 6,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 6,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 7,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 7,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 8,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 8,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 9,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 9,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 10,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 10,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 11,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 11,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "AT_SETTLEMENT",
+              "dependencies": [
+                "irreversible_evidence",
+                "phase"
+              ],
+              "event_index": 11,
+              "precision": "EXACT",
+              "rule_id": "ACCEPTANCE@AT_SETTLEMENT",
+              "truth": "TRUE"
+            }
+          ],
+          "escape_closure": "INCOMPLETE",
+          "event_history": [
+            {
+              "data": {
+                "allocation_eligible": true,
+                "contributing": "PRESENT",
+                "delta_valid": true,
+                "eligibility_valid": true,
+                "eligible": true,
+                "released_device_capacity_detached": false,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "InitializeCapacityContribution",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "device.total_bytes",
+                "value": 100
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_devices.total_rw_bytes",
+                "value": 1000
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_info.free_chunk_space",
+                "value": 600
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "SnapshotCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "device.total_bytes",
+                "value": 80
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "fs_devices.total_rw_bytes",
+                "value": 980
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "deadline": "AT_SETTLEMENT",
+                "relation": "fs_info.free_chunk_space",
+                "value": 580
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "CapacityMutation",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {},
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "CapacityFailure",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "device.total_bytes"
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "RestoreCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_devices.total_rw_bytes"
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "RestoreCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "fs_info.free_chunk_space"
+              },
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "RestoreCapacity",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            },
+            {
+              "data": {},
+              "epoch": {
+                "operation_root": "device-shrink:rollback",
+                "retry_generation": 0
+              },
+              "event": "OperationReturn",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:rollback"
+              },
+              "source": {}
+            }
+          ],
+          "irreversible_violation_evidence": [],
+          "isolation_evidence": "UNKNOWN",
+          "obligations": {
+            "WDC-O1:device.total_bytes": {
+              "activation_event": 7,
+              "activation_horizon": "CapacityFailure",
+              "allowed_authorities": [
+                "capacity_owner"
+              ],
+              "authority": null,
+              "completion_deadline": "AT_SETTLEMENT",
+              "deadline_policy": "MAY_DELEGATE_TO",
+              "delegation_deadline": "AT_SETTLEMENT",
+              "discharge_event": 8,
+              "relation": "device.total_bytes",
+              "status": "DISCHARGED",
+              "template_id": "WDC-O1"
+            },
+            "WDC-O1:fs_devices.total_rw_bytes": {
+              "activation_event": 7,
+              "activation_horizon": "CapacityFailure",
+              "allowed_authorities": [
+                "capacity_owner"
+              ],
+              "authority": null,
+              "completion_deadline": "AT_SETTLEMENT",
+              "deadline_policy": "MAY_DELEGATE_TO",
+              "delegation_deadline": "AT_SETTLEMENT",
+              "discharge_event": 9,
+              "relation": "fs_devices.total_rw_bytes",
+              "status": "DISCHARGED",
+              "template_id": "WDC-O1"
+            },
+            "WDC-O1:fs_info.free_chunk_space": {
+              "activation_event": 7,
+              "activation_horizon": "CapacityFailure",
+              "allowed_authorities": [
+                "capacity_owner"
+              ],
+              "authority": null,
+              "completion_deadline": "AT_SETTLEMENT",
+              "deadline_policy": "MAY_DELEGATE_TO",
+              "delegation_deadline": "AT_SETTLEMENT",
+              "discharge_event": 10,
+              "relation": "fs_info.free_chunk_space",
+              "status": "DISCHARGED",
+              "template_id": "WDC-O1"
+            }
+          },
+          "observability": [],
+          "operation_local_deltas": [
+            {
+              "after": 80,
+              "before": 100,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "device.total_bytes",
+              "source": "<events>:?:CapacityMutation"
+            },
+            {
+              "after": 980,
+              "before": 1000,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "fs_devices.total_rw_bytes",
+              "source": "<events>:?:CapacityMutation"
+            },
+            {
+              "after": 580,
+              "before": 600,
+              "deadline": "AT_SETTLEMENT",
+              "precision": "EXACT",
+              "relation": "fs_info.free_chunk_space",
+              "source": "<events>:?:CapacityMutation"
+            }
+          ],
+          "outcome": "UNKNOWN",
+          "path_feasible": true,
+          "phase": "SETTLED",
+          "precision_provenance": {
+            "capacity.allocation_eligible": "EXACT",
+            "capacity.contributing": "EXACT",
+            "capacity.delta_valid": "EXACT",
+            "capacity.eligibility_valid": "EXACT",
+            "capacity.eligible": "EXACT",
+            "capacity.writable": "EXACT",
+            "device.total_bytes": "EXACT",
+            "fs_devices.total_rw_bytes": "EXACT",
+            "fs_info.free_chunk_space": "EXACT",
+            "released_device_capacity_detached": "EXACT"
+          },
+          "protocol_id": "fmpca.writable_device_capacity_contribution",
+          "protocol_version": "0.4.0",
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "relation_facts": {
+            "capacity.allocation_eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.contributing": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": "PRESENT"
+            },
+            "capacity.delta_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligibility_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.writable": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "device.total_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:RestoreCapacity"
+              ],
+              "value": 100
+            },
+            "fs_devices.total_rw_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:RestoreCapacity"
+              ],
+              "value": 1000
+            },
+            "fs_info.free_chunk_space": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:RestoreCapacity"
+              ],
+              "value": 600
+            },
+            "released_device_capacity_detached": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": false
+            }
+          },
+          "repair_closed": true,
+          "role_bindings": {
+            "device": "device:1",
+            "fs_devices": "fs_devices:1",
+            "fs_info": "fs:1",
+            "operation": "device-shrink:rollback"
+          },
+          "symbolic_prestate": {
+            "device.total_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 100
+            },
+            "fs_devices.total_rw_bytes": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 1000
+            },
+            "fs_info.free_chunk_space": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:SnapshotCapacity"
+              ],
+              "value": 600
+            }
+          },
+          "transaction_context": {},
+          "unhandled_events": []
+        },
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+      "id": "wdc-shrink-rollback",
+      "passed": true,
+      "role": "RESIZE_FIXED_FAILURE"
+    },
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "details": {
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 2,
+          "handled_events": 2,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "protocol_id": "fmpca.writable_device_capacity_contribution",
+        "protocol_version": "0.4.0",
+        "reasons": [
+          "an exact due clause is false and the witness/repair slice is closed"
+        ],
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "state": {
+          "alias_closed": true,
+          "applicable": true,
+          "assumptions": [],
+          "authority_claims": [],
+          "checks": [
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "FALSE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "FALSE"
+            },
+            {
+              "deadline": "AT_SETTLEMENT",
+              "dependencies": [
+                "always_invariant",
+                "irreversible_evidence",
+                "phase"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "ACCEPTANCE@AT_SETTLEMENT",
+              "truth": "FALSE"
+            }
+          ],
+          "escape_closure": "INCOMPLETE",
+          "event_history": [
+            {
+              "data": {
+                "allocation_eligible": true,
+                "contributing": "PRESENT",
+                "delta_valid": false,
+                "eligibility_valid": true,
+                "eligible": true,
+                "released_device_capacity_detached": false,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-shrink:bug",
+                "retry_generation": 0
+              },
+              "event": "InitializeCapacityContribution",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:bug"
+              },
+              "source": {}
+            },
+            {
+              "data": {},
+              "epoch": {
+                "operation_root": "device-shrink:bug",
+                "retry_generation": 0
+              },
+              "event": "OperationReturn",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-shrink:bug"
+              },
+              "source": {}
+            }
+          ],
+          "irreversible_violation_evidence": [],
+          "isolation_evidence": "UNKNOWN",
+          "obligations": {},
+          "observability": [],
+          "operation_local_deltas": [],
+          "outcome": "UNKNOWN",
+          "path_feasible": true,
+          "phase": "STABLE",
+          "precision_provenance": {
+            "capacity.allocation_eligible": "EXACT",
+            "capacity.contributing": "EXACT",
+            "capacity.delta_valid": "EXACT",
+            "capacity.eligibility_valid": "EXACT",
+            "capacity.eligible": "EXACT",
+            "capacity.writable": "EXACT",
+            "released_device_capacity_detached": "EXACT"
+          },
+          "protocol_id": "fmpca.writable_device_capacity_contribution",
+          "protocol_version": "0.4.0",
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "relation_facts": {
+            "capacity.allocation_eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.contributing": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": "PRESENT"
+            },
+            "capacity.delta_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": false
+            },
+            "capacity.eligibility_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.writable": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "released_device_capacity_detached": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": false
+            }
+          },
+          "repair_closed": true,
+          "role_bindings": {
+            "device": "device:1",
+            "fs_devices": "fs_devices:1",
+            "fs_info": "fs:1",
+            "operation": "device-shrink:bug"
+          },
+          "symbolic_prestate": {},
+          "transaction_context": {},
+          "unhandled_events": []
+        },
+        "unknown_rules": [],
+        "violation_rules": [
+          "ACCEPTANCE@AT_SETTLEMENT",
+          "WDC-I2"
+        ]
+      },
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "id": "wdc-shrink-bug",
+      "passed": true,
+      "role": "RESIZE_CONFIRMED_BUG"
+    },
+    {
+      "actual": "INCOMPLETE_UNDER_LOADED_SPEC",
+      "details": {
+        "coverage": {
+          "alias_closed": false,
+          "all_paths_closed": false,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 2,
+          "handled_events": 1,
+          "path_model_closed": false,
+          "reached_deadlines": [],
+          "repair_slice_closed": false,
+          "unhandled_events": [
+            "UnknownCapacityHelper"
+          ]
+        },
+        "protocol_id": "fmpca.writable_device_capacity_contribution",
+        "protocol_version": "0.4.0",
+        "reasons": [
+          "no closed violation exists, but universal conformance is not closed",
+          "all relevant paths are not closed"
+        ],
+        "result": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "state": {
+          "alias_closed": true,
+          "applicable": true,
+          "assumptions": [],
+          "authority_claims": [],
+          "checks": [
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            }
+          ],
+          "escape_closure": "INCOMPLETE",
+          "event_history": [
+            {
+              "data": {
+                "allocation_eligible": true,
+                "contributing": "PRESENT",
+                "delta_valid": true,
+                "eligibility_valid": true,
+                "eligible": true,
+                "released_device_capacity_detached": false,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-capacity:unknown",
+                "retry_generation": 0
+              },
+              "event": "InitializeCapacityContribution",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-capacity:unknown"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "footprint": [
+                  "free_chunk_space"
+                ]
+              },
+              "epoch": {
+                "operation_root": "device-capacity:unknown",
+                "retry_generation": 0
+              },
+              "event": "UnknownCapacityHelper",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-capacity:unknown"
+              },
+              "source": {}
+            }
+          ],
+          "irreversible_violation_evidence": [],
+          "isolation_evidence": "UNKNOWN",
+          "obligations": {},
+          "observability": [],
+          "operation_local_deltas": [],
+          "outcome": "UNKNOWN",
+          "path_feasible": true,
+          "phase": "STABLE",
+          "precision_provenance": {
+            "capacity.allocation_eligible": "EXACT",
+            "capacity.contributing": "EXACT",
+            "capacity.delta_valid": "EXACT",
+            "capacity.eligibility_valid": "EXACT",
+            "capacity.eligible": "EXACT",
+            "capacity.writable": "EXACT",
+            "released_device_capacity_detached": "EXACT"
+          },
+          "protocol_id": "fmpca.writable_device_capacity_contribution",
+          "protocol_version": "0.4.0",
+          "reached_deadlines": [],
+          "relation_facts": {
+            "capacity.allocation_eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.contributing": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": "PRESENT"
+            },
+            "capacity.delta_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligibility_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "capacity.writable": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": true
+            },
+            "released_device_capacity_detached": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": false
+            }
+          },
+          "repair_closed": true,
+          "role_bindings": {
+            "device": "device:1",
+            "fs_devices": "fs_devices:1",
+            "fs_info": "fs:1",
+            "operation": "device-capacity:unknown"
+          },
+          "symbolic_prestate": {},
+          "transaction_context": {},
+          "unhandled_events": [
+            "UnknownCapacityHelper"
+          ]
+        },
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+      "id": "wdc-unknown",
+      "passed": true,
+      "role": "UNKNOWN"
+    },
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "details": {
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 4,
+          "handled_events": 4,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "AT_SETTLEMENT",
+            "BEFORE_RELEASE"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "protocol_id": "fmpca.writable_device_capacity_contribution",
+        "protocol_version": "0.4.0",
+        "reasons": [
+          "an exact due clause is false and the witness/repair slice is closed"
+        ],
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "state": {
+          "alias_closed": true,
+          "applicable": true,
+          "assumptions": [],
+          "authority_claims": [],
+          "checks": [
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 0,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 1,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "BEFORE_RELEASE",
+              "dependencies": [
+                "relation:released_device_capacity_detached"
+              ],
+              "event_index": 2,
+              "precision": "EXACT",
+              "rule_id": "WDC-I3",
+              "truth": "FALSE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.eligibility_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I1",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "ALWAYS",
+              "dependencies": [
+                "relation:capacity.delta_valid"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "WDC-I2",
+              "truth": "TRUE"
+            },
+            {
+              "deadline": "AT_SETTLEMENT",
+              "dependencies": [
+                "irreversible_evidence",
+                "phase"
+              ],
+              "event_index": 3,
+              "precision": "EXACT",
+              "rule_id": "ACCEPTANCE@AT_SETTLEMENT",
+              "truth": "TRUE"
+            }
+          ],
+          "escape_closure": "INCOMPLETE",
+          "event_history": [
+            {
+              "data": {
+                "allocation_eligible": true,
+                "contributing": "PRESENT",
+                "delta_valid": true,
+                "eligibility_valid": true,
+                "eligible": true,
+                "released_device_capacity_detached": false,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-release:bug",
+                "retry_generation": 0
+              },
+              "event": "InitializeCapacityContribution",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-release:bug"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "allocation_eligible": true,
+                "delta_valid": true,
+                "eligibility_valid": true,
+                "eligible": true,
+                "writable": true
+              },
+              "epoch": {
+                "operation_root": "device-release:bug",
+                "retry_generation": 0
+              },
+              "event": "ContributionEligibility",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-release:bug"
+              },
+              "source": {}
+            },
+            {
+              "data": {
+                "relation": "released_device_capacity_detached",
+                "value": false
+              },
+              "epoch": {
+                "operation_root": "device-release:bug",
+                "retry_generation": 0
+              },
+              "event": "ReleaseDevice",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-release:bug"
+              },
+              "source": {}
+            },
+            {
+              "data": {},
+              "epoch": {
+                "operation_root": "device-release:bug",
+                "retry_generation": 0
+              },
+              "event": "OperationReturn",
+              "precision": "EXACT",
+              "roles": {
+                "device": "device:1",
+                "fs_devices": "fs_devices:1",
+                "fs_info": "fs:1",
+                "operation": "device-release:bug"
+              },
+              "source": {}
+            }
+          ],
+          "irreversible_violation_evidence": [],
+          "isolation_evidence": "UNKNOWN",
+          "obligations": {},
+          "observability": [],
+          "operation_local_deltas": [],
+          "outcome": "UNKNOWN",
+          "path_feasible": true,
+          "phase": "SETTLED",
+          "precision_provenance": {
+            "capacity.allocation_eligible": "EXACT",
+            "capacity.contributing": "EXACT",
+            "capacity.delta_valid": "EXACT",
+            "capacity.eligibility_valid": "EXACT",
+            "capacity.eligible": "EXACT",
+            "capacity.writable": "EXACT",
+            "released_device_capacity_detached": "EXACT"
+          },
+          "protocol_id": "fmpca.writable_device_capacity_contribution",
+          "protocol_version": "0.4.0",
+          "reached_deadlines": [
+            "AT_SETTLEMENT",
+            "BEFORE_RELEASE"
+          ],
+          "relation_facts": {
+            "capacity.allocation_eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ContributionEligibility"
+              ],
+              "value": true
+            },
+            "capacity.contributing": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:InitializeCapacityContribution"
+              ],
+              "value": "PRESENT"
+            },
+            "capacity.delta_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ContributionEligibility"
+              ],
+              "value": true
+            },
+            "capacity.eligibility_valid": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ContributionEligibility"
+              ],
+              "value": true
+            },
+            "capacity.eligible": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ContributionEligibility"
+              ],
+              "value": true
+            },
+            "capacity.writable": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ContributionEligibility"
+              ],
+              "value": true
+            },
+            "released_device_capacity_detached": {
+              "precision": "EXACT",
+              "sources": [
+                "<events>:?:ReleaseDevice"
+              ],
+              "value": false
+            }
+          },
+          "repair_closed": true,
+          "role_bindings": {
+            "device": "device:1",
+            "fs_devices": "fs_devices:1",
+            "fs_info": "fs:1",
+            "operation": "device-release:bug"
+          },
+          "symbolic_prestate": {},
+          "transaction_context": {},
+          "unhandled_events": []
+        },
+        "unknown_rules": [],
+        "violation_rules": [
+          "WDC-I3"
+        ]
+      },
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "id": "wdc-release",
+      "passed": true,
+      "role": "RELEASE_NEGATIVE"
+    },
+    {
+      "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+      "details": {
+        "component_results": {
+          "device_topology_rollback": "CONFORMANT_UNDER_LOADED_SPEC",
+          "writable_device_capacity_contribution": "CONFORMANT_UNDER_LOADED_SPEC"
+        },
+        "reasons": [
+          "both component protocols and all cross-protocol clauses close"
+        ],
+        "result": "CONFORMANT_UNDER_LOADED_SPEC",
+        "rules": [],
+        "shared_identity": {
+          "device": "device:1",
+          "operation": "device-add:1"
+        }
+      },
+      "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+      "id": "dtc-add-success",
+      "passed": true,
+      "role": "MEMBERSHIP_NORMAL"
+    },
+    {
+      "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+      "details": {
+        "component_results": {
+          "device_topology_rollback": "CONFORMANT_UNDER_LOADED_SPEC",
+          "writable_device_capacity_contribution": "CONFORMANT_UNDER_LOADED_SPEC"
+        },
+        "reasons": [
+          "both component protocols and all cross-protocol clauses close"
+        ],
+        "result": "CONFORMANT_UNDER_LOADED_SPEC",
+        "rules": [],
+        "shared_identity": {
+          "device": "device:1",
+          "operation": "device-add:rollback"
+        }
+      },
+      "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+      "id": "dtc-add-rollback",
+      "passed": true,
+      "role": "MEMBERSHIP_FIXED_FAILURE"
+    },
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "details": {
+        "component_results": {
+          "device_topology_rollback": "CONFORMANT_UNDER_LOADED_SPEC",
+          "writable_device_capacity_contribution": "VIOLATION_UNDER_LOADED_SPEC"
+        },
+        "reasons": [
+          "capacity contribution disagrees with terminal eligibility"
+        ],
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "rules": [
+          "DTC-C2",
+          "WDC"
+        ],
+        "shared_identity": {
+          "device": "device:1",
+          "operation": "device-add:rollback"
+        }
+      },
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "id": "dtc-partial-capacity-rollback",
+      "passed": true,
+      "role": "COMPOSITION_NEGATIVE"
+    },
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "details": {
+        "component_results": {
+          "device_topology_rollback": "CONFORMANT_UNDER_LOADED_SPEC",
+          "writable_device_capacity_contribution": "CONFORMANT_UNDER_LOADED_SPEC"
+        },
+        "reasons": [
+          "capacity eligibility disagrees with topology membership and writable allocation state"
+        ],
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "rules": [
+          "DTC-C1"
+        ],
+        "shared_identity": {
+          "device": "device:1",
+          "operation": "device-add:1"
+        }
+      },
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "id": "dtc-eligibility-mismatch",
+      "passed": true,
+      "role": "CROSS_RELATION_NEGATIVE"
+    },
+    {
+      "actual": "INCOMPLETE_UNDER_LOADED_SPEC",
+      "details": {
+        "component_results": {
+          "device_topology_rollback": "CONFORMANT_UNDER_LOADED_SPEC",
+          "writable_device_capacity_contribution": "CONFORMANT_UNDER_LOADED_SPEC"
+        },
+        "reasons": [
+          "component instances do not share an exact operation and device identity"
+        ],
+        "result": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "rules": [
+          "DTC-ID"
+        ],
+        "shared_identity": {
+          "device": "device:1",
+          "operation": null
+        }
+      },
+      "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+      "id": "dtc-identity-mismatch",
+      "passed": true,
+      "role": "IDENTITY_UNKNOWN"
+    }
+  ],
+  "failed": 0,
+  "held_out_operation_families": [],
+  "manifest": "configs\\evaluation\\e4-v0.4.json",
+  "manifest_sha256": "ca7cb0c6cf66e02ef84493128fc06b2b87f60ed74ada7a0e1a60e820a1f5210b",
+  "passed": 10,
+  "schema_version": 1,
+  "semantic_freeze": "configs/freeze/domain-semantic-freeze-v0.4.json",
+  "total": 10
+}

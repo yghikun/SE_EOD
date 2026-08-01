@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.writable_device_capacity_contribution",
+  "protocol_version": "0.4.0",
+  "semantic_intent": "A device contributes to writable aggregate capacity exactly when its membership and allocation state make it eligible, and every operation-local contribution delta must settle consistently on failure or before device release.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "device", "kind": "member", "anchor": true, "required": true},
+    {"id": "fs_devices", "kind": "container", "anchor": false, "required": true},
+    {"id": "fs_info", "kind": "owner", "anchor": false, "required": true},
+    {"id": "capacity_owner", "kind": "authority", "anchor": false, "required": false}
+  ],
+  "epoch_policy": {"include": ["operation_root", "retry_generation"]},
+  "entry_formula": {"op": "all", "items": [
+    {"op": "role_bound", "role": "operation"},
+    {"op": "role_bound", "role": "device"},
+    {"op": "role_bound", "role": "fs_devices"},
+    {"op": "role_bound", "role": "fs_info"}
+  ]},
+  "initial_phase": "STABLE",
+  "phases": ["STABLE", "MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED", "SETTLED"],
+  "events": ["InitializeCapacityContribution", "ContributionEligibility", "SnapshotCapacity", "CapacityMutation", "CapacityFailure", "RestoreCapacity", "DelegateCapacityRestore", "CapacityAuthorityComplete", "ReleaseDevice", "OperationReturn", "OwnerTermination", "ProtocolComplete"],
+  "transitions": [
+    {"event": "InitializeCapacityContribution", "from": ["STABLE"], "to": "STABLE", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "capacity.contributing", "value": {"from_event": "contributing"}},
+      {"op": "set_relation", "name": "capacity.writable", "value": {"from_event": "writable"}},
+      {"op": "set_relation", "name": "capacity.allocation_eligible", "value": {"from_event": "allocation_eligible"}},
+      {"op": "set_relation", "name": "capacity.eligible", "value": {"from_event": "eligible"}},
+      {"op": "set_relation", "name": "capacity.eligibility_valid", "value": {"from_event": "eligibility_valid"}},
+      {"op": "set_relation", "name": "capacity.delta_valid", "value": {"from_event": "delta_valid"}},
+      {"op": "set_relation", "name": "released_device_capacity_detached", "value": {"from_event": "released_device_capacity_detached"}}
+    ]},
+    {"event": "ContributionEligibility", "from": ["STABLE", "MUTATING", "ROLLBACK_PENDING", "RESTORED"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "set_relation", "name": "capacity.writable", "value": {"from_event": "writable"}},
+      {"op": "set_relation", "name": "capacity.allocation_eligible", "value": {"from_event": "allocation_eligible"}},
+      {"op": "set_relation", "name": "capacity.eligible", "value": {"from_event": "eligible"}},
+      {"op": "set_relation", "name": "capacity.eligibility_valid", "value": {"from_event": "eligibility_valid"}},
+      {"op": "set_relation", "name": "capacity.delta_valid", "value": {"from_event": "delta_valid"}}
+    ]},
+    {"event": "SnapshotCapacity", "from": ["STABLE", "MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [{"op": "snapshot_relation_from_event"}]},
+    {"event": "CapacityMutation", "from": ["STABLE", "MUTATING"], "to": "MUTATING", "guard": {"op": "literal", "value": true}, "actions": [{"op": "update_relation_from_event"}]},
+    {"event": "CapacityFailure", "from": ["MUTATING", "ROLLBACK_PENDING"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [{"op": "activate_obligations_for_deltas", "template": "WDC-O1"}]},
+    {"event": "RestoreCapacity", "from": ["ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [{"op": "restore_relation_from_event", "template": "WDC-O1"}]},
+    {"event": "DelegateCapacityRestore", "from": ["ROLLBACK_PENDING", "DELEGATED"], "to": "DELEGATED", "guard": {"op": "literal", "value": true}, "actions": [{"op": "delegate_relation_from_event", "template": "WDC-O1"}]},
+    {"event": "CapacityAuthorityComplete", "from": ["DELEGATED", "ROLLBACK_PENDING", "RESTORED"], "to": "RESTORED", "guard": {"op": "literal", "value": true}, "actions": [
+      {"op": "restore_relation_from_event", "template": "WDC-O1"},
+      {"op": "complete_authority", "authority": {"from_event": "authority"}, "relation": "$event.relation"}
+    ]},
+    {"event": "ReleaseDevice", "from": ["MUTATING", "ROLLBACK_PENDING", "RESTORED"], "to": "ROLLBACK_PENDING", "guard": {"op": "literal", "value": true}, "actions": [{"op": "set_relation_from_event"}]},
+    {"event": "OperationReturn", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "OwnerTermination", "from": ["MUTATING", "ROLLBACK_PENDING", "DELEGATED", "RESTORED", "SETTLED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []},
+    {"event": "ProtocolComplete", "from": ["RESTORED"], "to": "SETTLED", "guard": {"op": "literal", "value": true}, "actions": []}
+  ],
+  "invariants": [
+    {"id": "WDC-I1", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "capacity.eligibility_valid", "value": true}, "evidence": ["trace:WDC-I1"]},
+    {"id": "WDC-I2", "deadline": "ALWAYS", "formula": {"op": "relation_equals", "name": "capacity.delta_valid", "value": true}, "evidence": ["trace:WDC-I2"]},
+    {"id": "WDC-I3", "deadline": "BEFORE_RELEASE", "formula": {"op": "relation_equals", "name": "released_device_capacity_detached", "value": true}, "evidence": ["trace:WDC-I3"]}
+  ],
+  "obligation_templates": [
+    {"id": "WDC-O1", "required_formula": {"op": "relation_matches_prestate", "name": "$obligation.relation"}, "activation_horizon": "CapacityFailure", "deadline_policy": "MAY_DELEGATE_TO", "delegation_deadline": "AT_SETTLEMENT", "completion_deadline": "AT_SETTLEMENT", "allowed_authorities": ["capacity_owner"]}
+  ],
+  "allowed_authorities": ["capacity_owner"],
+  "deadlines": ["ALWAYS", "BEFORE_RELEASE", "AT_SETTLEMENT", "BEFORE_OWNER_TERMINATION"],
+  "checkpoint_events": ["CapacityFailure", "DelegateCapacityRestore", "ReleaseDevice"],
+  "terminal_events": ["OperationReturn", "OwnerTermination", "ProtocolComplete"],
+  "acceptance_formula": {"op": "all", "items": [
+    {"op": "phase_in", "values": ["SETTLED", "RESTORED"]},
+    {"op": "no_irreversible_violation"}
+  ]},
+  "frame_relations": ["topology.active_device", "topology.fsid_identity", "unrelated_transaction_state"],
+  "semantic_footprint": ["device_membership", "device_writable_state", "device_total_bytes", "device_bytes_used", "writable_total_bytes", "free_chunk_space", "capacity_contribution", "capacity_failure", "device_release"],
+  "evidence_references": ["catalog-v0.4:WritableDeviceCapacityContribution", "source:btrfs-device-add-remove", "source:btrfs-device-shrink", "trace:WDC-I1", "trace:WDC-I2", "trace:WDC-I3", "trace:WDC-O1"]
+}

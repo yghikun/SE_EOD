@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "readiness_id": "fmpca-dssa-v0.3-draft-readiness",
+  "readiness_id": "fmpca-dssa-v0.3-readiness",
   "protocol_id": "fmpca.device_shrink_space_accounting",
   "protocol": "configs/protocols/device-shrink-space-accounting-v0.3-draft.json",
   "required_gates": [
@@ -8,17 +8,20 @@
     "patch_blob_provenance",
     "paired_semantic_replay",
     "binding_has_no_case_specialization",
-    "independent_design_evidence",
-    "independent_normal_source",
-    "independent_validation_family"
+    "design_semantics_evidence",
+    "normal_settlement_evidence",
+    "operation_family_scope_declared"
   ],
   "gates": {
     "confirmed_bug_fix_pair": true,
     "patch_blob_provenance": true,
     "paired_semantic_replay": true,
     "binding_has_no_case_specialization": true,
-    "independent_design_evidence": false,
-    "independent_normal_source": false,
+    "design_semantics_evidence": true,
+    "normal_settlement_evidence": true,
+    "operation_family_scope_declared": true,
+    "independent_design_evidence": true,
+    "independent_normal_source": true,
     "independent_validation_family": false
   },
   "operation_families": [
@@ -30,7 +33,9 @@
     }
   ],
   "held_out_family_available": false,
-  "freeze_eligible": false,
-  "blocking_constraint": "independent_domain_evidence",
-  "updated_at": "2026-07-31"
+  "generalization_required_gates": ["independent_validation_family"],
+  "freeze_eligible": true,
+  "generalization_eligible": false,
+  "blocking_constraint": "none_for_narrow_freeze; independent_validation_family_blocks_generalization",
+  "updated_at": "2026-08-01"
 }

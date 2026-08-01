@@ -1,0 +1,11 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeTopology", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}, "data": {"relation": "active_target_valid", "value": true}},
+    {"event": "SnapshotTopology", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}, "data": {"relation": "topology.device_membership", "value": "ABSENT"}},
+    {"event": "TopologyMutation", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}, "data": {"relation": "topology.device_membership", "value": "PRESENT", "deadline": "AT_SETTLEMENT"}},
+    {"event": "FailureObserved", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}},
+    {"event": "RestoreTopology", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}, "data": {"relation": "topology.device_membership"}},
+    {"event": "OperationReturn", "roles": {"operation": "device-add:rollback", "topology": "fs_devices:1", "device": "device:1"}, "epoch": {"operation_root": "device-add:rollback", "retry_generation": 0}}
+  ]
+}

@@ -1,0 +1,339 @@
+{
+  "binding_id": "fmpca.binding.chunk_metadata_reservation_completion",
+  "bug_specific_condition_count": 0,
+  "candidate_ready": true,
+  "evaluation_id": "fmpca-cmrc-v0.5-freeze-readiness",
+  "failed_candidate_gates": [],
+  "failed_freeze_gates": [],
+  "freeze_eligible": true,
+  "freeze_id": "fmpca-domain-semantic-freeze-v0.5",
+  "gates": {
+    "binding_has_no_case_specialization": true,
+    "candidate_ready": true,
+    "confirmed_bug_source_witness": true,
+    "normal_release_settlement_witness": true,
+    "paired_semantic_replay": true,
+    "protocol_validated": true,
+    "second_family_source_witness_closed": true,
+    "second_independent_family_available": true,
+    "source_semantic_footprint_closed": true
+  },
+  "held_out_family_available": false,
+  "interpretation": "CMRC v0.5 is a narrowly frozen Catalog entry. The #15 bug path, fixed/normal/unknown replay, release settlement and second independent device-item update family are closed enough for cross-operation-family qualification; no held-out or cross-filesystem generalization claim is made.",
+  "manifest": "configs\\evaluation\\cmrc-v0.5-readiness.json",
+  "manifest_sha256": "b68ded4bbaaec131339d773998e9ece2d98243108dc55ed078b88d992a90566d",
+  "operation_family_count": 2,
+  "protocol_id": "fmpca.chunk_metadata_reservation_completion",
+  "protocol_version": "0.5.0",
+  "replay": {
+    "cases": [
+      {
+        "actual": "VIOLATION_UNDER_LOADED_SPEC",
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 4,
+          "handled_events": 4,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "BEFORE_COMMIT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "expected": "VIOLATION_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/cmrc-bug-v0.5.json",
+        "id": "cmrc-bug-positive-zoned-success",
+        "passed": true,
+        "role": "BUG",
+        "unknown_rules": [],
+        "violation_rules": [
+          "ACCEPTANCE@AT_SETTLEMENT",
+          "CMRC-I1",
+          "CMRC-I3",
+          "CMRC-O1"
+        ]
+      },
+      {
+        "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 5,
+          "handled_events": 5,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "BEFORE_COMMIT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/cmrc-fixed-v0.5.json",
+        "id": "cmrc-fixed-normalized-success",
+        "passed": true,
+        "role": "FIXED_OR_REPAIR",
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      {
+        "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 5,
+          "handled_events": 5,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "BEFORE_COMMIT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/cmrc-normal-v0.5.json",
+        "id": "cmrc-normal-chunk-allocation",
+        "passed": true,
+        "role": "NORMAL",
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      {
+        "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": true,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 5,
+          "handled_events": 5,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "BEFORE_COMMIT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/cmrc-device-update-normal-v0.5.json",
+        "id": "cmrc-second-family-device-item-update",
+        "passed": true,
+        "role": "SIBLING_NORMAL",
+        "unknown_rules": [],
+        "violation_rules": []
+      },
+      {
+        "actual": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "coverage": {
+          "alias_closed": true,
+          "all_paths_closed": false,
+          "assumptions": [],
+          "escape_closure": "INCOMPLETE",
+          "events": 3,
+          "handled_events": 3,
+          "path_model_closed": true,
+          "reached_deadlines": [
+            "AT_SETTLEMENT"
+          ],
+          "repair_slice_closed": true,
+          "unhandled_events": []
+        },
+        "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/cmrc-unknown-v0.5.json",
+        "id": "cmrc-unknown-no-commit-closure",
+        "passed": true,
+        "role": "UNKNOWN",
+        "unknown_rules": [],
+        "violation_rules": []
+      }
+    ],
+    "failed": 0,
+    "passed": 5,
+    "total": 5
+  },
+  "schema_version": 1,
+  "second_family_candidates": [
+    {
+      "evidence": [
+        {
+          "function": "btrfs_grow_device",
+          "kind": "operation_family",
+          "value": "btrfs-device-item-update"
+        },
+        {
+          "found": true,
+          "kind": "metadata_reservation_wrapper",
+          "lines": [
+            3133
+          ],
+          "primitives": [
+            "btrfs_reserve_chunk_metadata",
+            "check_system_chunk"
+          ]
+        },
+        {
+          "found": true,
+          "kind": "chunk_tree_metadata_update",
+          "lines": [
+            3134
+          ],
+          "primitives": [
+            "btrfs_chunk_alloc_add_chunk_item",
+            "btrfs_update_device",
+            "btrfs_insert_empty_item",
+            "btrfs_del_item",
+            "remove_chunk_item"
+          ]
+        },
+        {
+          "found": true,
+          "kind": "transaction_chunk_metadata_release",
+          "lines": [
+            3135
+          ],
+          "primitives": [
+            "btrfs_trans_release_chunk_metadata"
+          ]
+        },
+        {
+          "found": true,
+          "kind": "reservation_update_release_order",
+          "ordered_triple": {
+            "metadata_update": {
+              "line": 3134,
+              "name": "btrfs_update_device",
+              "offset": 1332
+            },
+            "release": {
+              "line": 3135,
+              "name": "btrfs_trans_release_chunk_metadata",
+              "offset": 1369
+            },
+            "reservation": {
+              "line": 3133,
+              "name": "btrfs_reserve_chunk_metadata",
+              "offset": 1281
+            }
+          }
+        }
+      ],
+      "expected_source_witness_closed": true,
+      "function": "btrfs_grow_device",
+      "id": "btrfs-device-item-update-grow-v7.1",
+      "independent_from_development_family": true,
+      "operation_family": "btrfs-device-item-update",
+      "passed": true,
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "source_witness_closed": true
+    }
+  ],
+  "second_family_screening": {
+    "closed_independent_families": [
+      "btrfs-device-item-update"
+    ],
+    "failed": 0,
+    "passed": 1,
+    "total": 1
+  },
+  "second_family_search": {
+    "current_exclusions": [
+      "do_chunk_alloc is useful normal-path evidence but shares the same chunk allocation/reservation mechanism and is not counted as an independent family yet",
+      "btrfs_trans_release_chunk_metadata is settlement evidence, not a separate publication family"
+    ],
+    "found": true,
+    "required_shape": "A second normal/fixed/sibling operation family that publishes or updates chunk-tree metadata and independently requires transaction-scoped chunk metadata reservation completion before commit.",
+    "status": "CLOSED_FOR_CATALOG_FREEZE"
+  },
+  "semantic_freeze": "configs/freeze/domain-semantic-freeze-v0.5.json",
+  "semantic_freeze_sha256": "6fc50ea464ec13a5e6045aa9b6e02ac39076de22f07caee71a68b4c0669b6030",
+  "source_witness": {
+    "release": {
+      "evidence": [
+        {
+          "field": "trans->chunk_bytes_reserved",
+          "found": true,
+          "kind": "reserved_bytes_guard"
+        },
+        {
+          "found": true,
+          "kind": "chunk_metadata_release",
+          "primitives": [
+            "btrfs_block_rsv_release"
+          ]
+        },
+        {
+          "field": "trans->chunk_bytes_reserved",
+          "found": true,
+          "kind": "reservation_counter_zeroed"
+        }
+      ],
+      "operation_family": "btrfs-chunk-metadata-reservation-release",
+      "selected_release_path_closed": true
+    },
+    "reservation": {
+      "evidence": [
+        {
+          "function": "reserve_chunk_space",
+          "kind": "operation_family",
+          "value": "btrfs-chunk-metadata-reservation"
+        },
+        {
+          "found": true,
+          "kind": "chunk_publication",
+          "primitives": [
+            "btrfs_chunk_alloc_add_chunk_item"
+          ]
+        },
+        {
+          "found": true,
+          "kind": "positive_success_activation_call",
+          "line": 4270,
+          "primitives": [
+            "btrfs_zoned_activate_one_bg"
+          ]
+        },
+        {
+          "found": true,
+          "function": "btrfs_zoned_activate_one_bg",
+          "kind": "positive_success_possible",
+          "return_one_line": 2583,
+          "return_zero_line": 2561
+        },
+        {
+          "found": true,
+          "guards": [
+            "!$ret"
+          ],
+          "kind": "reservation_guard_reuses_positive_success",
+          "line": 4288,
+          "success_result_normalized_before_guard": false
+        },
+        {
+          "found": true,
+          "kind": "chunk_block_reservation",
+          "primitives": [
+            "btrfs_block_rsv_add"
+          ]
+        },
+        {
+          "fields": [
+            "trans->chunk_bytes_reserved",
+            "bytes"
+          ],
+          "found": true,
+          "kind": "transaction_reservation_accounting"
+        }
+      ],
+      "operation_family": "btrfs-chunk-metadata-reservation",
+      "selected_bug_path_closed": true,
+      "source_semantic_footprint_closed": true
+    }
+  }
+}

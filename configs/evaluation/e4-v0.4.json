@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-e4-v0.4",
+  "catalog": "docs/protocol-mining/domain-protocol-catalog-v0.4.md",
+  "semantic_freeze": "configs/freeze/domain-semantic-freeze-v0.4.json",
+  "composition_spec": "configs/compositions/device-topology-capacity-v0.4.json",
+  "held_out_operation_families": [],
+  "interpretation": "Cross-operation-family qualification of the device capacity contribution protocol and topology composition; not a post-freeze held-out or cross-filesystem benchmark.",
+  "cases": [
+    {"id": "wdc-shrink-success", "role": "RESIZE_NORMAL", "type": "capacity", "protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "events": "tests/fixtures/events/wdc-shrink-success-v0.4.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "wdc-shrink-rollback", "role": "RESIZE_FIXED_FAILURE", "type": "capacity", "protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "events": "tests/fixtures/events/wdc-shrink-rollback-v0.4.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "wdc-shrink-bug", "role": "RESIZE_CONFIRMED_BUG", "type": "capacity", "protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "events": "tests/fixtures/events/wdc-shrink-bug-v0.4.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "wdc-unknown", "role": "UNKNOWN", "type": "capacity", "protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "events": "tests/fixtures/events/wdc-unknown-v0.4.json", "expected": "INCOMPLETE_UNDER_LOADED_SPEC"},
+    {"id": "wdc-release", "role": "RELEASE_NEGATIVE", "type": "capacity", "protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "events": "tests/fixtures/events/wdc-release-violation-v0.4.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "dtc-add-success", "role": "MEMBERSHIP_NORMAL", "type": "composition", "topology_protocol": "configs/protocols/device-topology-rollback-v0.2.json", "topology_events": "tests/fixtures/events/dtc-topology-add-success-v0.4.json", "capacity_protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "capacity_events": "tests/fixtures/events/wdc-add-success-v0.4.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "dtc-add-rollback", "role": "MEMBERSHIP_FIXED_FAILURE", "type": "composition", "topology_protocol": "configs/protocols/device-topology-rollback-v0.2.json", "topology_events": "tests/fixtures/events/dtc-topology-add-rollback-v0.4.json", "capacity_protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "capacity_events": "tests/fixtures/events/wdc-add-rollback-v0.4.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "dtc-partial-capacity-rollback", "role": "COMPOSITION_NEGATIVE", "type": "composition", "topology_protocol": "configs/protocols/device-topology-rollback-v0.2.json", "topology_events": "tests/fixtures/events/dtc-topology-add-rollback-v0.4.json", "capacity_protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "capacity_events": "tests/fixtures/events/wdc-add-partial-rollback-v0.4.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "dtc-eligibility-mismatch", "role": "CROSS_RELATION_NEGATIVE", "type": "composition", "topology_protocol": "configs/protocols/device-topology-rollback-v0.2.json", "topology_events": "tests/fixtures/events/dtc-topology-add-success-v0.4.json", "capacity_protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "capacity_events": "tests/fixtures/events/wdc-add-cross-mismatch-v0.4.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "dtc-identity-mismatch", "role": "IDENTITY_UNKNOWN", "type": "composition", "topology_protocol": "configs/protocols/device-topology-rollback-v0.2.json", "topology_events": "tests/fixtures/events/dtc-topology-add-success-v0.4.json", "capacity_protocol": "configs/protocols/writable-device-capacity-contribution-v0.4.json", "capacity_events": "tests/fixtures/events/wdc-shrink-success-v0.4.json", "expected": "INCOMPLETE_UNDER_LOADED_SPEC"}
+  ]
+}

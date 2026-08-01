@@ -1,7 +1,9 @@
 # Bug #15: Btrfs Chunk Metadata Reservation Completion
 
-Status: `EVIDENCE_INCOMPLETE` for catalog freezing because the family has one
-confirmed case, despite strong reproduction evidence.
+Status: `CATALOG_V0.5_NARROW_FREEZE`. The confirmed bug path remains the
+development counterexample; the Catalog v0.5 freeze is justified only after
+adding an independent `btrfs_grow_device()` device-item update family as
+sibling source evidence.
 
 ## Evidence
 
@@ -29,4 +31,3 @@ confirmed case, despite strong reproduction evidence.
 - Responsibility transfer: transaction owns the reservation obligation.
 - Outcome/terminal: activation succeeds but companion reservation is absent.
 - Deadline: `BEFORE_COMMIT`.
-

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "freeze_id": "fmpca-heldout-semantic-freeze-e5-v0.4",
+  "catalog_version": "0.4.0",
+  "status": "POST_FREEZE_HELD_OUT_APPLICABILITY_SCREEN",
+  "predecessor_freeze": {
+    "configs/freeze/domain-semantic-freeze-v0.4.json": "0346e3119fe1835fd0b1af5c62f59104f982620f2d8ced099be558d2f2a8b82f"
+  },
+  "artifacts": {
+    "configs/freeze/domain-semantic-freeze-v0.4.json": "0346e3119fe1835fd0b1af5c62f59104f982620f2d8ced099be558d2f2a8b82f",
+    "configs/protocols/writable-device-capacity-contribution-v0.4.json": "2777f35892c2172b9d7a56103abc1acfd78f3e9d0491d7d03727828b6adbd9b8",
+    "configs/compositions/device-topology-capacity-v0.4.json": "56e43c6554bf5c652e74133d133b14d421a4022c951df52e7e4ac5f036bd7873",
+    "configs/bindings/writable-device-capacity-contribution-v0.4.json": "d8984397b77d6eaccdb92137ad3931427ae02d32403d596f79909b6568864308",
+    "configs/evaluation/e5-v0.4-heldout-screening.json": "6d469b83001477c09d338b64a84151c60eac470ef8a1e6b3792bf9604e592714",
+    "docs/protocol-mining/domain-protocol-catalog-v0.4.md": "1aff884ade47b330a0fd07ee689fa8ead11fa11471f246ec0a96b1841726c62a",
+    "docs/protocol-mining/e5-heldout-screening-v0.4.md": "d608fb437333b14486c110d0ffa1f6e9e16be7b2945d372bfdcb7feea622d8b0",
+    "docs/cases/bug-15-btrfs-chunk-reservation.md": "d64be20561974b1f64d974d6daf02c1dedaece9d4d52c64a7be143d4d5859f83",
+    "src/fmpca/frontend_capacity.py": "ae22d8a866ee5922592e496d3713e3c6aa8e0047f0132ddbf731945d2786a1e0",
+    "src/fmpca/heldout_v4.py": "b84bda02de77869098ab52c4b97c418ceedbe0aec81b169d2147a10218545277",
+    "tests/test_v4_heldout_screening.py": "2860fd79f2c4cd48ce6543bbb86911802c7115081f0523be58004abe8449f8f0",
+    "linux-sources/linux-v6.14-fs/fs/btrfs/block-group.c": "ca9796be747b8260d872e7132d14108b1080cab641b65146c45369a5ffb3097e",
+    "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c": "147b425db7c1cca85071b65962984510db0dc82703397e0d0638d58146cc6cd9",
+    "linux-sources/linux-v7.1-fs/fs/btrfs/dev-replace.c": "68cb6c1d15f49c76c5eb41c0b7729f361df98c00dda42e857084007099261681"
+  },
+  "screened_candidate_families": [
+    "btrfs-device-grow",
+    "btrfs-device-remove",
+    "btrfs-device-replace-finish",
+    "btrfs-chunk-metadata-reservation"
+  ],
+  "held_out_operation_families": [],
+  "rejected_candidate_families": [
+    "btrfs-device-grow",
+    "btrfs-device-remove",
+    "btrfs-device-replace-finish",
+    "btrfs-chunk-metadata-reservation"
+  ],
+  "protocol_acceptance_modifications": 0,
+  "checker_modifications_after_freeze": 0,
+  "bug_specific_condition_count": 0,
+  "frozen_at": "2026-08-01"
+}

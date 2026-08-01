@@ -1,4 +1,4 @@
-# RRAS Independence Screening v0.3 Draft
+# RRAS Independence Screening v0.3
 
 Screening date: 2026-07-31. Result: `ONE_OPERATION_FAMILY_ONLY`.
 
@@ -16,5 +16,6 @@ Screening date: 2026-07-31. Result: `ONE_OPERATION_FAMILY_ONLY`.
 
 Multiple patches in `merge_reloc_roots()` do not create multiple independent
 operation families. The executable readiness manifest therefore records one
-family and sets `independent_validation_family=false`. RRAS v0.3 remains a
-draft even though the selected Bug/fix and normal paths are source-closed.
+family and sets `independent_validation_family=false`. RRAS v0.3 is frozen
+only for this declared family; `generalization_eligible=false` remains
+enforced.

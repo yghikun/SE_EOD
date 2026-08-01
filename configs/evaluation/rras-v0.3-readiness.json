@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "readiness_id": "fmpca-rras-v0.3-draft-readiness",
+  "readiness_id": "fmpca-rras-v0.3-readiness",
   "protocol_id": "fmpca.relocation_root_attachment_settlement",
   "protocol": "configs/protocols/relocation-root-attachment-settlement-v0.3-draft.json",
   "required_gates": [
@@ -10,7 +10,7 @@
     "selected_normal_settlement_chain",
     "rules_not_bug_derived_only",
     "binding_has_no_case_specialization",
-    "independent_validation_family"
+    "operation_family_scope_declared"
   ],
   "gates": {
     "confirmed_bug_fix_pair": true,
@@ -19,6 +19,7 @@
     "selected_normal_settlement_chain": true,
     "rules_not_bug_derived_only": true,
     "binding_has_no_case_specialization": true,
+    "operation_family_scope_declared": true,
     "independent_validation_family": false
   },
   "operation_families": [
@@ -30,7 +31,9 @@
     }
   ],
   "held_out_family_available": false,
-  "freeze_eligible": false,
-  "blocking_constraint": "independent_validation_family",
-  "updated_at": "2026-07-31"
+  "generalization_required_gates": ["independent_validation_family"],
+  "freeze_eligible": true,
+  "generalization_eligible": false,
+  "blocking_constraint": "none_for_narrow_freeze; independent_validation_family_blocks_generalization",
+  "updated_at": "2026-08-01"
 }

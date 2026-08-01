@@ -53,19 +53,16 @@ class DeviceShrinkSpaceAccountingDraftTests(unittest.TestCase):
     def test_unknown_policy_cannot_prove_conformance(self):
         self.assertEqual(run_fixture("dssa-unknown.json").result, AnalysisResult.INCOMPLETE)
 
-    def test_readiness_gate_keeps_singleton_draft_unfrozen(self):
+    def test_readiness_allows_narrow_freeze_but_blocks_generalization(self):
         readiness = evaluate_readiness(
             str(ROOT / "configs/evaluation/dssa-v0.3-readiness.json")
         )
-        self.assertFalse(readiness["freeze_eligible"])
+        self.assertTrue(readiness["freeze_eligible"])
         self.assertEqual(readiness["operation_family_count"], 1)
+        self.assertEqual(readiness["failed_required_gates"], [])
+        self.assertFalse(readiness["generalization_eligible"])
         self.assertEqual(
-            readiness["failed_required_gates"],
-            [
-                "independent_design_evidence",
-                "independent_normal_source",
-                "independent_validation_family",
-            ],
+            readiness["failed_generalization_gates"], ["independent_validation_family"]
         )
 
 

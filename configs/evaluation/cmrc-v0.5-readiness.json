@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-cmrc-v0.5-freeze-readiness",
+  "catalog": "docs/protocol-mining/domain-protocol-catalog-v0.5.md",
+  "semantic_freeze": "configs/freeze/domain-semantic-freeze-v0.5.json",
+  "protocol": "configs/protocols/chunk-metadata-reservation-completion-v0.5.json",
+  "binding": "configs/bindings/chunk-metadata-reservation-completion-v0.5.json",
+  "candidate_required_gates": [
+    "protocol_validated",
+    "binding_has_no_case_specialization",
+    "confirmed_bug_source_witness",
+    "source_semantic_footprint_closed",
+    "normal_release_settlement_witness",
+    "paired_semantic_replay"
+  ],
+  "freeze_required_gates": [
+    "candidate_ready",
+    "second_independent_family_available",
+    "second_family_source_witness_closed"
+  ],
+  "gates": {
+    "second_independent_family_available": false,
+    "second_family_source_witness_closed": false
+  },
+  "operation_families": [
+    {
+      "family_id": "btrfs-chunk-metadata-reservation",
+      "role": "DEVELOPMENT_CONFIRMED_BUG",
+      "case_ref": "#15",
+      "scope": "reserve_chunk_space positive zoned activation success can suppress companion chunk metadata reservation"
+    },
+    {
+      "family_id": "btrfs-device-item-update",
+      "role": "SECOND_FAMILY_NORMAL_SOURCE",
+      "case_ref": "source-screen:btrfs_grow_device",
+      "scope": "device resize updates a chunk-tree device item under btrfs_reserve_chunk_metadata and releases the transaction reservation afterwards"
+    }
+  ],
+  "held_out_family_available": false,
+  "second_family_search": {
+    "status": "CLOSED_FOR_CATALOG_FREEZE",
+    "found": true,
+    "required_shape": "A second normal/fixed/sibling operation family that publishes or updates chunk-tree metadata and independently requires transaction-scoped chunk metadata reservation completion before commit.",
+    "current_exclusions": [
+      "do_chunk_alloc is useful normal-path evidence but shares the same chunk allocation/reservation mechanism and is not counted as an independent family yet",
+      "btrfs_trans_release_chunk_metadata is settlement evidence, not a separate publication family"
+    ]
+  },
+  "second_family_candidates": [
+    {
+      "id": "btrfs-device-item-update-grow-v7.1",
+      "operation_family": "btrfs-device-item-update",
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "function": "btrfs_grow_device",
+      "expected_source_witness_closed": true,
+      "screening_note": "btrfs_grow_device is independent from #15 and wraps btrfs_update_device with btrfs_reserve_chunk_metadata()/btrfs_trans_release_chunk_metadata()."
+    }
+  ],
+  "source_witness": {
+    "reservation": {
+      "source": "linux-sources/linux-v6.14-fs/fs/btrfs/block-group.c",
+      "source_version": "linux-v6.14",
+      "function": "reserve_chunk_space"
+    },
+    "positive_success": {
+      "source": "linux-sources/linux-v6.14-fs/fs/btrfs/zoned.c",
+      "source_version": "linux-v6.14",
+      "function": "btrfs_zoned_activate_one_bg"
+    },
+    "release": {
+      "source": "linux-sources/linux-v6.14-fs/fs/btrfs/transaction.c",
+      "source_version": "linux-v6.14",
+      "function": "btrfs_trans_release_chunk_metadata"
+    }
+  },
+  "replay_fixtures": [
+    {
+      "id": "cmrc-bug-positive-zoned-success",
+      "role": "BUG",
+      "fixture": "tests/fixtures/events/cmrc-bug-v0.5.json"
+    },
+    {
+      "id": "cmrc-fixed-normalized-success",
+      "role": "FIXED_OR_REPAIR",
+      "fixture": "tests/fixtures/events/cmrc-fixed-v0.5.json"
+    },
+    {
+      "id": "cmrc-normal-chunk-allocation",
+      "role": "NORMAL",
+      "fixture": "tests/fixtures/events/cmrc-normal-v0.5.json"
+    },
+    {
+      "id": "cmrc-second-family-device-item-update",
+      "role": "SIBLING_NORMAL",
+      "fixture": "tests/fixtures/events/cmrc-device-update-normal-v0.5.json"
+    },
+    {
+      "id": "cmrc-unknown-no-commit-closure",
+      "role": "UNKNOWN",
+      "fixture": "tests/fixtures/events/cmrc-unknown-v0.5.json"
+    }
+  ],
+  "interpretation": "CMRC v0.5 is a narrowly frozen Catalog entry. The #15 bug path, fixed/normal/unknown replay, release settlement and second independent device-item update family are closed enough for cross-operation-family qualification; no held-out or cross-filesystem generalization claim is made.",
+  "updated_at": "2026-08-01"
+}

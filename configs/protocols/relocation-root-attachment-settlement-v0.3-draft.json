@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "protocol_id": "fmpca.relocation_root_attachment_settlement",
-  "protocol_version": "0.3.0-draft",
+  "protocol_version": "0.3.0",
   "semantic_intent": "A runtime relocation merge that observes a preexisting fs_root-to-reloc_root attachment must settle that relation to its entry prestate before the relocation owner returns or teardown takes ownership.",
   "roles": [
     {"id": "operation", "kind": "operation", "anchor": true, "required": true},

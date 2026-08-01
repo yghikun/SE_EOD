@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "binding_id": "fmpca.binding.relocation_root_attachment_settlement",
-  "binding_version": "0.3.0-draft",
+  "binding_version": "0.3.0",
   "protocol_id": "fmpca.relocation_root_attachment_settlement",
   "kinds": ["preexisting_relation_failure_cleanup"],
   "field_paths": ["root.reloc_root"],

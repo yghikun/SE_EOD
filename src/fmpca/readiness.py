@@ -17,6 +17,12 @@ def evaluate_readiness(path: str) -> Dict[str, Any]:
     if len(families) != len(set(families)):
         raise ValueError("operation families must be unique")
     failed = sorted(name for name in required if not manifest["gates"][name])
+    generalization_required = set(manifest.get("generalization_required_gates", []))
+    generalization_failed = sorted(
+        name
+        for name in generalization_required
+        if not manifest["gates"].get(name, False)
+    )
     derived_eligible = not failed
     if bool(manifest["freeze_eligible"]) != derived_eligible:
         raise ValueError("freeze_eligible disagrees with required gate values")
@@ -27,4 +33,6 @@ def evaluate_readiness(path: str) -> Dict[str, Any]:
         "failed_required_gates": failed,
         "operation_family_count": len(families),
         "held_out_family_available": bool(manifest["held_out_family_available"]),
+        "generalization_eligible": not generalization_failed,
+        "failed_generalization_gates": generalization_failed,
     }

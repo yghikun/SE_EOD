@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-e6-v0.5-heldout-screening",
+  "catalog": "docs/protocol-mining/domain-protocol-catalog-v0.5.md",
+  "semantic_freeze": "configs/freeze/heldout-semantic-freeze-e6-v0.5.json",
+  "binding": "configs/bindings/chunk-metadata-reservation-completion-v0.5.json",
+  "protocol": "configs/protocols/chunk-metadata-reservation-completion-v0.5.json",
+  "frozen_operation_families": [
+    "btrfs-chunk-metadata-reservation",
+    "btrfs-device-item-update"
+  ],
+  "target_semantic_footprint": [
+    "chunk_tree_metadata_update",
+    "chunk_block_reservation",
+    "chunk_metadata_release",
+    "transaction_commit"
+  ],
+  "required_replay_roles": [
+    "NORMAL",
+    "FIXED_OR_REPAIR",
+    "NEGATIVE",
+    "UNKNOWN"
+  ],
+  "held_out_operation_families": [],
+  "interpretation": "E6 is a post-v0.5 held-out applicability screen for CMRC. It keeps the v0.5 protocol and binding frozen, then checks whether a third chunk-tree metadata family can close the same reservation/update/release lifecycle without being one of the two frozen v0.5 families.",
+  "candidates": [
+    {
+      "id": "btrfs-remove-chunk-v7.1",
+      "operation_family": "btrfs-chunk-item-removal",
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "function": "btrfs_remove_chunk",
+      "semantic_footprint": [
+        "chunk_tree_metadata_update",
+        "chunk_block_reservation",
+        "chunk_metadata_release",
+        "transaction_commit"
+      ],
+      "replay_fixtures": [
+        {
+          "id": "remove-chunk-heldout-normal",
+          "role": "NORMAL",
+          "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json"
+        },
+        {
+          "id": "remove-chunk-heldout-fixed",
+          "role": "FIXED_OR_REPAIR",
+          "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-fixed-v0.5.json"
+        },
+        {
+          "id": "remove-chunk-heldout-negative",
+          "role": "NEGATIVE",
+          "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-negative-v0.5.json"
+        },
+        {
+          "id": "remove-chunk-heldout-unknown",
+          "role": "UNKNOWN",
+          "fixture": "tests/fixtures/events/cmrc-remove-chunk-heldout-unknown-v0.5.json"
+        }
+      ],
+      "expected_decision": "ELIGIBLE_HELD_OUT_REPLAY"
+    },
+    {
+      "id": "btrfs-add-dev-item-v7.1",
+      "operation_family": "btrfs-device-item-update",
+      "source": "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c",
+      "source_version": "linux-v7.1",
+      "function": "btrfs_add_dev_item",
+      "semantic_footprint": [
+        "chunk_tree_metadata_update",
+        "chunk_block_reservation",
+        "chunk_metadata_release",
+        "transaction_commit"
+      ],
+      "expected_decision": "REJECT_NOT_INDEPENDENT"
+    }
+  ]
+}

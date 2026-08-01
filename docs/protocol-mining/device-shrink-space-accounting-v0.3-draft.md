@@ -1,6 +1,7 @@
-# DeviceShrinkSpaceAccounting v0.3 Draft
+# DeviceShrinkSpaceAccounting v0.3
 
-状态：`DRAFT_SINGLETON_FAMILY`; 不属于 frozen Catalog v0.2。
+状态：`FROZEN_NARROW_SCOPE`; 属于 Catalog v0.3，但不属于 frozen Catalog
+v0.2。文件名保留 `draft` 仅为兼容旧引用。
 
 ## Semantic object
 
@@ -32,10 +33,8 @@ generic rule that every counter update must be reversed.
 - The accepted patch identifies both the wrong forward delta and the
   unconditional rollback addition.
 
-The draft has structured Bug, fixed-success, fixed-failure and unknown replay.
-It remains a singleton `btrfs_shrink_device` family and cannot be frozen or
-used as held-out evidence without independent design/normal-source validation.
-The executable readiness manifest is
-`configs/evaluation/dssa-v0.3-readiness.json`; its failed required gates are
-`independent_design_evidence`, `independent_normal_source` and
-`independent_validation_family`.
+The protocol has structured Bug, fixed-success, fixed-failure and unknown
+replay. Independent Btrfs design/normal-source evidence is recorded in
+`dssa-evidence-v0.3.md`. It remains one `btrfs-device-shrink` family, so it is
+frozen narrowly but is not held-out or generalization evidence. The executable
+readiness manifest is `configs/evaluation/dssa-v0.3-readiness.json`.

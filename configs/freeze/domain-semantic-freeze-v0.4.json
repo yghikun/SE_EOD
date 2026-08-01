@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "freeze_id": "fmpca-domain-semantic-freeze-v0.4",
+  "catalog_version": "0.4.0",
+  "status": "FROZEN_CROSS_FAMILY_NARROW_SCOPE",
+  "predecessor_freezes": {
+    "configs/freeze/domain-semantic-freeze-v0.2.json": "12d70118013442cc6a38cb55c9faaee3eb9e7544e4ce7a43d6f72395ee924bb2",
+    "configs/freeze/domain-semantic-freeze-v0.3.json": "0ee8dea39711494a878e7263a4c262d4d16a5c68178277e8576dd53d12d38854"
+  },
+  "artifacts": {
+    "configs/freeze/domain-semantic-freeze-v0.2.json": "12d70118013442cc6a38cb55c9faaee3eb9e7544e4ce7a43d6f72395ee924bb2",
+    "configs/freeze/domain-semantic-freeze-v0.3.json": "0ee8dea39711494a878e7263a4c262d4d16a5c68178277e8576dd53d12d38854",
+    "configs/protocols/device-topology-rollback-v0.2.json": "9e238871b5e0d0ed1aa82a7c1625a7ad0c0a91a067958bb970357f782e5a6cf2",
+    "configs/protocols/writable-device-capacity-contribution-v0.4.json": "2777f35892c2172b9d7a56103abc1acfd78f3e9d0491d7d03727828b6adbd9b8",
+    "configs/compositions/device-topology-capacity-v0.4.json": "56e43c6554bf5c652e74133d133b14d421a4022c951df52e7e4ac5f036bd7873",
+    "configs/bindings/writable-device-capacity-contribution-v0.4.json": "d8984397b77d6eaccdb92137ad3931427ae02d32403d596f79909b6568864308",
+    "configs/evaluation/wdc-v0.4-readiness.json": "f7b8e99630ba4f51896a3ff7684d3b0f9d0010b8c7b8af4052ee6622fa8635c3",
+    "configs/evaluation/e4-v0.4.json": "ca7cb0c6cf66e02ef84493128fc06b2b87f60ed74ada7a0e1a60e820a1f5210b",
+    "src/fmpca/composition.py": "98d0f9427b281fdabe231d56f1224d4ddb22d12f9495733ee84683d55547123a",
+    "src/fmpca/frontend_capacity.py": "ae22d8a866ee5922592e496d3713e3c6aa8e0047f0132ddbf731945d2786a1e0",
+    "src/fmpca/readiness_v4.py": "53ea29052b04af8614498d9c23f6eade29e5f49a570681b54253bb5ee008ec45",
+    "tests/test_device_composition_v4.py": "54316b3d231a745a1b2843b137b18c9a7247e41682cc33b92aebe39758e6870a",
+    "tests/fixtures/events/dtc-topology-add-rollback-v0.4.json": "4785f143a8a92493dfcf07cef7dd58aff08a0c5a9a1306a59b39c30a8b588be7",
+    "tests/fixtures/events/dtc-topology-add-success-v0.4.json": "9a9b73190c8b3565b8b2cb3956da23c0b751685e728d0999c15c86fd47801773",
+    "tests/fixtures/events/wdc-add-cross-mismatch-v0.4.json": "45894143f6dd9be942374993344616c66efc24d856e505a45e9e8bcc833de390",
+    "tests/fixtures/events/wdc-add-partial-rollback-v0.4.json": "88711bd9bf15f5437287430cfad464c9da99771fafde82895a8056f57dba592c",
+    "tests/fixtures/events/wdc-add-rollback-v0.4.json": "7c6ab62014560d8968510e6e11fe43ef06b46a621f0e5b668e00e21022495dc0",
+    "tests/fixtures/events/wdc-add-success-v0.4.json": "f240c70d148e9918ce3b747a2e11b30daa9a74dcffbac19e8554702f20153426",
+    "tests/fixtures/events/wdc-release-violation-v0.4.json": "6a288c9ce6789828aaf9d39117f305b7bc83b7dbbdffdbfc0f103d2bfb786067",
+    "tests/fixtures/events/wdc-shrink-bug-v0.4.json": "dd2729bf410dfcd3f9ae7e4715fee24f0865f16826c0891fe79e30c2d8cf279d",
+    "tests/fixtures/events/wdc-shrink-rollback-v0.4.json": "26586077fc9d7d308394baa64c55a5785f2d5aa612df97bd92ee049ab766e62e",
+    "tests/fixtures/events/wdc-shrink-success-v0.4.json": "a359d30fef845e50b02e4c594a46dc3e5177b50ce871bbadf3595cb2b47386d0",
+    "tests/fixtures/events/wdc-unknown-v0.4.json": "526cd91a88a852372eb260e9f367abaa94d053c3e9a7b533edc6822b40d0f34e",
+    "docs/protocol-mining/device-protocol-decomposition-v0.4.md": "bbcda91e80fcd98b3b46cf671b42c40f8a5a8776a0c6b399be2c0b356685f176",
+    "docs/protocol-mining/device-source-evidence-v0.4.md": "b9084d5323727198a105340a1fde42d0010f50d5a43a29b62e6c0fd9ce8af2c8",
+    "docs/protocol-mining/domain-evaluation-split-v0.4.md": "9a16ecab57bf1bee6b939e617c6189c9d1d78b364048029260bc111f5e65b684",
+    "docs/protocol-mining/domain-freeze-manifest-v0.4.md": "b558b33289deb66721fc0dce1d579c53c0ed980f5aa588f8784de98044f2f60c",
+    "docs/protocol-mining/domain-manual-replay-v0.4.md": "54373d1ab1849dad750aac3d35c7b23e013955e20becd0bf72d74cb4216f8825",
+    "docs/protocol-mining/domain-protocol-catalog-v0.4.md": "1aff884ade47b330a0fd07ee689fa8ead11fa11471f246ec0a96b1841726c62a",
+    "docs/protocol-mining/domain-traceability-matrix-v0.4.md": "45ec2c9e34a3ba0cc978113691a2a7fa94c197e49471b8062fabcc101e6bbc00",
+    "linux-sources/linux-v7.1-fs/SOURCE_MANIFEST.json": "36f92beaadf5637f798497ac8fa2867e84c7fb6b5f9fd368b1568043ef3b4b10",
+    "linux-sources/linux-v7.1-fs/fs/btrfs/volumes.c": "147b425db7c1cca85071b65962984510db0dc82703397e0d0638d58146cc6cd9",
+    "tests/fixtures/patches/btrfs-shrink-free-chunk-space-e9fd2c.json": "4817e9ec31de93bae47b543fa3c2aa4afa7d92f6e96dd67b459682e27136a71e"
+  },
+  "component_protocols": [
+    "fmpca.device_topology_rollback",
+    "fmpca.writable_device_capacity_contribution"
+  ],
+  "composition_id": "fmpca.device_topology_capacity_composition",
+  "operation_families": [
+    "btrfs-device-membership-change",
+    "btrfs-device-capacity-resize"
+  ],
+  "held_out_operation_families": [],
+  "cross_operation_family_validated": true,
+  "held_out_generalization_eligible": false,
+  "cross_filesystem_generalization_eligible": false,
+  "bug_specific_condition_count": 0,
+  "frozen_at": "2026-08-01"
+}

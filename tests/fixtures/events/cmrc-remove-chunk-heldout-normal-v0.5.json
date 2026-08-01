@@ -1,0 +1,104 @@
+{
+  "events": [
+    {
+      "event": "InitializeChunkMetadataReservation",
+      "roles": {
+        "operation": "operation:btrfs_remove_chunk:heldout-normal",
+        "transaction": "trans:chunk-removal",
+        "block_group": "block_group:removed-chunk",
+        "chunk_item": "chunk_tree_record:removed-chunk",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "btrfs_remove_chunk",
+        "transaction_epoch": "trans:chunk-removal",
+        "retry_generation": 0
+      },
+      "data": {
+        "success_domain_compatible": true,
+        "source_footprint_closed": true,
+        "reservation_completed": false
+      },
+      "source": {"file": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json", "line": 1}
+    },
+    {
+      "event": "ChunkMetadataReserved",
+      "roles": {
+        "operation": "operation:btrfs_remove_chunk:heldout-normal",
+        "transaction": "trans:chunk-removal",
+        "block_group": "block_group:removed-chunk",
+        "chunk_item": "chunk_tree_record:removed-chunk",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "btrfs_remove_chunk",
+        "transaction_epoch": "trans:chunk-removal",
+        "retry_generation": 0
+      },
+      "data": {"bytes": "system metadata reservation for chunk removal"},
+      "source": {"file": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json", "line": 2}
+    },
+    {
+      "event": "ChunkTreeMetadataUpdate",
+      "roles": {
+        "operation": "operation:btrfs_remove_chunk:heldout-normal",
+        "transaction": "trans:chunk-removal",
+        "block_group": "block_group:removed-chunk",
+        "chunk_item": "chunk_tree_record:removed-chunk",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "btrfs_remove_chunk",
+        "transaction_epoch": "trans:chunk-removal",
+        "retry_generation": 0
+      },
+      "data": {
+        "relation": "chunk_tree.chunk_item_removed",
+        "value": true,
+        "before": false,
+        "deadline": "BEFORE_COMMIT",
+        "reservation_completed": true
+      },
+      "source": {"file": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json", "line": 3}
+    },
+    {
+      "event": "ChunkMetadataReleased",
+      "roles": {
+        "operation": "operation:btrfs_remove_chunk:heldout-normal",
+        "transaction": "trans:chunk-removal",
+        "block_group": "block_group:removed-chunk",
+        "chunk_item": "chunk_tree_record:removed-chunk",
+        "chunk_block_rsv": "fs_info.chunk_block_rsv"
+      },
+      "epoch": {
+        "operation_root": "btrfs_remove_chunk",
+        "transaction_epoch": "trans:chunk-removal",
+        "retry_generation": 0
+      },
+      "data": {},
+      "source": {"file": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json", "line": 4}
+    },
+    {
+      "event": "TransactionCommit",
+      "roles": {
+        "operation": "operation:btrfs_remove_chunk:heldout-normal",
+        "transaction": "trans:chunk-removal",
+        "block_group": "block_group:removed-chunk"
+      },
+      "epoch": {
+        "operation_root": "btrfs_remove_chunk",
+        "transaction_epoch": "trans:chunk-removal",
+        "retry_generation": 0
+      },
+      "data": {},
+      "source": {"file": "tests/fixtures/events/cmrc-remove-chunk-heldout-normal-v0.5.json", "line": 5}
+    }
+  ],
+  "closure": {
+    "path_model_closed": true,
+    "all_paths_closed": true,
+    "repair_slice_closed": true,
+    "alias_closed": true
+  },
+  "expected_result": "CONFORMANT_UNDER_LOADED_SPEC"
+}
