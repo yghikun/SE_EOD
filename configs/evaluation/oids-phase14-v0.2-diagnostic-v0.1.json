@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-oids-phase14-v0.2-diagnostic-v0.1",
+  "phase13_manifest": "configs/evaluation/oids-phase13-v0.2-preregistration-v0.1.json",
+  "diagnostic_extension": "configs/protocols/common/orphan-inode-deletion-settlement-v0.2-diagnostic.json",
+  "diagnostic_mapping": "configs/catalog/oids-phase14-reiserfs-diagnostic-mapping-v0.1.json",
+  "phase6_manifest": "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json",
+  "phase8_manifest": "configs/evaluation/oids-phase8-ubifs-validation-v0.1.json",
+  "phase9_manifest": "configs/evaluation/oids-phase9-common-freeze-v0.1.json",
+  "phase10_manifest": "configs/evaluation/oids-phase10-ocfs2-heldout-v0.1.json",
+  "development_fixtures": [
+    "tests/fixtures/events/oids-phase12-reiserfs-o1-minimal-v0.1.json",
+    "tests/fixtures/events/oids-phase12-reiserfs-o3-minimal-v0.1.json"
+  ],
+  "artifact_hashes": {
+    "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json": "5262d9db9c2f20b1434ad955de923deaf2df5c5a66267112db2c7c71e573f404",
+    "configs/evaluation/oids-phase13-v0.2-preregistration-v0.1.json": "2ab0f9acc550999af7b56185f4d37cc533a593a2eb2e569cc456e3d95e3f4698",
+    "outputs/fmpca-oids-phase13-v0.1/summary.json": "7428fae81ee501e230cd30402b758c54baaa7a6a4823d56363b06f1270a32702",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.2-diagnostic.json": "613b00438c5ebb6bf3ed6abc48ceb7bf6d73991dd074219f7ed2f84bc4d25fb1",
+    "src/fmpca/diagnostics.py": "27a6631a4d7c0ef75dd6604c58dbd6b886ae71bf5a06d9dbac3bfc946cb02cb1",
+    "configs/catalog/oids-phase14-reiserfs-diagnostic-mapping-v0.1.json": "2918075f088c453d98309212a9aa4900b352fef47bfa009f5e76cfd6dd1dc278",
+    "src/fmpca/orphan_phase14.py": "be0add986c0d6d81b5b86048dcb1bf7660e281359289a6fd9d1747c91ad63ab1",
+    "tests/test_oids_phase14_v02_diagnostics.py": "4a9a42188ac714dcaae97aad03783b26bde3118334ebccecd725d4ea8d56beda",
+    "docs/crossfs/orphan-inode/oids-phase14-v0.2-diagnostic-v0.1.md": "a9bdebfea2366c66f8f9e406bc06a571594052755ea013cb260a135b9c7cd330",
+    "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json": "5eaa6300791801b58cea2b5d9283495f711976352f49c276be2df25a24963985",
+    "configs/evaluation/oids-phase8-ubifs-validation-v0.1.json": "bad098a91fc0af5a6a99bc5cc90f193fc73e1af92a14e824c6078486de258fa0",
+    "configs/evaluation/oids-phase9-common-freeze-v0.1.json": "2b044c5498e0c157a62d0f0d48a11e984a3412d0530fbd5a9fb2534a3bf46082",
+    "configs/evaluation/oids-phase10-ocfs2-heldout-v0.1.json": "cdba00ca72f5518bd997e2e8e447a5538dc214e6fe229d9a5e3813111cd217d8",
+    "tests/fixtures/events/oids-phase12-reiserfs-o1-minimal-v0.1.json": "ac9c8135ebd3734a7f230b1737852bbde469a2459364fa1e4979cdefc297c2f5",
+    "tests/fixtures/events/oids-phase12-reiserfs-o3-minimal-v0.1.json": "139e1ccb036b743206440c2c5fb13cde2c3f472153e859c17fe4c319c53cd54e"
+  },
+  "next_phase_plan": "Phase 15 will freeze the Phase 14 v0.2 diagnostic and regression baseline, audit the unrevealed candidate pool without reading candidate source, and create a separate pre-reveal held-out preregistration. Only after that lock may the selected filesystem source be acquired for a new applicability and diagnostic evaluation.",
+  "interpretation": "OIDS v0.2 now provides a validated diagnostic extension over the unchanged v0.1 protocol. It classifies registration and recovery error suppression, maps each ReiserFS development bug to a machine-readable repair obligation and three evidence-bearing safe alternatives, and rejects incomplete evidence. No safe alternative is proven in the evaluated ReiserFS source, so OIDS-O1 and OIDS-O3 remain violations. Btrfs, ext4, UBIFS, and OCFS2 regression boundaries are preserved, applicability is unchanged, and v0.2 held-out validation remains disabled."
+}

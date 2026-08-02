@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "amendment_id": "fmpca-oids-phase8-ubifs-preregistration-amendment-v0.1",
+  "preregistration": "configs/evaluation/oids-phase8-ubifs-preregistration-v0.1.json",
+  "preregistration_sha256": "9923997a1a885dccb7c2356d63c302d0c9512fd604084d59a8cad596d3d24e49",
+  "reason": "GitHub path metadata established that fs/ubifs/inode.c does not exist in Linux v6.14. Inode settlement is implemented in file.c, and recovery reconstruction also requires replay.c.",
+  "removed_nonexistent_targets": [
+    "fs/ubifs/inode.c"
+  ],
+  "added_registered_targets": [
+    "fs/ubifs/file.c",
+    "fs/ubifs/replay.c"
+  ],
+  "effective_target_sources": [
+    "fs/ubifs/ubifs.h",
+    "fs/ubifs/dir.c",
+    "fs/ubifs/file.c",
+    "fs/ubifs/orphan.c",
+    "fs/ubifs/journal.c",
+    "fs/ubifs/recovery.c",
+    "fs/ubifs/replay.c",
+    "fs/ubifs/commit.c",
+    "fs/ubifs/super.c"
+  ],
+  "checker_or_protocol_lock_changes": 0,
+  "semantic_change": false
+}

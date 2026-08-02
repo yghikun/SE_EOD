@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "catalog_id": "fmpca.oids.phase14.reiserfs_diagnostic_mapping",
+  "catalog_version": "0.1.0",
+  "diagnostic_extension": "configs/protocols/common/orphan-inode-deletion-settlement-v0.2-diagnostic.json",
+  "development_mappings": [
+    {
+      "case_id": "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "rule": "OIDS-O1",
+      "cause": "REGISTRATION_ACCEPTANCE_ERROR_SUPPRESSION",
+      "trigger_facts": [
+        "persistent_registration_failed",
+        "failure_not_propagated",
+        "namespace_commit_reachable"
+      ],
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "evidence_facts": [
+        "source_anchor",
+        "control_flow",
+        "rule_specific_replay",
+        "unsafe_checkpoint"
+      ],
+      "expected_repair_obligation": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT",
+      "expected_safe_alternatives": [
+        "REGISTRATION_PROPAGATE_AND_PREVENT_COMMIT",
+        "REGISTRATION_ABORT_OR_ROLLBACK",
+        "REGISTRATION_FAILSTOP"
+      ],
+      "observed_repair_facts": [],
+      "repair_status": "REQUIRED_NOT_IMPLEMENTED",
+      "preserved_result": "VIOLATION_UNDER_LOADED_SPEC"
+    },
+    {
+      "case_id": "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "rule": "OIDS-O3",
+      "cause": "RECOVERY_CLEANUP_ERROR_SUPPRESSION",
+      "trigger_facts": [
+        "recovery_cleanup_failed",
+        "failure_not_propagated",
+        "successful_recovery_exposure_reachable"
+      ],
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "evidence_facts": [
+        "source_anchor",
+        "control_flow",
+        "rule_specific_replay",
+        "unsafe_checkpoint"
+      ],
+      "expected_repair_obligation": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT",
+      "expected_safe_alternatives": [
+        "RECOVERY_PROPAGATE_MOUNT_FAILURE",
+        "RECOVERY_CONTAIN_AND_RETAIN_RESPONSIBILITY",
+        "RECOVERY_DEADLINE_SAFE_DELEGATION"
+      ],
+      "observed_repair_facts": [],
+      "repair_status": "REQUIRED_NOT_IMPLEMENTED",
+      "preserved_result": "VIOLATION_UNDER_LOADED_SPEC"
+    }
+  ],
+  "mapping_policy": {
+    "diagnostic_does_not_discharge_obligation": true,
+    "repair_suggestion_does_not_prove_repair": true,
+    "at_least_one_safe_alternative_requires_independent_evidence": true,
+    "v0_1_result_preserved": true
+  }
+}

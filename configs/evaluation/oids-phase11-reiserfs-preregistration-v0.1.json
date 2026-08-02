@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "preregistration_id": "fmpca-oids-phase11-reiserfs-preregistration-v0.1",
+  "registered_on": "2026-08-02",
+  "candidate_filesystem": "ReiserFS",
+  "candidate_family": "balanced-tree journaled filesystem with persistent save links",
+  "candidate_status_before_reveal": "UNREVEALED_POST_COMMON_HELDOUT",
+  "selection_rationale": "ReiserFS does not occur in the pre-existing OIDS protocol, scope, binding, screening, replay, test, or source-evidence artifacts. XFS, F2FS, Btrfs, ext4, UBIFS, and OCFS2 are ineligible because they were revealed before this preregistration. ReiserFS is selected for a recovery-deadline-first test of persistent save-link cleanup before normal mount exposure.",
+  "common_freeze": {
+    "freeze_id": "fmpca.oids.common.narrow-freeze.v0.1",
+    "semantic_scope": "COMMON",
+    "freeze_boundary": "NARROW_FREEZE",
+    "phase9_manifest": "configs/evaluation/oids-phase9-common-freeze-v0.1.json",
+    "phase9_manifest_sha256": "2b044c5498e0c157a62d0f0d48a11e984a3412d0530fbd5a9fb2534a3bf46082",
+    "phase9_summary": "outputs/fmpca-oids-phase9-v0.1/summary.json",
+    "phase9_summary_sha256": "dd9fe3062ba2df6705ea957a0e657a2acc301e7e81b7c0f3e20574a7e49de184"
+  },
+  "prior_negative_heldout": {
+    "candidate": "OCFS2",
+    "decision": "NON_APPLICABLE",
+    "reason_code": "DEADLINE_NOT_ALIGNED",
+    "phase10_manifest": "configs/evaluation/oids-phase10-ocfs2-heldout-v0.1.json",
+    "phase10_manifest_sha256": "cdba00ca72f5518bd997e2e8e447a5538dc214e6fe229d9a5e3813111cd217d8",
+    "phase10_summary": "outputs/fmpca-oids-phase10-v0.1/summary.json",
+    "phase10_summary_sha256": "78c35643b8f3210544eaf73a8fa19b4d5355c81994bc17df921f5c099ed66d7e"
+  },
+  "source_version": {
+    "git_tag": "v6.8",
+    "git_commit": "e8f897f4afef0031fe618a8e94127a0934896aba",
+    "repository": "https://github.com/torvalds/linux",
+    "base_source_manifest": "linux-sources/linux-v6.8-fs/SOURCE_MANIFEST.json"
+  },
+  "registered_target_sources": [
+    "fs/reiserfs/reiserfs.h",
+    "fs/reiserfs/namei.c",
+    "fs/reiserfs/inode.c",
+    "fs/reiserfs/journal.c",
+    "fs/reiserfs/super.c",
+    "fs/reiserfs/stree.c"
+  ],
+  "screening_dimensions": [
+    "object",
+    "relation",
+    "lifecycle",
+    "authority",
+    "deadline"
+  ],
+  "required_source_stages": [
+    "registration",
+    "settlement",
+    "recovery"
+  ],
+  "recovery_deadline_first_requirements": [
+    "persistent save-link enumeration is synchronous on the successful RW mount path",
+    "terminal inode settlement is completed or durably co-settled for every enumerated save link",
+    "recovery cleanup dominates normal root exposure",
+    "no deferred worker can postpone required cleanup beyond exposure"
+  ],
+  "required_closure_gates": [
+    "correspondence",
+    "source",
+    "replay",
+    "registration",
+    "settlement",
+    "recovery",
+    "proof"
+  ],
+  "decision_partition": [
+    "APPLICABLE",
+    "NON_APPLICABLE",
+    "UNRESOLVED"
+  ],
+  "ineligible_previously_revealed_filesystems": [
+    "XFS",
+    "F2FS",
+    "Btrfs",
+    "ext4",
+    "UBIFS",
+    "OCFS2"
+  ],
+  "pre_reveal_locks": {
+    "configs/evaluation/oids-phase9-common-freeze-v0.1.json": "2b044c5498e0c157a62d0f0d48a11e984a3412d0530fbd5a9fb2534a3bf46082",
+    "outputs/fmpca-oids-phase9-v0.1/summary.json": "dd9fe3062ba2df6705ea957a0e657a2acc301e7e81b7c0f3e20574a7e49de184",
+    "configs/evaluation/oids-phase10-ocfs2-heldout-v0.1.json": "cdba00ca72f5518bd997e2e8e447a5538dc214e6fe229d9a5e3813111cd217d8",
+    "outputs/fmpca-oids-phase10-v0.1/summary.json": "78c35643b8f3210544eaf73a8fa19b4d5355c81994bc17df921f5c099ed66d7e",
+    "configs/evaluation/oids-phase9-common-scope-v0.1.json": "5e1c1eabb052c535ab53d932bd7276b7dfe85e9f70d1c7a22eecb91513cab3a5",
+    "configs/catalog/oids-phase9-common-qualification-v0.1.json": "49026ce99a454743b2aad88323cc517f76d0b6564b6799cd580e19dc90570b92",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "configs/bindings/common/orphan-inode-btrfs-v0.1.json": "71cff0452c3211ce2648003fa2c2687fef98b06cef45feb706af6394819ec620",
+    "configs/bindings/common/orphan-inode-ext4-v0.1.json": "c9634d37cab224dd778854246906933bb86f34511834620548a420bf452b61df",
+    "configs/bindings/common/orphan-inode-ubifs-v0.1.json": "6450adc66111c5911c6e12272178c75ed17679dd855bdc1bcf3761982cead336",
+    "src/fmpca/dsl.py": "1bb8ebca79b1adc3696a5a5e1447ac3a5a600732b4d90ccb03c6842419d5ce63",
+    "src/fmpca/model.py": "1d608fb40c4f988bcf60a5d2e41edc1e48aa0f67d5455e28ae36a946ad255645",
+    "src/fmpca/formulas.py": "c264f4a74f10dacf21f6905dd7bb2bbb2e3c86e85d1ff0157cd5c901e119614e",
+    "src/fmpca/proof.py": "7d9f3af3f4e54b61ac9dbd05b938d3febaf8cbe34f1a7064fef0d42767009b8d",
+    "src/fmpca/semantics.py": "526ebf1c1a4342fc461d5d635baefeb06c8293e48c1648e93c7020248884999b",
+    "src/fmpca/semantics_extensions.py": "aea9392afccf75705f882d3a9933938343732636e20a896dc0af3482793bb65f",
+    "src/fmpca/c_cfg.py": "4178a5599b97ba9a324c2c8fb77e35ec33c22fef157bb9b31b1354b00211a996",
+    "src/fmpca/c_cfg_extensions.py": "7195060919abee5465350663664331c381cb0c44db47549dbe0bc4091403a2b0",
+    "src/fmpca/frontend_orphan_common.py": "f9e18c615f3fca693dbf022823d511738faab7b6afd983ee9f53e9f13da09c4e",
+    "src/fmpca/scope.py": "ed1bf631cebe1a0e5b1b7af364470e801f2104509a03807f9dfcf6ceb2c40fc8",
+    "src/fmpca/orphan_phase9.py": "052235e1281b729e845a91a4fd4fd90bd412ded4cbb9b448937771bbae3b9367",
+    "tests/test_dsl.py": "6b8864eabbec40623e33eb5eb5587062ac29b0df1bc3b4950da6aa5cc4f2002c",
+    "tests/test_oids_phase7_scope.py": "9d55058c16f0a3603fa3edf3d82f14d1ae91589e10d0af5659dfe6426a4ce0d5",
+    "tests/test_oids_phase8_ubifs.py": "db906ada4e1eb5f0e22eaef28bfcdec4ad3e92645f7429ef5407aaf48e6722e7",
+    "tests/test_oids_phase9_common_freeze.py": "8ba1b2e5b24f5c368a33f5830a406bfa91d163ccdafca5e8f09b88e3b7d87013",
+    "tests/test_oids_phase10_ocfs2_heldout.py": "d4aa37660aa8341c6bebaf995078250661bb743c5e9b5aa94e9d1ad58291b4cb"
+  },
+  "post_reveal_rules": [
+    "The candidate source must not change the Phase 9 COMMON freeze, protocol, bindings, binding-independent checker, AcceptP, semantics, CFG frontend, or locked tests.",
+    "Recovery deadline correspondence is evaluated before promotion: cleanup must dominate normal root exposure on every validated successful RW path.",
+    "NON_APPLICABLE requires a controlled correspondence reason; UNRESOLVED cannot validate the COMMON held-out gate.",
+    "COMMON_HELDOUT_VALIDATED requires every registered closure gate and no post-freeze semantic modification.",
+    "ReiserFS is bound to Linux v6.8 for this result; later removal or deprecation cannot be used to alter the source decision."
+  ]
+}

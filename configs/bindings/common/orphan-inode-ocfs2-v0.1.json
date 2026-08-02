@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.orphan_inode_deletion_settlement.ocfs2",
+  "binding_version": "0.1.0",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "filesystem": "ocfs2",
+  "role_kinds": {
+    "operation": "clustered_unlink_final_eviction_or_journal_recovery",
+    "filesystem": "ocfs2_super_and_cluster_slots",
+    "inode": "filesystem_scoped_ocfs2_dinode_block_identity",
+    "namespace_entry": "ocfs2_directory_entry",
+    "orphan_registry": "slot_specific_ocfs2_orphan_system_directory",
+    "registration_transaction": "ocfs2_jbd2_unlink_handle",
+    "settlement_transaction": "ocfs2_jbd2_delete_inode_handle",
+    "deletion_authority": "cluster_exclusive_final_eviction_or_orphan_recovery_worker"
+  },
+  "semantic_footprint": [
+    "zero_link_namespace_detachment",
+    "slot_orphan_directory_acceptance",
+    "terminal_dinode_deallocation",
+    "orphan_dirent_atomic_retirement",
+    "journal_replay_then_asynchronous_orphan_cleanup"
+  ],
+  "namespace_transition_primitives": ["ocfs2_delete_entry"],
+  "link_count_primitives": ["drop_nlink"],
+  "zero_link_predicates": ["ocfs2_inode_is_unlinkable(inode)"],
+  "registry_insert_primitives": ["ocfs2_orphan_add"],
+  "registry_remove_primitives": ["ocfs2_orphan_del"],
+  "terminal_deletion_primitives": ["ocfs2_free_dinode"],
+  "transaction_settlement_primitives": ["ocfs2_commit_trans"],
+  "recovery_primitives": ["ocfs2_replay_journal", "ocfs2_complete_mount_recovery", "ocfs2_recover_orphans", "iput"],
+  "recovery_entry_markers": ["ocfs2_check_volume(osb)"],
+  "recovery_exposure_markers": ["return status;"],
+  "transaction_types": ["handle_t", "JBD2", "slot_recovery_workqueue"],
+  "registry_identity_tokens": ["ORPHAN_DIR_SYSTEM_INODE", "OCFS2_ORPHANED_FL", "i_orphaned_slot", "orphan_name"]
+}

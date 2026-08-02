@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "preregistration_id": "fmpca-oids-phase8-ubifs-preregistration-v0.1",
+  "registered_on": "2026-08-02",
+  "candidate_filesystem": "UBIFS",
+  "candidate_family": "UBI flash filesystem",
+  "candidate_status_before_reveal": "UNREVEALED_FOR_OIDS",
+  "selection_rationale": "UBIFS has not appeared in the OIDS protocol, binding, correspondence, replay, test, or Linux source snapshot artifacts. F2FS is rejected as blind held-out because it was explicitly reserved in the pre-freeze correspondence matrix.",
+  "source_version": {
+    "git_tag": "v6.14",
+    "git_commit": "38fec10eb60d687e30c8c6b5420d86e8149f7557",
+    "repository": "https://github.com/torvalds/linux"
+  },
+  "registered_target_sources": [
+    "fs/ubifs/ubifs.h",
+    "fs/ubifs/dir.c",
+    "fs/ubifs/inode.c",
+    "fs/ubifs/orphan.c",
+    "fs/ubifs/journal.c",
+    "fs/ubifs/recovery.c",
+    "fs/ubifs/commit.c",
+    "fs/ubifs/super.c"
+  ],
+  "screening_dimensions": [
+    "object",
+    "relation",
+    "lifecycle",
+    "authority",
+    "deadline"
+  ],
+  "required_source_stages": [
+    "registration",
+    "settlement",
+    "recovery"
+  ],
+  "decision_partition": [
+    "APPLICABLE",
+    "NON_APPLICABLE",
+    "UNRESOLVED"
+  ],
+  "pre_reveal_locks": {
+    "configs/evaluation/oids-phase7-scope-freeze-v0.1.json": "9260fd03af2cd281a57e8966a91cd02716c08089243bfb37f0e73fada8596ac7",
+    "configs/catalog/oids-phase7-scope-qualification-v0.1.json": "aad99d5f6e2fd5fbd073d0a9e7115490ef380971158e6b4d7ba62c9ab4f3b7ab",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "src/fmpca/c_cfg.py": "4178a5599b97ba9a324c2c8fb77e35ec33c22fef157bb9b31b1354b00211a996",
+    "src/fmpca/c_cfg_extensions.py": "7195060919abee5465350663664331c381cb0c44db47549dbe0bc4091403a2b0",
+    "src/fmpca/frontend_orphan_common.py": "f9e18c615f3fca693dbf022823d511738faab7b6afd983ee9f53e9f13da09c4e",
+    "src/fmpca/orphan_allpath.py": "8fca2f87d64191244657865bb69bd4b197664ed070f2a26450a2f45c70bc534d",
+    "src/fmpca/orphan_candidate.py": "eba5cad9d456584d5e5b9cc0ad134d9b2873bc3b0a1fb9913bfcaf3347737e94",
+    "src/fmpca/orphan_phase6.py": "df9ef3ccbd172664da5060e547f981e9368a9881dfb5ee589891b9dba2c135a4",
+    "src/fmpca/orphan_phase7.py": "3323adc3237d1fbf5e97eb935bdbf8cb123994b63d4b118099eacdb3a433a70d",
+    "src/fmpca/proof.py": "7d9f3af3f4e54b61ac9dbd05b938d3febaf8cbe34f1a7064fef0d42767009b8d",
+    "src/fmpca/semantics_extensions.py": "aea9392afccf75705f882d3a9933938343732636e20a896dc0af3482793bb65f",
+    "src/fmpca/formulas.py": "c264f4a74f10dacf21f6905dd7bb2bbb2e3c86e85d1ff0157cd5c901e119614e",
+    "src/fmpca/scope.py": "ed1bf631cebe1a0e5b1b7af364470e801f2104509a03807f9dfcf6ceb2c40fc8",
+    "tests/test_oids_phase7_scope.py": "9d55058c16f0a3603fa3edf3d82f14d1ae91589e10d0af5659dfe6426a4ce0d5"
+  },
+  "post_reveal_rules": [
+    "The candidate source must not change the locked protocol, checker, AcceptP, or Phase 7 scope declaration.",
+    "NON_APPLICABLE requires a controlled correspondence reason; UNRESOLVED does not count as broader-scope evidence.",
+    "XFS and F2FS remain revealed evidence and cannot replace the preregistered UBIFS candidate."
+  ]
+}

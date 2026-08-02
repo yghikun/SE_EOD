@@ -1,0 +1,14 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "FinalReferenceReleased", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "TerminalDeletionPrepared", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "OrphanRegistryRemoval", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}, "data": {"same_transaction": false}},
+    {"event": "SettlementTransactionCommit", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "oids:neg-remove", "filesystem": "fs:1", "inode": "inode:11", "namespace_entry": "dirent:11", "orphan_registry": "registry:1"}, "epoch": {}}
+  ]
+}

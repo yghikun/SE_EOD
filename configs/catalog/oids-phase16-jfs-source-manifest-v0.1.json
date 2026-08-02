@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "manifest_id": "fmpca-oids-phase16-jfs-linux-v6.14-source-manifest-v0.1",
+  "repository": "https://github.com/torvalds/linux",
+  "git_tag": "v6.14",
+  "git_commit": "38fec10eb60d687e30c8c6b5420d86e8149f7557",
+  "source_root": "linux-sources/linux-v6.14-jfs-heldout",
+  "registered_files": {
+    "fs/jfs/namei.c": "66ece81c3ce668179182968b20a33ed776ed5123ad109dadf00c9b415b07c416",
+    "fs/jfs/inode.c": "f0d95539b68c536f3f8386dd54c936cb7a05a350862f20f1cb930790a5f63ec7",
+    "fs/jfs/jfs_imap.c": "2458776181fa2bd0238b74f4955d9c69dd7231ae59c06bef2d82fdf4805e50d8",
+    "fs/jfs/jfs_txnmgr.c": "ec09669be6b9d698579a29c6197a1c97319a5d544ee46ba1adb525c8888267ac",
+    "fs/jfs/jfs_logmgr.c": "0f1e3ae4e49a2d02ed918c01b4bac13fd90b06c43299c624c1cacfbf8f242874",
+    "fs/jfs/jfs_mount.c": "21b4680943b3d4ea5685ca96410c83997417268c7989a6ea14c71f13aaaf5a29",
+    "fs/jfs/jfs_inode.h": "89fa99efb957263e46ed57e8b7c9e4699b07455e47fa83b5ead3dcc1892ca917",
+    "fs/jfs/jfs_dinode.h": "553cbabc0bd41a5022775f72ad2f8b2d72df8077b340db83d52762a5e3529ad6",
+    "fs/jfs/jfs_filsys.h": "2e24b0d77b5a60e2fecf7b60614da797faa4bc9b281c01670275cb52daf16a2a",
+    "fs/jfs/super.c": "6361e6c17ebf9b4482d665bafb6f6f17628582b2c268deb6d84ea066e1b317b8"
+  },
+  "structural_files": {
+    "fs/jfs/Makefile": "affd60fda88c2cee71c97f23d3f007a8feb08a8f70981aec1c88d94a20071f4e"
+  },
+  "absent_referenced_paths": ["fs/jfs/jfs_logredo.c"],
+  "acquisition": {
+    "registered_files": "GitHub Contents API at the pinned commit, base64 decoded",
+    "structural_files": "raw.githubusercontent.com at the pinned commit",
+    "absent_path_checks": ["GitHub Contents API HTTP 404", "raw.githubusercontent.com HTTP 404"]
+  }
+}

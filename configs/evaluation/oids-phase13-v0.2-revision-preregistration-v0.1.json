@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "preregistration_id": "fmpca-oids-phase13-v0.2-revision-preregistration-v0.1",
+  "registered_on": "2026-08-02",
+  "base_protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "base_protocol_version": "0.1.0-candidate-frozen",
+  "planned_protocol_version": "0.2.0",
+  "revision_kind": "DIAGNOSTIC_AND_FAILURE_HANDLING_CONTRACT_EXTENSION",
+  "semantic_edits_before_preregistration": 0,
+  "base_protocol_mutated": false,
+  "normative_safety_outcomes_preserved": true,
+  "motivation": "Phase 12 preserved COMMON semantic applicability but independently confirmed that ReiserFS violates the frozen OIDS-O1 registration-acceptance rule and OIDS-O3 recovery-exposure rule. These are source-confirmed implementation correctness defects under the loaded protocol. Version 0.2 is preregistered to explain failure causes and required repairs without weakening applicability or reclassifying the defects as conformant.",
+  "development_cases": [
+    {
+      "case_id": "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "filesystem": "ReiserFS",
+      "former_role": "V0_1_POST_COMMON_BLIND_HELD_OUT",
+      "v0_2_role": "DEVELOPMENT_COUNTEREXAMPLE",
+      "rule": "OIDS-O1",
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "upstream_acknowledged": false,
+      "runtime_reproduced": false
+    },
+    {
+      "case_id": "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "filesystem": "ReiserFS",
+      "former_role": "V0_1_POST_COMMON_BLIND_HELD_OUT",
+      "v0_2_role": "DEVELOPMENT_COUNTEREXAMPLE",
+      "rule": "OIDS-O3",
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "upstream_acknowledged": false,
+      "runtime_reproduced": false
+    }
+  ],
+  "repair_objectives": [
+    {
+      "objective_id": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT",
+      "trigger": "persistent orphan registration fails after the final-link transition is staged",
+      "required_safe_outcomes": [
+        "propagate failure and prevent namespace transaction commit",
+        "abort or roll back the final-link transition with proof",
+        "enter a failstop boundary that prevents unsafe success exposure"
+      ],
+      "forbidden_outcome": "commit namespace removal while persistent cleanup responsibility is absent",
+      "preserved_violation_rule": "OIDS-O1"
+    },
+    {
+      "objective_id": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT",
+      "trigger": "synchronous orphan recovery returns an incomplete-cleanup error",
+      "required_safe_outcomes": [
+        "propagate mount failure before root exposure",
+        "enter a failstop or read-only containment boundary with explicit retained responsibility",
+        "delegate cleanup only when the frozen deadline and delegation safety conditions are proven"
+      ],
+      "forbidden_outcome": "return successful mount exposure with required cleanup incomplete",
+      "preserved_violation_rule": "OIDS-O3"
+    }
+  ],
+  "non_goals": [
+    "do not add add_save_link_succeeded as an applicability predicate",
+    "do not add finish_unfinished_succeeded as an applicability predicate",
+    "do not reinterpret ReiserFS v0.1 violations as non-applicable",
+    "do not claim upstream acknowledgement, runtime reproduction, exploitability, or a CVE",
+    "do not mutate or supersede Phase 9 through Phase 12 historical artifacts"
+  ],
+  "planned_extension_surface": [
+    "machine-readable failure-cause taxonomy",
+    "machine-readable repair obligation and safe-outcome alternatives",
+    "diagnostic mapping from OIDS-O1/OIDS-O3 proof closure to repair objectives",
+    "coverage report fields that separate source-confirmed, runtime-reproduced, and upstream-acknowledged evidence"
+  ],
+  "evaluation_split_reset": {
+    "development": [
+      "ReiserFS OIDS-O1 source/CFG/minimal replay counterexample",
+      "ReiserFS OIDS-O3 source/CFG/minimal replay counterexample"
+    ],
+    "regression_validation": [
+      "Btrfs qualified successful profile",
+      "ext4 ERRORS_RO_OR_FAILSTOP profile and ERRORS_CONT negative boundary",
+      "UBIFS live and successful-RW profiles plus read-only deferred boundary",
+      "OCFS2 controlled DEADLINE_NOT_ALIGNED screening"
+    ],
+    "post_v0_2_heldout": [],
+    "heldout_candidate_status": "SELECTION_DEFERRED_UNTIL_SEPARATE_PRE_REVEAL_PREREGISTRATION"
+  },
+  "ineligible_future_heldout_filesystems": [
+    "XFS",
+    "F2FS",
+    "Btrfs",
+    "ext4",
+    "UBIFS",
+    "OCFS2",
+    "ReiserFS"
+  ],
+  "pre_edit_locks": {
+    "configs/evaluation/oids-phase12-claim-disposition-v0.1.json": "150235f8f767a47b7ba152e55f94b9bf3668aaa8657b8fabfaed4acb481acf05",
+    "configs/catalog/oids-phase12-common-claim-disposition-v0.1.json": "81655f303a621a6caab0ec62eb0a5e51c5c0ea002a29c846ef236b6059dfa82a",
+    "outputs/fmpca-oids-phase12-v0.1/summary.json": "9a37e9941a6f36946849d85ed15d776337eaca8f5ebd3a23cbb9155899c2191b",
+    "src/fmpca/orphan_phase12.py": "f5ee8550de77e34ab8ed8bcddbbb6f5e270ff3401f2b188895a5e235cabb4348",
+    "tests/test_oids_phase12_claim_disposition.py": "4b4f85abc19b392a255be6401137fa1004f8852b41a896a5e988fbb2c1b6cf6f",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "src/fmpca/dsl.py": "1bb8ebca79b1adc3696a5a5e1447ac3a5a600732b4d90ccb03c6842419d5ce63",
+    "src/fmpca/proof.py": "7d9f3af3f4e54b61ac9dbd05b938d3febaf8cbe34f1a7064fef0d42767009b8d",
+    "src/fmpca/semantics.py": "526ebf1c1a4342fc461d5d635baefeb06c8293e48c1648e93c7020248884999b",
+    "src/fmpca/semantics_extensions.py": "aea9392afccf75705f882d3a9933938343732636e20a896dc0af3482793bb65f",
+    "src/fmpca/c_cfg.py": "4178a5599b97ba9a324c2c8fb77e35ec33c22fef157bb9b31b1354b00211a996",
+    "src/fmpca/c_cfg_extensions.py": "7195060919abee5465350663664331c381cb0c44db47549dbe0bc4091403a2b0",
+    "configs/evaluation/oids-phase11-reiserfs-heldout-v0.1.json": "cd7e6d7e5a79e8872801a3932899d1c141505366a032f1a72023b8dc69b358c9",
+    "linux-sources/linux-v6.8-fs/PHASE11_REISERFS_SUPPLEMENTARY_MANIFEST.json": "b17965790c8de2883524053310391f5442cbc57548e3232d86d96a8e5eaf4cb2",
+    "tests/fixtures/events/oids-phase12-reiserfs-o1-minimal-v0.1.json": "ac9c8135ebd3734a7f230b1737852bbde469a2459364fa1e4979cdefc297c2f5",
+    "tests/fixtures/events/oids-phase12-reiserfs-o3-minimal-v0.1.json": "139e1ccb036b743206440c2c5fb13cde2c3f472153e859c17fe4c319c53cd54e"
+  },
+  "promotion_gates": [
+    "all pre-edit locks remain byte-identical",
+    "v0.1 OIDS-O1 and OIDS-O3 results remain violations",
+    "v0.2 extensions add diagnostics and repair contracts without outcome-dependent scope narrowing",
+    "regression validation preserves all qualified positive and explicit negative boundaries",
+    "a separate preregistration precedes selection or source reveal of any post-v0.2 heldout candidate"
+  ]
+}

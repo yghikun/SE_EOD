@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "catalog_id": "fmpca.oids.common_qualification",
+  "catalog_version": "0.1.0",
+  "taxonomy": "configs/catalog/protocol-scope-taxonomy-v0.1.json",
+  "scope_declaration": "configs/evaluation/oids-phase9-common-scope-v0.1.json",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "decision": "QUALIFIED_COMMON_NARROW_FREEZE",
+  "freeze_members": [
+    {
+      "filesystem": "btrfs",
+      "role": "DEVELOPMENT",
+      "operation_family": "btrfs-orphan-item-transaction",
+      "profile": "ZERO_LINK_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE",
+      "proof_source": "outputs/fmpca-oids-phase4-v0.1/summary.json"
+    },
+    {
+      "filesystem": "ext4",
+      "role": "VALIDATION",
+      "operation_family": "ext4-orphan-file-or-list-jbd2-failstop",
+      "profile": "ERRORS_RO_OR_FAILSTOP",
+      "proof_source": "outputs/fmpca-oids-phase6-v0.1/summary.json"
+    },
+    {
+      "filesystem": "ubifs",
+      "role": "VALIDATION",
+      "provenance": "PREREGISTERED_BLIND_INDEPENDENT_FAMILY",
+      "operation_family": "ubifs-journal-and-orphan-area-commit",
+      "profile": "LIVE_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE",
+      "proof_source": "outputs/fmpca-oids-phase8-v0.1/summary.json"
+    }
+  ],
+  "configuration_boundaries": [
+    {
+      "filesystem": "ext4",
+      "excluded": "ERRORS_CONT",
+      "reason": "closed OIDS-O1/O2/O3 negative witnesses"
+    },
+    {
+      "filesystem": "ubifs",
+      "excluded": "READ_ONLY_RECOVERY_EXPOSURE",
+      "reason": "recovery remains explicitly deferred rather than durably settled"
+    }
+  ],
+  "historical_artifact_policy": {
+    "phase7_scope_modified": false,
+    "historical_taxonomy_modified": false,
+    "candidate_protocol_modified": false,
+    "checker_modified": false
+  },
+  "held_out_policy": {
+    "common_heldout_validated": false,
+    "ubifs_counts_as_post_common_heldout": false,
+    "next_requirement": "After this COMMON freeze, preregister a different unrevealed filesystem before reading its source."
+  },
+  "interpretation": "Btrfs, qualified ext4, and qualified UBIFS are independent freeze members. UBIFS retains its blind preregistration provenance but participates in forming this COMMON freeze, so it cannot simultaneously validate the already-frozen COMMON scope."
+}

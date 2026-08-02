@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "catalog_id": "fmpca.oids.scope_qualification",
+  "catalog_version": "0.1.0",
+  "taxonomy": "configs/catalog/protocol-scope-taxonomy-v0.1.json",
+  "scope_declaration": "configs/evaluation/oids-phase7-ext4-failstop-scope-v0.1.json",
+  "phase6_manifest": "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "decision": "QUALIFIED_FS_SPECIFIC_SCOPE",
+  "applicability": {
+    "included": {
+      "filesystem": "ext4",
+      "error_policy": "ERRORS_RO_OR_FAILSTOP"
+    },
+    "predicate": "filesystem == ext4 AND error_policy != ERRORS_CONT",
+    "excluded": [
+      {
+        "filesystem": "ext4",
+        "error_policy": "ERRORS_CONT",
+        "reason": "closed OIDS-O1/O2/O3 negative witnesses"
+      }
+    ]
+  },
+  "common_freeze": {
+    "allowed": false,
+    "reason": "The declaration is FS_SPECIFIC and ERRORS_CONT is a valid configuration counterexample."
+  },
+  "held_out_policy": {
+    "xfs": "POST_FREEZE_XFS_VALIDATED",
+    "blind_held_out_claim": false,
+    "next_requirement": "A new filesystem family must be selected before protocol-level held-out validation."
+  },
+  "interpretation": "Phase 7 records the explicit configuration boundary without changing the historical taxonomy or candidate protocol bytes."
+}

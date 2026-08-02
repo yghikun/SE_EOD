@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-oids-phase13-v0.2-preregistration-v0.1",
+  "preregistration": "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json",
+  "preregistration_sha256": "5262d9db9c2f20b1434ad955de923deaf2df5c5a66267112db2c7c71e573f404",
+  "phase12_manifest": "configs/evaluation/oids-phase12-claim-disposition-v0.1.json",
+  "bug_catalog": "configs/catalog/oids-phase13-reiserfs-development-bugs-v0.1.json",
+  "evaluation_split": "configs/evaluation/oids-phase13-v0.2-evaluation-split-v0.1.json",
+  "v0_2_protocol_implemented": false,
+  "artifact_hashes": {
+    "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json": "5262d9db9c2f20b1434ad955de923deaf2df5c5a66267112db2c7c71e573f404",
+    "configs/evaluation/oids-phase13-v0.2-evaluation-split-v0.1.json": "93ee6fedb2519084bfd705e49a314d033ba637a7524be274ee593b6218ab60cc",
+    "configs/catalog/oids-phase13-reiserfs-development-bugs-v0.1.json": "403149f2a22d0eac007c4feebef5ede7d290ee58b7e44986bf8e45e77875f799",
+    "docs/cases/reiserfs-oids-source-confirmed-bugs-v0.1.md": "e02e7c3c1e2f259250efe4cfd9c2f8892217f1386b034f10b8548781962b4124",
+    "docs/crossfs/orphan-inode/oids-phase13-v0.2-preregistration-v0.1.md": "0c0aec1b3a88ade00168791966162e11e1146cf11850bd3f13e00bf9c71ff466",
+    "src/fmpca/orphan_phase13.py": "110ee9eb89cb931ef42d645e52efe9ffb40ebc10fe3c73bf3937e36e76af9a71",
+    "tests/test_oids_phase13_v02_preregistration.py": "4c13a61c1df33e579773b30e8ad513b08142b489df2b78904ed747d34747d04b",
+    "configs/evaluation/oids-phase12-claim-disposition-v0.1.json": "150235f8f767a47b7ba152e55f94b9bf3668aaa8657b8fabfaed4acb481acf05",
+    "outputs/fmpca-oids-phase12-v0.1/summary.json": "9a37e9941a6f36946849d85ed15d776337eaca8f5ebd3a23cbb9155899c2191b"
+  },
+  "next_phase_plan": "Phase 14 will implement the preregistered v0.2 diagnostic and failure-handling contract schema without changing v0.1 or weakening OIDS-O1/OIDS-O3. It will map both ReiserFS development bugs to safe repair alternatives, rerun Btrfs/ext4/UBIFS/OCFS2 regression boundaries, and keep held-out validation disabled until a separate candidate preregistration.",
+  "interpretation": "Both ReiserFS findings qualify as source-confirmed correctness bugs under the frozen OIDS contract: source anchors, control flow, minimal replay, unsafe checkpoints, and repair contracts are closed. Neither finding is claimed as runtime-reproduced, upstream-acknowledged, security-relevant, or assigned a CVE. Phase 13 preregisters a v0.2 diagnostic and failure-handling contract extension before semantic edits, preserves OIDS-O1 and OIDS-O3 as violations, moves ReiserFS into development, resets regression validation, and leaves the future held-out partition empty."
+}

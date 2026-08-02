@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "amendment_id": "fmpca-oids-phase10-ocfs2-preregistration-amendment-v0.1",
+  "amended_on": "2026-08-02",
+  "preregistration": "configs/evaluation/oids-phase10-ocfs2-preregistration-v0.1.json",
+  "preregistration_sha256": "391b906fb50c00a54ec9c09f04db1c5492e9e2c4bff570ec31f3b79bc6be6b1a",
+  "reason": "Post-reveal path resolution only. Linux v6.14 keeps OCFS2 orphan-directory operations in namei.c and journal/orphan recovery in journal.c rather than in separate orphan_dir.c and recovery.c files. ocfs2_fs.h is added because it defines the persistent orphan flag, system-directory identity, and orphan slot field. No semantic lock, candidate, source version, screening dimension, decision partition, or closure gate changes.",
+  "path_resolutions": [
+    {
+      "registered_path": "fs/ocfs2/orphan_dir.c",
+      "status": "ABSENT_AT_REGISTERED_REVISION",
+      "effective_paths": ["fs/ocfs2/namei.c"]
+    },
+    {
+      "registered_path": "fs/ocfs2/recovery.c",
+      "status": "ABSENT_AT_REGISTERED_REVISION",
+      "effective_paths": ["fs/ocfs2/journal.c"]
+    },
+    {
+      "registered_path": null,
+      "status": "STRUCTURAL_HEADER_DISCOVERED_POST_REVEAL",
+      "effective_paths": ["fs/ocfs2/ocfs2_fs.h"]
+    }
+  ],
+  "effective_target_sources": [
+    "fs/ocfs2/ocfs2.h",
+    "fs/ocfs2/ocfs2_fs.h",
+    "fs/ocfs2/namei.c",
+    "fs/ocfs2/inode.c",
+    "fs/ocfs2/journal.c",
+    "fs/ocfs2/super.c"
+  ],
+  "pre_reveal_semantics_modified": false,
+  "candidate_modified": false,
+  "source_revision_modified": false
+}

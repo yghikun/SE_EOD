@@ -35,6 +35,10 @@ REQUIRED_KEYS = {
     "evidence_references",
 }
 
+OPTIONAL_KEYS = {
+    "deadline_events",
+}
+
 FORMULA_OPS = {
     "literal",
     "all",
@@ -136,7 +140,7 @@ def validate_protocol(raw: Dict[str, Any]) -> None:
     if not isinstance(raw, dict):
         raise ProtocolValidationError("protocol root must be an object")
     missing = REQUIRED_KEYS - set(raw)
-    extra = set(raw) - REQUIRED_KEYS
+    extra = set(raw) - REQUIRED_KEYS - OPTIONAL_KEYS
     if missing:
         raise ProtocolValidationError(f"missing keys: {sorted(missing)}")
     if extra:
@@ -191,6 +195,29 @@ def validate_protocol(raw: Dict[str, Any]) -> None:
         raise ProtocolValidationError("checkpoint_events must be declared events")
     if not set(raw["terminal_events"]).issubset(set(events)):
         raise ProtocolValidationError("terminal_events must be declared events")
+    deadline_events = raw.get("deadline_events", {})
+    if not isinstance(deadline_events, dict):
+        raise ProtocolValidationError("deadline_events must be an object")
+    for event, deadlines in deadline_events.items():
+        if event not in events:
+            raise ProtocolValidationError(
+                f"deadline_events uses undeclared event: {event}"
+            )
+        if not isinstance(deadlines, list) or not deadlines:
+            raise ProtocolValidationError(
+                f"deadline_events[{event!r}] must be a non-empty list"
+            )
+        undeclared = set(deadlines) - set(raw["deadlines"])
+        if undeclared:
+            raise ProtocolValidationError(
+                f"deadline_events[{event!r}] uses undeclared deadlines: "
+                f"{sorted(undeclared)}"
+            )
+        if _duplicates(deadlines):
+            raise ProtocolValidationError(
+                f"deadline_events[{event!r}] has duplicate deadlines: "
+                f"{_duplicates(deadlines)}"
+            )
 
 
 def load_protocol(path: str) -> ProtocolSpec:

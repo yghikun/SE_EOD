@@ -1,0 +1,14 @@
+{
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "registration_transaction": "handle:301"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "registration_transaction": "handle:301"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "registration_transaction": "handle:301"}, "epoch": {}},
+    {"event": "FinalReferenceReleased", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "deletion_authority": "ext4_evict"}, "epoch": {}},
+    {"event": "TerminalDeletionPrepared", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "settlement_transaction": "handle:302"}, "epoch": {}},
+    {"event": "OrphanRegistryRemoval", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "settlement_transaction": "handle:302"}, "epoch": {}, "data": {"same_transaction": true}},
+    {"event": "SettlementTransactionCommit", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file", "settlement_transaction": "handle:302"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "oids:ext4:1", "filesystem": "ext4:sb:1", "inode": "ext4:ino:84:gen:3", "namespace_entry": "dirent:84", "orphan_registry": "ext4:orphan-file"}, "epoch": {}}
+  ]
+}

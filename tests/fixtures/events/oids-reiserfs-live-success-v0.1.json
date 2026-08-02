@@ -1,0 +1,17 @@
+{
+  "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+  "profile_status": "SUCCESSFUL_LIVE_DELETION",
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "registration_transaction": "journal:701"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "registration_transaction": "journal:701"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "registration_transaction": "journal:701"}, "epoch": {}},
+    {"event": "FinalReferenceReleased", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "deletion_authority": "reiserfs_evict_inode"}, "epoch": {}},
+    {"event": "TerminalDeletionPrepared", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree"}, "epoch": {}},
+    {"event": "TerminalDeletionDurable", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree"}, "epoch": {}},
+    {"event": "OrphanRegistryRemoval", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "settlement_transaction": "journal:734"}, "epoch": {}, "data": {"same_transaction": false}},
+    {"event": "SettlementTransactionCommit", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree", "settlement_transaction": "journal:734"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "oids:reiserfs:live:1", "filesystem": "reiserfs:sb:1", "inode": "reiserfs:object:841:dir:2", "namespace_entry": "diritem:841", "orphan_registry": "reiserfs:save-link-tree"}, "epoch": {}}
+  ]
+}

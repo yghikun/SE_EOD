@@ -1,0 +1,167 @@
+{
+  "absent_recovery_path": "fs/jfs/jfs_logredo.c",
+  "applicability": "NON_APPLICABLE",
+  "artifact_hashes_verified": true,
+  "candidate_replaced": false,
+  "common_v0_2_validated": false,
+  "conformance": "NOT_EVALUABLE",
+  "controlled_reason_code": "PERSISTENT_CLEANUP_OBJECT_NOT_FOUND",
+  "diagnostic_disposition": "NOT_APPLICABLE",
+  "evaluation_id": "fmpca-oids-phase16-jfs-blind-heldout-v0.1",
+  "evidence_anchors": [
+    {
+      "actual_line": "inode_dec_link_count(ip);",
+      "contains": "inode_dec_link_count(ip);",
+      "fact": "last-link transition is part of unlink",
+      "line": 520,
+      "matched": true,
+      "path": "fs/jfs/namei.c"
+    },
+    {
+      "actual_line": "if ((new_size = commitZeroLink(tid, ip)) < 0) {",
+      "contains": "commitZeroLink(tid, ip)",
+      "fact": "zero-link deletion is prepared in the transaction",
+      "line": 528,
+      "matched": true,
+      "path": "fs/jfs/namei.c"
+    },
+    {
+      "actual_line": "tblk->xflag |= COMMIT_DELETE;",
+      "contains": "COMMIT_DELETE",
+      "fact": "transaction is marked as inode deletion",
+      "line": 538,
+      "matched": true,
+      "path": "fs/jfs/namei.c"
+    },
+    {
+      "actual_line": "set_cflag(COMMIT_Freewmap, ip);",
+      "contains": "COMMIT_Freewmap",
+      "fact": "only volatile working-map cleanup may remain",
+      "line": 646,
+      "matched": true,
+      "path": "fs/jfs/namei.c"
+    },
+    {
+      "actual_line": "* free xtree/data blocks from persistent block map, and",
+      "contains": "persistent block map",
+      "fact": "persistent data resources are freed by zero-link commit",
+      "line": 669,
+      "matched": true,
+      "path": "fs/jfs/namei.c"
+    },
+    {
+      "actual_line": "} else if (tblk->xflag & COMMIT_DELETE) {",
+      "contains": "COMMIT_DELETE",
+      "fact": "delete commit updates inode allocation state",
+      "line": 2364,
+      "matched": true,
+      "path": "fs/jfs/jfs_txnmgr.c"
+    },
+    {
+      "actual_line": "diUpdatePMap(ipimap, ip->i_ino, true, tblk);",
+      "contains": "diUpdatePMap",
+      "fact": "persistent inode allocation map is freed",
+      "line": 2366,
+      "matched": true,
+      "path": "fs/jfs/jfs_txnmgr.c"
+    },
+    {
+      "actual_line": "if (test_cflag(COMMIT_Freewmap, inode))",
+      "contains": "COMMIT_Freewmap",
+      "fact": "eviction handles only remaining working-map cleanup",
+      "line": 152,
+      "matched": true,
+      "path": "fs/jfs/inode.c"
+    },
+    {
+      "actual_line": "if (j_sb->s_state != cpu_to_le32(FM_CLEAN) &&",
+      "contains": "FM_CLEAN",
+      "fact": "read-write mount requires a clean filesystem",
+      "line": 348,
+      "matched": true,
+      "path": "fs/jfs/jfs_mount.c"
+    },
+    {
+      "actual_line": "jfs_err(\"jfs_mount: Mount Failure: File System Dirty.\");",
+      "contains": "File System Dirty",
+      "fact": "dirty read-write mount fails closed",
+      "line": 350,
+      "matched": true,
+      "path": "fs/jfs/jfs_mount.c"
+    },
+    {
+      "actual_line": "* recovery manager (jfs_logredo.c).",
+      "contains": "jfs_logredo.c",
+      "fact": "registered log manager points outside the pinned kernel build for recovery",
+      "line": 11,
+      "matched": true,
+      "path": "fs/jfs/jfs_logmgr.c"
+    },
+    {
+      "actual_line": "jfs_logmgr.o jfs_txnmgr.o \\",
+      "contains": "jfs_logmgr.o jfs_txnmgr.o",
+      "fact": "kernel JFS build contains log and transaction managers but no logredo object",
+      "line": 12,
+      "matched": true,
+      "path": "fs/jfs/Makefile"
+    }
+  ],
+  "evidence_anchors_closed": true,
+  "interpretation": "JFS is a valid blind held-out attempt but is outside the OIDS applicability domain. Its delete transaction frees persistent block and inode allocation state; only volatile working-map cleanup may remain for an open deleted inode. No persistent orphan registry or equivalent mount-recovery cleanup object exists in the pinned kernel implementation, and dirty read-write mount fails closed.",
+  "manifest": "configs/evaluation/oids-phase16-jfs-heldout-v0.1.json",
+  "manifest_sha256": "c602717a18c10fa1fde887472955dca5efa48ffcd7e2103a3a2a249151e9a8b9",
+  "next_phase_plan": "Phase 17 will freeze this first complete held-out result byte-for-byte, preserve candidate_replaced=false, and issue the final v0.2 claim disposition without reopening candidate selection.",
+  "persistent_registry_absent": true,
+  "persistent_registry_token_hits": {
+    "next_orphan": [],
+    "orphan": [],
+    "orphan_file": [],
+    "prev_orphan": []
+  },
+  "phase15_preregistration_preserved": true,
+  "phase16_heldout_evaluation_closed": true,
+  "registered_sources_acquired": true,
+  "replay_required": false,
+  "schema_version": 1,
+  "screening": [
+    {
+      "closed": true,
+      "dimension": "object",
+      "reason_code": "PERSISTENT_CLEANUP_OBJECT_NOT_FOUND",
+      "status": "NOT_SATISFIED"
+    },
+    {
+      "closed": true,
+      "dimension": "relation",
+      "reason_code": "NO_PERSISTENT_PENDING_RELATION",
+      "status": "NOT_REACHED_AFTER_OBJECT_GATE"
+    },
+    {
+      "closed": true,
+      "dimension": "lifecycle",
+      "reason_code": "PERSISTENT_DELETE_COMPLETES_BEFORE_VOLATILE_CLOSE",
+      "status": "NON_CORRESPONDING"
+    },
+    {
+      "closed": true,
+      "dimension": "authority",
+      "reason_code": "KERNEL_DIRTY_MOUNT_FAILS_CLOSED",
+      "status": "NON_CORRESPONDING"
+    },
+    {
+      "closed": true,
+      "dimension": "deadline",
+      "reason_code": "NO_KERNEL_RECOVERY_EXPOSURE",
+      "status": "NOT_REACHED"
+    }
+  ],
+  "source_hashes_verified": true,
+  "source_revision": "38fec10eb60d687e30c8c6b5420d86e8149f7557",
+  "source_stages": {
+    "recovery": "KERNEL_DIRTY_READ_WRITE_MOUNT_REJECTION_PROVEN",
+    "registration": "CONTROLLED_ABSENCE_OF_PERSISTENT_CLEANUP_REGISTRY_PROVEN",
+    "settlement": "PERSISTENT_DELETE_COMMIT_AND_MAP_FREE_PROVEN"
+  },
+  "stop_policy_honored": true,
+  "structural_amendment_closed": true
+}

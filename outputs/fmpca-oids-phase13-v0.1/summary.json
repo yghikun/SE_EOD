@@ -1,0 +1,89 @@
+{
+  "artifact_hashes_verified": true,
+  "bug_assessments": [
+    {
+      "bug_claim_allowed": true,
+      "case_id": "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "closed": true,
+      "cve_claimed": false,
+      "evidence_boundary_preserved": true,
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "minimal_replay_closed": true,
+      "repair_contract_documented": true,
+      "rule": "OIDS-O1",
+      "runtime_reproduced": false,
+      "security_impact_established": false,
+      "source_anchor_match": true,
+      "source_confirmed": true,
+      "unsafe_mechanism_documented": true,
+      "upstream_acknowledged": false
+    },
+    {
+      "bug_claim_allowed": true,
+      "case_id": "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "closed": true,
+      "cve_claimed": false,
+      "evidence_boundary_preserved": true,
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "minimal_replay_closed": true,
+      "repair_contract_documented": true,
+      "rule": "OIDS-O3",
+      "runtime_reproduced": false,
+      "security_impact_established": false,
+      "source_anchor_match": true,
+      "source_confirmed": true,
+      "unsafe_mechanism_documented": true,
+      "upstream_acknowledged": false
+    }
+  ],
+  "bug_cases_closed": true,
+  "common_v0_2_validated": false,
+  "diagnostic_revision_only": true,
+  "evaluation_id": "fmpca-oids-phase13-v0.2-preregistration-v0.1",
+  "heldout_validation_allowed": false,
+  "interpretation": "Both ReiserFS findings qualify as source-confirmed correctness bugs under the frozen OIDS contract: source anchors, control flow, minimal replay, unsafe checkpoints, and repair contracts are closed. Neither finding is claimed as runtime-reproduced, upstream-acknowledged, security-relevant, or assigned a CVE. Phase 13 preregisters a v0.2 diagnostic and failure-handling contract extension before semantic edits, preserves OIDS-O1 and OIDS-O3 as violations, moves ReiserFS into development, resets regression validation, and leaves the future held-out partition empty.",
+  "manifest": "configs/evaluation/oids-phase13-v0.2-preregistration-v0.1.json",
+  "manifest_sha256": "2ab0f9acc550999af7b56185f4d37cc533a593a2eb2e569cc456e3d95e3f4698",
+  "next_phase_plan": "Phase 14 will implement the preregistered v0.2 diagnostic and failure-handling contract schema without changing v0.1 or weakening OIDS-O1/OIDS-O3. It will map both ReiserFS development bugs to safe repair alternatives, rerun Btrfs/ext4/UBIFS/OCFS2 regression boundaries, and keep held-out validation disabled until a separate candidate preregistration.",
+  "phase12_disposition_preserved": true,
+  "phase13_preregistration_closed": true,
+  "pre_edit_locks_verified": true,
+  "preregistration": "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json",
+  "preregistration_hash_verified": true,
+  "preserved_violation_rules": [
+    "OIDS-O1",
+    "OIDS-O3"
+  ],
+  "repair_objectives_closed": true,
+  "runtime_reproduced_bug_count": 0,
+  "schema_version": 1,
+  "security_bug_count": 0,
+  "source_confirmed_bug_count": 2,
+  "split_assessment": {
+    "development_case_count": 2,
+    "development_case_ids": [
+      "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED"
+    ],
+    "development_rules": [
+      "OIDS-O1",
+      "OIDS-O3"
+    ],
+    "heldout_case_count": 0,
+    "heldout_contamination_count": 0,
+    "heldout_empty": true,
+    "known_revealed_filesystems_excluded": true,
+    "regression_validation_filesystems": [
+      "btrfs",
+      "ext4",
+      "ocfs2",
+      "ubifs"
+    ],
+    "split_reset_closed": true
+  },
+  "terminology_policy_closed": true,
+  "upstream_acknowledged_bug_count": 0,
+  "v0_1_frozen": true,
+  "v0_1_protocol_mutated": false,
+  "v0_2_protocol_implemented": false
+}

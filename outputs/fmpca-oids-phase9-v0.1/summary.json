@@ -1,0 +1,103 @@
+{
+  "artifact_hashes_verified": true,
+  "assessment": {
+    "blockers": [],
+    "closed": true,
+    "common_heldout_validated": false,
+    "filesystems": [
+      {
+        "applicability_predicate_closed": true,
+        "blockers": [],
+        "closed": true,
+        "configuration_scope": "ZERO_LINK_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE",
+        "correspondence_closed": true,
+        "filesystem": "btrfs",
+        "operation_family": "btrfs-orphan-item-transaction",
+        "proof_closure_closed": true,
+        "replay_closed": true,
+        "source_witness_closed": true,
+        "status": "CLOSED",
+        "validation_role": "DEVELOPMENT"
+      },
+      {
+        "applicability_predicate_closed": true,
+        "blockers": [],
+        "closed": true,
+        "configuration_scope": "ERRORS_RO_OR_FAILSTOP",
+        "correspondence_closed": true,
+        "filesystem": "ext4",
+        "operation_family": "ext4-orphan-file-or-list-jbd2-failstop",
+        "proof_closure_closed": true,
+        "replay_closed": true,
+        "source_witness_closed": true,
+        "status": "CLOSED",
+        "validation_role": "VALIDATION"
+      },
+      {
+        "applicability_predicate_closed": true,
+        "blockers": [],
+        "closed": true,
+        "configuration_scope": "LIVE_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE",
+        "correspondence_closed": true,
+        "filesystem": "ubifs",
+        "operation_family": "ubifs-journal-and-orphan-area-commit",
+        "proof_closure_closed": true,
+        "replay_closed": true,
+        "source_witness_closed": true,
+        "status": "CLOSED",
+        "validation_role": "VALIDATION"
+      }
+    ],
+    "independent_operation_families": true,
+    "phase7_scope_preserved": true,
+    "scope": {
+      "applicable_filesystems": [
+        "btrfs",
+        "ext4",
+        "ubifs"
+      ],
+      "common_candidate_ready": true,
+      "common_freeze_ready": true,
+      "common_heldout_validated": false,
+      "cross_filesystem_claim_allowed": true,
+      "declaration_valid": true,
+      "declared_semantic_scope": "COMMON",
+      "failed_candidate_gates": [],
+      "failed_freeze_gates": [],
+      "failed_heldout_gates": [
+        "heldout_correspondence_closed",
+        "heldout_proof_closure_closed",
+        "heldout_replay_closed",
+        "heldout_source_witness_closed",
+        "no_post_freeze_semantic_modifications",
+        "third_filesystem_post_freeze"
+      ],
+      "failed_scope_gates": [],
+      "freeze_boundary": "NARROW_FREEZE",
+      "non_applicable_filesystems": [],
+      "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+      "unresolved_filesystems": []
+    },
+    "status": "CLOSED",
+    "ubifs_is_freeze_member_not_post_common_heldout": true
+  },
+  "bug_specific_condition_count": 0,
+  "common_candidate_ready": true,
+  "common_freeze_manifest_generated": true,
+  "common_freeze_ready": true,
+  "common_heldout_validated": false,
+  "cross_filesystem_claim_allowed": true,
+  "evaluation_id": "fmpca-oids-phase9-common-freeze-v0.1",
+  "freeze_id": "fmpca.oids.common.narrow-freeze.v0.1",
+  "freeze_members": [
+    "btrfs",
+    "ext4",
+    "ubifs"
+  ],
+  "interpretation": "Phase 9 creates a COMMON NARROW_FREEZE for the unchanged OIDS protocol across Btrfs, ext4 ERRORS_RO_OR_FAILSTOP, and UBIFS live/successful-RW recovery. All candidate and freeze gates close with three independent operation families. Existing ext4 ERRORS_CONT and UBIFS read-only recovery boundaries remain explicit. UBIFS helped form the freeze and therefore is not post-COMMON held-out evidence; COMMON_HELDOUT_VALIDATED remains false.",
+  "manifest": "configs/evaluation/oids-phase9-common-freeze-v0.1.json",
+  "manifest_sha256": "2b044c5498e0c157a62d0f0d48a11e984a3412d0530fbd5a9fb2534a3bf46082",
+  "next_heldout_requirement": "Preregister a different unrevealed filesystem after the Phase 9 COMMON freeze, before reading its source; lock the COMMON scope, protocol, checker, AcceptP, bindings, and tests.",
+  "phase7_scope_unchanged": true,
+  "schema_version": 1
+}

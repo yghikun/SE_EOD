@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "catalog_id": "fmpca.oids.phase10.ocfs2_heldout_screening",
+  "catalog_version": "0.1.0",
+  "candidate_filesystem": "OCFS2",
+  "validation_role": "HELD_OUT",
+  "validation_provenance": "PREREGISTERED_POST_COMMON_BLIND",
+  "operation_family": "ocfs2-slot-orphan-directory-jbd2-cluster-recovery",
+  "decision": "NON_APPLICABLE",
+  "controlled_reason_code": "DEADLINE_NOT_ALIGNED",
+  "closed_dimensions": ["object", "relation", "lifecycle", "authority"],
+  "blocked_dimensions": ["deadline"],
+  "validated_live_profile": "SUCCESSFUL_LIVE_DELETION",
+  "rejected_recovery_profile": "RECOVERY_ASYNCHRONOUS_AFTER_MOUNT_EXPOSURE",
+  "evidence_note": "OCFS2 registers a last-link inode in a slot-specific persistent orphan directory and atomically co-settles orphan removal with dinode deallocation. Mount recovery, however, queues orphan cleanup after root construction and provides no wait proving completion before fill_super returns. The locked OIDS-O3 recovery deadline therefore does not align.",
+  "common_heldout_validated": false,
+  "phase9_common_freeze_preserved": true
+}

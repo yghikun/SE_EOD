@@ -1,0 +1,20 @@
+{
+  "source_witness": {
+    "filesystem": "ext4",
+    "configuration": "ERRORS_CONT",
+    "failure": "ext4_orphan_get error exits void cleanup without per-inode settlement",
+    "transaction_effect": "recovery completion and successful mount exposure remain reachable"
+  },
+  "expected_result": "VIOLATION_UNDER_LOADED_SPEC",
+  "expected_rule": "OIDS-O3",
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "RecoveryAuthorityAccepted", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry", "deletion_authority": "ext4:mount-recovery"}, "epoch": {}},
+    {"event": "RecoveryExposure", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry", "deletion_authority": "ext4:mount-recovery"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "ext4:errors-cont:recovery", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:recovery", "namespace_entry": "ext4:dirent:recovery", "orphan_registry": "ext4:orphan-registry", "deletion_authority": "ext4:mount-recovery"}, "epoch": {}}
+  ]
+}

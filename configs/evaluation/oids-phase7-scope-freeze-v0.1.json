@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-oids-phase7-scope-freeze-v0.1",
+  "taxonomy": "configs/catalog/protocol-scope-taxonomy-v0.1.json",
+  "scope_catalog": "configs/catalog/oids-phase7-scope-qualification-v0.1.json",
+  "scope_declaration": "configs/evaluation/oids-phase7-ext4-failstop-scope-v0.1.json",
+  "phase6_manifest": "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json",
+  "phase6_summary": "outputs/fmpca-oids-phase6-v0.1/summary.json",
+  "test_artifact": "tests/test_oids_phase7_scope.py",
+  "artifact_hashes": {
+    "configs/catalog/protocol-scope-taxonomy-v0.1.json": "c4c1055e1c90b9c47ecf56a6f1d09331129f3d1a07c1555a14cf4b53c50119a4",
+    "configs/catalog/oids-phase7-scope-qualification-v0.1.json": "aad99d5f6e2fd5fbd073d0a9e7115490ef380971158e6b4d7ba62c9ab4f3b7ab",
+    "configs/evaluation/oids-phase7-ext4-failstop-scope-v0.1.json": "ee1f54519ef66077a3e99ed1306bbf01661de9ff7d6bbc6764b9a02a7a7bda85",
+    "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json": "5eaa6300791801b58cea2b5d9283495f711976352f49c276be2df25a24963985",
+    "outputs/fmpca-oids-phase6-v0.1/summary.json": "6384c538e6d32d5fe10563dc34bb14c87c1ade64f052eaa3e110bacbf023a8fa",
+    "outputs/fmpca-oids-phase6-v0.1/report.md": "6dab42bcbaa84ea5be307d0c240e625cf0d7d5fb5cedf63013a86184e72dd44f",
+    "src/fmpca/orphan_phase7.py": "3323adc3237d1fbf5e97eb935bdbf8cb123994b63d4b118099eacdb3a433a70d",
+    "src/fmpca/scope.py": "ed1bf631cebe1a0e5b1b7af364470e801f2104509a03807f9dfcf6ceb2c40fc8",
+    "src/fmpca/report.py": "cafe91646ef9a356197238d4323953b11248518a47699fe49fb3275699157630",
+    "src/fmpca/semantics_extensions.py": "aea9392afccf75705f882d3a9933938343732636e20a896dc0af3482793bb65f",
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "configs/bindings/common/orphan-inode-ext4-v0.1.json": "c9634d37cab224dd778854246906933bb86f34511834620548a420bf452b61df",
+    "tests/test_oids_phase7_scope.py": "9d55058c16f0a3603fa3edf3d82f14d1ae91589e10d0af5659dfe6426a4ce0d5",
+    "docs/crossfs/orphan-inode/oids-phase7-qualified-scope-v0.1.md": "e4127b260a96e377ee13dc8547479531d1a8b229d6a576d247b3f01b653c6f86",
+    "linux-sources/linux-v6.14-fs/SOURCE_MANIFEST.json": "302223b94530376b980c082621ec2a9c34b05dcfb27bfa45a3adf776e669918c",
+    "linux-sources/linux-v6.14-fs/PHASE6_SUPPLEMENTARY_MANIFEST.json": "f7d2ea6a0c2ad6c05d2a570919968762323d39f917fff89037040e8269cd7e66"
+  },
+  "interpretation": "Phase 7 freezes a narrow ext4 failstop-qualified OIDS scope: filesystem == ext4 AND error_policy != ERRORS_CONT. ERRORS_CONT remains an explicit excluded configuration with closed Phase 6 negative witnesses. COMMON freeze and blind held-out claims remain false."
+}

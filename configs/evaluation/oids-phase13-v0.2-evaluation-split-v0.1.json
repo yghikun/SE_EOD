@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "split_id": "fmpca.oids.v0.2.evaluation_split.v0.1",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "planned_protocol_version": "0.2.0",
+  "preregistration": "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json",
+  "development": [
+    {
+      "filesystem": "ReiserFS",
+      "case_id": "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "rule": "OIDS-O1",
+      "provenance": "REVEALED_V0_1_HELDOUT_PROMOTED_TO_V0_2_DEVELOPMENT"
+    },
+    {
+      "filesystem": "ReiserFS",
+      "case_id": "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "rule": "OIDS-O3",
+      "provenance": "REVEALED_V0_1_HELDOUT_PROMOTED_TO_V0_2_DEVELOPMENT"
+    }
+  ],
+  "regression_validation": [
+    {
+      "filesystem": "Btrfs",
+      "profile": "ZERO_LINK_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE",
+      "required_result": "PRESERVE_PHASE9_CLOSED"
+    },
+    {
+      "filesystem": "ext4",
+      "profile": "ERRORS_RO_OR_FAILSTOP_AND_ERRORS_CONT_BOUNDARY",
+      "required_result": "PRESERVE_POSITIVE_AND_NEGATIVE_BOUNDARIES"
+    },
+    {
+      "filesystem": "UBIFS",
+      "profile": "LIVE_SUCCESSFUL_RW_AND_READ_ONLY_DEFERRED_BOUNDARY",
+      "required_result": "PRESERVE_POSITIVE_AND_DEFERRED_BOUNDARIES"
+    },
+    {
+      "filesystem": "OCFS2",
+      "profile": "RECOVERY_ASYNCHRONOUS_AFTER_MOUNT_EXPOSURE",
+      "required_result": "PRESERVE_NON_APPLICABLE_DEADLINE_NOT_ALIGNED"
+    }
+  ],
+  "heldout": [],
+  "heldout_status": "UNASSIGNED_REQUIRES_SEPARATE_PRE_REVEAL_PREREGISTRATION",
+  "heldout_ineligible_filesystems": [
+    "XFS",
+    "F2FS",
+    "Btrfs",
+    "ext4",
+    "UBIFS",
+    "OCFS2",
+    "ReiserFS"
+  ],
+  "contamination_rules": [
+    "No filesystem or case used in v0.1 formation, validation, screening, held-out evaluation, source evidence, or replay may become v0.2 held-out evidence.",
+    "ReiserFS OIDS-O1 and OIDS-O3 are development cases and cannot count toward v0.2 held-out validation.",
+    "A future candidate must be selected and hash-locked before its source is read.",
+    "No held-out claim is allowed while heldout is empty."
+  ],
+  "split_reset_closed": true
+}
+

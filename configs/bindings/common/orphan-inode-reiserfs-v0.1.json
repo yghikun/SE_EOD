@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "binding_id": "fmpca.binding.orphan_inode_deletion_settlement.reiserfs",
+  "binding_version": "0.1.0",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "filesystem": "reiserfs",
+  "role_kinds": {
+    "operation": "unlink_final_eviction_or_rw_mount_save_link_recovery",
+    "filesystem": "reiserfs_super_and_balanced_tree",
+    "inode": "reiserfs_objectid_and_dirid_scoped_inode",
+    "namespace_entry": "reiserfs_directory_item_entry",
+    "orphan_registry": "reiserfs_persistent_save_link_tree_item",
+    "registration_transaction": "reiserfs_unlink_journal_transaction",
+    "settlement_transaction": "reiserfs_delete_object_then_save_link_transaction",
+    "deletion_authority": "reiserfs_evict_inode_or_synchronous_finish_unfinished"
+  },
+  "semantic_footprint": [
+    "zero_link_namespace_detachment",
+    "persistent_save_link_acceptance",
+    "terminal_object_item_deletion",
+    "save_link_retirement_after_object_deletion",
+    "journal_replay_and_synchronous_mount_save_link_scan"
+  ],
+  "namespace_transition_primitives": ["reiserfs_cut_from_item"],
+  "link_count_primitives": ["drop_nlink"],
+  "zero_link_predicates": ["!savelink"],
+  "registry_insert_primitives": ["add_save_link"],
+  "registry_remove_primitives": ["remove_save_link"],
+  "terminal_deletion_primitives": ["reiserfs_delete_object"],
+  "transaction_settlement_primitives": ["journal_end"],
+  "recovery_primitives": ["journal_read", "finish_unfinished", "iput"],
+  "recovery_entry_markers": ["journal_init(s, jdev_name, old_format, commit_max_age)"],
+  "recovery_exposure_markers": ["return (0);"],
+  "transaction_types": ["reiserfs_transaction_handle", "journal_transaction", "tree_balance"],
+  "registry_identity_tokens": ["MAX_KEY_OBJECTID", "i_link_saved_unlink_mask", "save_link_key", "k_objectid"]
+}

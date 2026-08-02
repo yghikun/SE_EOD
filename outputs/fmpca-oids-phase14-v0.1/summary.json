@@ -1,0 +1,213 @@
+{
+  "applicability_unchanged": true,
+  "artifact_hashes_verified": true,
+  "common_v0_2_validated": false,
+  "development_replays": [
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "expected_rule": "OIDS-O1",
+      "fixture": "tests/fixtures/events/oids-phase12-reiserfs-o1-minimal-v0.1.json",
+      "preserved": true,
+      "violation_rules": [
+        "OIDS-O1"
+      ]
+    },
+    {
+      "actual": "VIOLATION_UNDER_LOADED_SPEC",
+      "expected": "VIOLATION_UNDER_LOADED_SPEC",
+      "expected_rule": "OIDS-O3",
+      "fixture": "tests/fixtures/events/oids-phase12-reiserfs-o3-minimal-v0.1.json",
+      "preserved": true,
+      "violation_rules": [
+        "OIDS-O3"
+      ]
+    }
+  ],
+  "diagnostic_mappings": [
+    {
+      "case_id": "REISERFS_SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "cause": "REGISTRATION_ACCEPTANCE_ERROR_SUPPRESSION",
+      "diagnostic_closed": true,
+      "evidence_complete": true,
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "expected_safe_alternatives_match": true,
+      "forbidden_outcome": "commit namespace removal while persistent cleanup responsibility is absent",
+      "incomplete_evidence_rejected": true,
+      "mapping_closed": true,
+      "missing_evidence": [],
+      "missing_repair_facts": {
+        "REGISTRATION_ABORT_OR_ROLLBACK": [
+          "final_link_transition_rolled_back",
+          "transaction_aborted"
+        ],
+        "REGISTRATION_FAILSTOP": [
+          "failstop_entered",
+          "unsafe_success_exposure_prevented"
+        ],
+        "REGISTRATION_PROPAGATE_AND_PREVENT_COMMIT": [
+          "failure_propagated",
+          "namespace_commit_prevented"
+        ]
+      },
+      "preserved_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "proven_safe_alternatives": [],
+      "repair_obligation": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT",
+      "repair_status": "REQUIRED_NOT_IMPLEMENTED",
+      "rule": "OIDS-O1",
+      "safe_alternatives": [
+        {
+          "id": "REGISTRATION_PROPAGATE_AND_PREVENT_COMMIT",
+          "kind": "PROPAGATE_FAILURE",
+          "required_facts": [
+            "failure_propagated",
+            "namespace_commit_prevented"
+          ]
+        },
+        {
+          "id": "REGISTRATION_ABORT_OR_ROLLBACK",
+          "kind": "PROVE_ABORT_OR_ROLLBACK",
+          "required_facts": [
+            "transaction_aborted",
+            "final_link_transition_rolled_back"
+          ]
+        },
+        {
+          "id": "REGISTRATION_FAILSTOP",
+          "kind": "ENTER_FAILSTOP",
+          "required_facts": [
+            "failstop_entered",
+            "unsafe_success_exposure_prevented"
+          ]
+        }
+      ],
+      "stage": "registration",
+      "supplied_evidence": [
+        "control_flow",
+        "rule_specific_replay",
+        "source_anchor",
+        "unsafe_checkpoint"
+      ],
+      "trigger_facts_present": true,
+      "unsafe_checkpoint": "RegistrationTransactionCommit"
+    },
+    {
+      "case_id": "REISERFS_RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "cause": "RECOVERY_CLEANUP_ERROR_SUPPRESSION",
+      "diagnostic_closed": true,
+      "evidence_complete": true,
+      "evidence_level": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "expected_safe_alternatives_match": true,
+      "forbidden_outcome": "return successful mount exposure with required cleanup incomplete",
+      "incomplete_evidence_rejected": true,
+      "mapping_closed": true,
+      "missing_evidence": [],
+      "missing_repair_facts": {
+        "RECOVERY_CONTAIN_AND_RETAIN_RESPONSIBILITY": [
+          "cleanup_responsibility_retained",
+          "failstop_or_read_only_containment"
+        ],
+        "RECOVERY_DEADLINE_SAFE_DELEGATION": [
+          "delegation_authority_accepted",
+          "delegation_before_exposure",
+          "delegation_safety_proven"
+        ],
+        "RECOVERY_PROPAGATE_MOUNT_FAILURE": [
+          "mount_failure_propagated",
+          "root_exposure_prevented"
+        ]
+      },
+      "preserved_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "proven_safe_alternatives": [],
+      "repair_obligation": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT",
+      "repair_status": "REQUIRED_NOT_IMPLEMENTED",
+      "rule": "OIDS-O3",
+      "safe_alternatives": [
+        {
+          "id": "RECOVERY_PROPAGATE_MOUNT_FAILURE",
+          "kind": "PROPAGATE_FAILURE",
+          "required_facts": [
+            "mount_failure_propagated",
+            "root_exposure_prevented"
+          ]
+        },
+        {
+          "id": "RECOVERY_CONTAIN_AND_RETAIN_RESPONSIBILITY",
+          "kind": "ENTER_CONTAINMENT",
+          "required_facts": [
+            "failstop_or_read_only_containment",
+            "cleanup_responsibility_retained"
+          ]
+        },
+        {
+          "id": "RECOVERY_DEADLINE_SAFE_DELEGATION",
+          "kind": "PROVE_SAFE_DELEGATION",
+          "required_facts": [
+            "delegation_authority_accepted",
+            "delegation_safety_proven",
+            "delegation_before_exposure"
+          ]
+        }
+      ],
+      "stage": "recovery",
+      "supplied_evidence": [
+        "control_flow",
+        "rule_specific_replay",
+        "source_anchor",
+        "unsafe_checkpoint"
+      ],
+      "trigger_facts_present": true,
+      "unsafe_checkpoint": "RecoveryExposure"
+    }
+  ],
+  "diagnostic_mappings_closed": true,
+  "evaluation_id": "fmpca-oids-phase14-v0.2-diagnostic-v0.1",
+  "evidence_gate_closed": true,
+  "heldout_partition_empty": true,
+  "heldout_validation_allowed": false,
+  "interpretation": "OIDS v0.2 now provides a validated diagnostic extension over the unchanged v0.1 protocol. It classifies registration and recovery error suppression, maps each ReiserFS development bug to a machine-readable repair obligation and three evidence-bearing safe alternatives, and rejects incomplete evidence. No safe alternative is proven in the evaluated ReiserFS source, so OIDS-O1 and OIDS-O3 remain violations. Btrfs, ext4, UBIFS, and OCFS2 regression boundaries are preserved, applicability is unchanged, and v0.2 held-out validation remains disabled.",
+  "manifest": "configs/evaluation/oids-phase14-v0.2-diagnostic-v0.1.json",
+  "manifest_sha256": "af7fcf7969e1f2d4ee5941a937af7cfdd1aeae69d85e787a0728a2669dc214ff",
+  "mapping_policy_closed": true,
+  "next_phase_plan": "Phase 15 will freeze the Phase 14 v0.2 diagnostic and regression baseline, audit the unrevealed candidate pool without reading candidate source, and create a separate pre-reveal held-out preregistration. Only after that lock may the selected filesystem source be acquired for a new applicability and diagnostic evaluation.",
+  "phase13_preregistration_preserved": true,
+  "phase14_v0_2_diagnostic_closed": true,
+  "regression_boundaries_preserved": true,
+  "regression_matrix": [
+    {
+      "actual": "CLOSED",
+      "boundary": "QUALIFIED_SUCCESSFUL_PROFILE",
+      "expected": "CLOSED",
+      "filesystem": "btrfs",
+      "preserved": true
+    },
+    {
+      "actual": "PRESERVED",
+      "boundary": "FAILSTOP_POSITIVE_AND_ERRORS_CONT_NEGATIVE",
+      "expected": "PRESERVED",
+      "filesystem": "ext4",
+      "preserved": true
+    },
+    {
+      "actual": "PRESERVED",
+      "boundary": "LIVE_RW_POSITIVE_AND_READ_ONLY_DEFERRED",
+      "expected": "PRESERVED",
+      "filesystem": "ubifs",
+      "preserved": true
+    },
+    {
+      "actual": "PRESERVED",
+      "boundary": "NON_APPLICABLE_DEADLINE_NOT_ALIGNED",
+      "expected": "PRESERVED",
+      "filesystem": "ocfs2",
+      "preserved": true
+    }
+  ],
+  "schema_version": 1,
+  "v0_1_protocol_hash": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+  "v0_1_protocol_mutated": false,
+  "v0_2_diagnostic_hash": "613b00438c5ebb6bf3ed6abc48ceb7bf6d73991dd074219f7ed2f84bc4d25fb1",
+  "v0_2_diagnostic_implemented": true,
+  "v0_2_normative_protocol_replaced": false,
+  "violation_results_preserved": true
+}

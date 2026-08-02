@@ -1,0 +1,250 @@
+{
+  "artifact_hashes_verified": true,
+  "bug_specific_condition_count": 0,
+  "claim_disposition": {
+    "common_failure_path_conformance": "REFUTED_BY_POST_COMMON_HELDOUT_COUNTEREXAMPLE",
+    "common_heldout_validated": false,
+    "common_normal_profile_conformance": "SUPPORTED_FOR_EVALUATED_QUALIFIED_PROFILES",
+    "common_semantic_applicability": "SUPPORTED_UNDER_FROZEN_NARROW_SCOPE",
+    "protocol_v0_1_disposition": "FROZEN_WITH_RETAINED_COUNTEREXAMPLE",
+    "revised_protocol_requirement": "NEW_VERSION_AND_NEW_EVALUATION_SPLIT",
+    "universal_filesystem_conformance": "NOT_CLAIMED"
+  },
+  "common_heldout_validated": false,
+  "counterexample_audits": [
+    {
+      "actual_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "closed": true,
+      "deletion_trials": [
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "InitializeOrphanDeletion",
+          "removed_index": 0,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "LastLinkRemoved",
+          "removed_index": 1,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "RegistrationTransactionCommit",
+          "removed_index": 2,
+          "target_rule_absent": true,
+          "violation_rules": []
+        }
+      ],
+      "event_sequence": [
+        "InitializeOrphanDeletion",
+        "LastLinkRemoved",
+        "RegistrationTransactionCommit"
+      ],
+      "expected_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "fixture": "tests/fixtures/events/oids-phase12-reiserfs-o1-minimal-v0.1.json",
+      "rule": "OIDS-O1",
+      "rule_specific_irreducible": true,
+      "source_control_flow_closed": true,
+      "source_partition": "SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "source_replay_bridge_closed": true,
+      "source_slice": [
+        {
+          "fact": "registration helper has no result channel",
+          "function": "add_save_link",
+          "line": 429,
+          "node_id": -1,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "persistent registration insertion can fail",
+          "function": "add_save_link",
+          "line": 494,
+          "node_id": 8,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "failed insertion returns without propagation",
+          "function": "add_save_link",
+          "line": 496,
+          "node_id": 2,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "unlink invokes the void registration helper",
+          "function": "reiserfs_unlink",
+          "line": 1076,
+          "node_id": 16,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\namei.c"
+        },
+        {
+          "fact": "namespace transaction commit remains reachable",
+          "function": "reiserfs_unlink",
+          "line": 1078,
+          "node_id": 14,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\namei.c"
+        }
+      ],
+      "violation_rules": [
+        "OIDS-O1"
+      ]
+    },
+    {
+      "actual_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "closed": true,
+      "deletion_trials": [
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "InitializeOrphanDeletion",
+          "removed_index": 0,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "LastLinkRemoved",
+          "removed_index": 1,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "OrphanRegistryAccepted",
+          "removed_index": 2,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "RecoveryAuthorityAccepted",
+          "removed_index": 3,
+          "target_rule_absent": true,
+          "violation_rules": []
+        },
+        {
+          "actual_result": "INCOMPLETE_UNDER_LOADED_SPEC",
+          "removed_event": "RecoveryExposure",
+          "removed_index": 4,
+          "target_rule_absent": true,
+          "violation_rules": []
+        }
+      ],
+      "event_sequence": [
+        "InitializeOrphanDeletion",
+        "LastLinkRemoved",
+        "OrphanRegistryAccepted",
+        "RecoveryAuthorityAccepted",
+        "RecoveryExposure"
+      ],
+      "expected_result": "VIOLATION_UNDER_LOADED_SPEC",
+      "fixture": "tests/fixtures/events/oids-phase12-reiserfs-o3-minimal-v0.1.json",
+      "rule": "OIDS-O3",
+      "rule_specific_irreducible": true,
+      "source_control_flow_closed": true,
+      "source_partition": "RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "source_replay_bridge_closed": true,
+      "source_slice": [
+        {
+          "fact": "recovery scan returns cleanup failure",
+          "function": "finish_unfinished",
+          "line": 420,
+          "node_id": 2,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "mount discards the recovery cleanup result",
+          "function": "reiserfs_fill_super",
+          "line": 2185,
+          "node_id": -1,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "synchronous recovery scan is called",
+          "function": "reiserfs_fill_super",
+          "line": 2185,
+          "node_id": 29,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        },
+        {
+          "fact": "successful mount exposure remains reachable",
+          "function": "reiserfs_fill_super",
+          "line": 2214,
+          "node_id": 20,
+          "source": "linux-sources\\linux-v6.8-fs\\fs\\reiserfs\\super.c"
+        }
+      ],
+      "violation_rules": [
+        "OIDS-O3"
+      ]
+    }
+  ],
+  "counterexamples_closed": true,
+  "disposition_matches_catalog": true,
+  "evaluation_id": "fmpca-oids-phase12-claim-disposition-v0.1",
+  "failure_path_conformance_refuted": true,
+  "historical_results_preserved": true,
+  "interpretation": "The Phase 9 COMMON narrow freeze remains supported as a semantic applicability scope and the evaluated qualified normal profiles remain closed. Universal failure-path conformance is refuted by an applicable post-COMMON blind ReiserFS candidate with independently minimal OIDS-O1 and OIDS-O3 witnesses. OCFS2 remains a controlled non-applicable screening result and does not repair or refute the applicable counterexample. OIDS v0.1 is therefore frozen with its counterexample retained, COMMON_HELDOUT_VALIDATED remains false, and any protocol repair requires a new version and a new evaluation split.",
+  "manifest": "configs/evaluation/oids-phase12-claim-disposition-v0.1.json",
+  "manifest_sha256": "150235f8f767a47b7ba152e55f94b9bf3668aaa8657b8fabfaed4acb481acf05",
+  "matrix": [
+    {
+      "applicability": "APPLICABLE",
+      "evaluation_role": "FREEZE_FORMATION_DEVELOPMENT",
+      "failure_path_conformance": "NOT_POST_COMMON_HELDOUT_TESTED",
+      "filesystem": "btrfs",
+      "heldout_disposition": "NOT_HELDOUT",
+      "normal_profile_conformance": "CLOSED",
+      "qualified_profile": "ZERO_LINK_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE"
+    },
+    {
+      "applicability": "APPLICABLE_WITH_EXPLICIT_CONFIGURATION_BOUNDARY",
+      "evaluation_role": "FREEZE_FORMATION_VALIDATION",
+      "failure_path_conformance": "ERRORS_CONT_EXCLUDED_WITH_NEGATIVE_WITNESSES",
+      "filesystem": "ext4",
+      "heldout_disposition": "NOT_HELDOUT",
+      "normal_profile_conformance": "CLOSED",
+      "qualified_profile": "ERRORS_RO_OR_FAILSTOP"
+    },
+    {
+      "applicability": "APPLICABLE_WITH_EXPLICIT_RECOVERY_PROFILE",
+      "evaluation_role": "FREEZE_FORMATION_VALIDATION",
+      "failure_path_conformance": "READ_ONLY_RECOVERY_DEFERRED_OUTSIDE_PROFILE",
+      "filesystem": "ubifs",
+      "heldout_disposition": "NOT_POST_COMMON_HELDOUT",
+      "normal_profile_conformance": "CLOSED",
+      "qualified_profile": "LIVE_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE"
+    },
+    {
+      "applicability": "NON_APPLICABLE",
+      "evaluation_role": "POST_COMMON_BLIND_SCREENING",
+      "failure_path_conformance": "NOT_EVALUABLE_UNDER_COMMON_DEADLINE",
+      "filesystem": "ocfs2",
+      "heldout_disposition": "CONTROLLED_NON_APPLICABLE_DEADLINE_NOT_ALIGNED",
+      "normal_profile_conformance": "LIVE_ONLY_CLOSED",
+      "qualified_profile": "RECOVERY_ASYNCHRONOUS_AFTER_MOUNT_EXPOSURE"
+    },
+    {
+      "applicability": "APPLICABLE",
+      "evaluation_role": "POST_COMMON_BLIND_HELD_OUT",
+      "failure_path_conformance": "REFUTED_BY_OIDS_O1_AND_OIDS_O3",
+      "filesystem": "reiserfs",
+      "heldout_disposition": "NON_CONFORMANT_HELDOUT",
+      "normal_profile_conformance": "CLOSED",
+      "qualified_profile": "LIVE_DELETION_AND_SUCCESSFUL_RW_RECOVERY_EXPOSURE_PLUS_FAILURE_PARTITIONS"
+    }
+  ],
+  "matrix_matches_catalog": true,
+  "narrowing_audit_closed": true,
+  "next_phase_plan": "Phase 13 will freeze this disposition and preregister an OIDS v0.2 revision track before any semantic edit. ReiserFS OIDS-O1/OIDS-O3 become development counterexamples, not held-out evidence for v0.2; the revision must define its repair objective, create a new development/validation/held-out split, and reserve a genuinely unrevealed filesystem for any later validation claim.",
+  "no_outcome_predicates_in_frozen_scope": true,
+  "normal_profiles_supported": true,
+  "phase10_controlled_non_applicable_preserved": true,
+  "phase11_nonconformant_heldout_preserved": true,
+  "phase12_claim_disposition_closed": true,
+  "phase9_common_freeze_preserved": true,
+  "protocol_v0_1_mutated": false,
+  "schema_version": 1,
+  "semantic_applicability_supported": true
+}

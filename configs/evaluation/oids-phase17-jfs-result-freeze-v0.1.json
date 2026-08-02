@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-oids-phase17-jfs-result-freeze-v0.1",
+  "phase16_summary": "outputs/fmpca-oids-phase16-v0.1/summary.json",
+  "artifact_hashes": {
+    "configs/evaluation/oids-phase15-jfs-heldout-preregistration-v0.1.json": "938f31a9381c8998d3f0aabdc314c38ca775626df559580aff61b1fce4076595",
+    "outputs/fmpca-oids-phase14-v0.1/summary.json": "cbb90e330aa384be04391c26cb50ac55b9e0a45884c12a15e21cc0d9d27ebdc1",
+    "configs/evaluation/oids-phase16-jfs-heldout-v0.1.json": "c602717a18c10fa1fde887472955dca5efa48ffcd7e2103a3a2a249151e9a8b9",
+    "outputs/fmpca-oids-phase16-v0.1/summary.json": "2ed72ce51422940581d35600eb57cd4cdd53b5b0eb41e6ea3b854acd16bacb52",
+    "outputs/fmpca-oids-phase16-v0.1/report.md": "66f389bccb32ca2a33ae91f0bc47025f0caa656c23a753d3806569f5fabeae19",
+    "src/fmpca/orphan_phase17.py": "38eb406aef9721ac74b1d3a5de729324b206f5a3d9210014e495aef0a9b334f7",
+    "tests/test_oids_phase17_jfs_result_freeze.py": "01732a551379e6f5119b21aa476fc3ab512381d27af2663c2766d74d0bf26fc7",
+    "docs/crossfs/orphan-inode/oids-phase17-jfs-result-freeze-v0.1.md": "2af8995d7f3be0a0bd6f791069cbdfa2a9c5e60f572dc33172d79289b64203f6"
+  },
+  "candidate": "JFS",
+  "frozen_result": {
+    "applicability": "NON_APPLICABLE",
+    "controlled_reason_code": "PERSISTENT_CLEANUP_OBJECT_NOT_FOUND",
+    "conformance": "NOT_EVALUABLE",
+    "diagnostic_disposition": "NOT_APPLICABLE"
+  },
+  "candidate_replaced": false,
+  "stop_policy_honored": true,
+  "heldout_attempt_final": true,
+  "claim_matrix": [
+    {"claim": "OIDS_V0_1_QUALIFIED_COMMON_CANDIDATE", "disposition": "PRESERVED", "closed": true},
+    {"claim": "OIDS_V0_2_DIAGNOSTIC_EXTENSION", "disposition": "IMPLEMENTED_AND_DEVELOPMENT_VALIDATED", "closed": true},
+    {"claim": "JFS_V0_2_BLIND_HELDOUT", "disposition": "NON_APPLICABLE_CONTROLLED_RESULT", "closed": true},
+    {"claim": "COMMON_V0_2_VALIDATED", "disposition": "NOT_VALIDATED", "closed": true}
+  ],
+  "v0_2_claim_disposition": "HELDOUT_NON_APPLICABLE_NO_COMMON_VALIDATION",
+  "common_v0_2_validated": false,
+  "next_phase_plan": "Phase 18 will package the complete Phase 1-17 evidence chain, final claim matrix, reproducibility instructions, locked release summary, and a hard project endpoint with maintenance mode enabled.",
+  "interpretation": "The single preregistered JFS attempt produced a complete controlled non-applicable result. The selection and stop policies were honored. OIDS v0.2 diagnostics remain development-validated, but COMMON v0.2 is not held-out validated."
+}

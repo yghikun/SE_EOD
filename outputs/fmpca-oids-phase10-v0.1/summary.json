@@ -1,0 +1,390 @@
+{
+  "applicability": "NON_APPLICABLE",
+  "artifact_hashes_verified": true,
+  "assessment": {
+    "blockers": [
+      "OCFS2_ORPHAN_RECOVERY_NOT_JOINED_BEFORE_MOUNT_EXPOSURE",
+      "DEADLINE_NOT_ALIGNED"
+    ],
+    "controlled_non_applicable": true,
+    "correspondence": [
+      {
+        "closed": true,
+        "conclusion": "A persistent dinode flag and slot-specific orphan system directory form the cleanup object.",
+        "dimension": "object",
+        "evidence": [
+          {
+            "fact": "persistent dinode flag identifies an orphaned inode",
+            "function": "file_scope",
+            "line": 211,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\ocfs2_fs.h"
+          },
+          {
+            "fact": "the dinode records the responsible slot orphan directory",
+            "function": "file_scope",
+            "line": 688,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\ocfs2_fs.h"
+          }
+        ],
+        "reason_code": null,
+        "status": "CLOSED"
+      },
+      {
+        "closed": true,
+        "conclusion": "The inode block identity is inserted into the responsible slot orphan directory.",
+        "dimension": "relation",
+        "evidence": [
+          {
+            "fact": "the same handle accepts persistent orphan responsibility",
+            "function": "ocfs2_unlink",
+            "line": 1014,
+            "node_id": 23,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+          }
+        ],
+        "reason_code": null,
+        "status": "CLOSED"
+      },
+      {
+        "closed": true,
+        "conclusion": "Last-link registration, final eviction, replay, and orphan scanning expose every lifecycle stage.",
+        "dimension": "lifecycle",
+        "evidence": [
+          {
+            "fact": "regular-file last-link selection makes the following drop reach zero",
+            "function": "ocfs2_inode_is_unlinkable",
+            "line": 869,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+          },
+          {
+            "fact": "orphan dirent retirement is staged in the delete handle",
+            "function": "ocfs2_remove_inode",
+            "line": 687,
+            "node_id": 28,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\inode.c"
+          },
+          {
+            "fact": "iput drives eventual orphan inode deletion",
+            "function": "ocfs2_recover_orphans",
+            "line": 2338,
+            "node_id": 5,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          }
+        ],
+        "reason_code": null,
+        "status": "CLOSED"
+      },
+      {
+        "closed": true,
+        "conclusion": "Cluster-exclusive final eviction and queued orphan recovery are explicit deletion authorities.",
+        "dimension": "authority",
+        "evidence": [
+          {
+            "fact": "cluster-exclusive final eviction decides live deletion authority",
+            "function": "ocfs2_delete_inode",
+            "line": 1076,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\inode.c"
+          },
+          {
+            "fact": "the asynchronous recovery worker waits until mounted quota state",
+            "function": "ocfs2_complete_recovery",
+            "line": 1321,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          }
+        ],
+        "reason_code": null,
+        "status": "CLOSED"
+      },
+      {
+        "closed": false,
+        "conclusion": "The recovery authority does not guarantee orphan settlement before normal mount exposure.",
+        "dimension": "deadline",
+        "evidence": [
+          {
+            "fact": "root dentry is constructed before orphan recovery is queued",
+            "function": "ocfs2_fill_super",
+            "line": 1112,
+            "node_id": 45,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+          },
+          {
+            "fact": "the mounted superblock receives its root",
+            "function": "ocfs2_fill_super",
+            "line": 1118,
+            "node_id": 41,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+          },
+          {
+            "fact": "mount completion only dispatches asynchronous recovery",
+            "function": "ocfs2_fill_super",
+            "line": 1120,
+            "node_id": 40,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+          },
+          {
+            "fact": "orphan recovery is submitted to the recovery workqueue",
+            "function": "ocfs2_complete_mount_recovery",
+            "line": 1421,
+            "node_id": 8,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          },
+          {
+            "fact": "the asynchronous recovery worker waits until mounted quota state",
+            "function": "ocfs2_complete_recovery",
+            "line": 1321,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          },
+          {
+            "fact": "orphan cleanup runs in queued recovery work",
+            "function": "ocfs2_complete_recovery",
+            "line": 1351,
+            "node_id": -1,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          },
+          {
+            "fact": "the worker scans the persistent orphan directory",
+            "function": "ocfs2_recover_orphans",
+            "line": 2270,
+            "node_id": 49,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          },
+          {
+            "fact": "iput drives eventual orphan inode deletion",
+            "function": "ocfs2_recover_orphans",
+            "line": 2338,
+            "node_id": 5,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+          },
+          {
+            "fact": "fill_super has no workqueue join before returning",
+            "function": "ocfs2_fill_super",
+            "line": 1147,
+            "node_id": 27,
+            "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+          }
+        ],
+        "reason_code": "DEADLINE_NOT_ALIGNED",
+        "status": "BLOCKED"
+      }
+    ],
+    "correspondence_closed": false,
+    "heldout_replay_closed": false,
+    "proof_closure_closed": false,
+    "recovery": {
+      "blockers": [
+        "OCFS2_ORPHAN_RECOVERY_NOT_JOINED_BEFORE_MOUNT_EXPOSURE"
+      ],
+      "closed": false,
+      "conclusion": "Journal replay is synchronous, but persistent orphan cleanup is queued after root construction and is not joined before successful mount exposure.",
+      "evidence": [
+        {
+          "fact": "root dentry is constructed before orphan recovery is queued",
+          "function": "ocfs2_fill_super",
+          "line": 1112,
+          "node_id": 45,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+        },
+        {
+          "fact": "the mounted superblock receives its root",
+          "function": "ocfs2_fill_super",
+          "line": 1118,
+          "node_id": 41,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+        },
+        {
+          "fact": "mount completion only dispatches asynchronous recovery",
+          "function": "ocfs2_fill_super",
+          "line": 1120,
+          "node_id": 40,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+        },
+        {
+          "fact": "orphan recovery is submitted to the recovery workqueue",
+          "function": "ocfs2_complete_mount_recovery",
+          "line": 1421,
+          "node_id": 8,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+        },
+        {
+          "fact": "the asynchronous recovery worker waits until mounted quota state",
+          "function": "ocfs2_complete_recovery",
+          "line": 1321,
+          "node_id": -1,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+        },
+        {
+          "fact": "orphan cleanup runs in queued recovery work",
+          "function": "ocfs2_complete_recovery",
+          "line": 1351,
+          "node_id": -1,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+        },
+        {
+          "fact": "the worker scans the persistent orphan directory",
+          "function": "ocfs2_recover_orphans",
+          "line": 2270,
+          "node_id": 49,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+        },
+        {
+          "fact": "iput drives eventual orphan inode deletion",
+          "function": "ocfs2_recover_orphans",
+          "line": 2338,
+          "node_id": 5,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\journal.c"
+        },
+        {
+          "fact": "fill_super has no workqueue join before returning",
+          "function": "ocfs2_fill_super",
+          "line": 1147,
+          "node_id": 27,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\super.c"
+        }
+      ],
+      "stage": "recovery",
+      "status": "BLOCKED"
+    },
+    "registration": {
+      "blockers": [],
+      "closed": true,
+      "conclusion": "Successful last-link unlink stages namespace deletion, zero-link state, and slot orphan-directory registration in one JBD2 handle before commit.",
+      "evidence": [
+        {
+          "fact": "regular-file last-link selection makes the following drop reach zero",
+          "function": "ocfs2_inode_is_unlinkable",
+          "line": 869,
+          "node_id": -1,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        },
+        {
+          "fact": "last-reference candidates prepare the slot orphan directory",
+          "function": "ocfs2_unlink",
+          "line": 958,
+          "node_id": 55,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        },
+        {
+          "fact": "namespace entry deletion is staged in the unlink handle",
+          "function": "ocfs2_unlink",
+          "line": 988,
+          "node_id": 42,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        },
+        {
+          "fact": "the selected inode reaches zero links",
+          "function": "ocfs2_unlink",
+          "line": 996,
+          "node_id": 36,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        },
+        {
+          "fact": "the same handle accepts persistent orphan responsibility",
+          "function": "ocfs2_unlink",
+          "line": 1014,
+          "node_id": 23,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        },
+        {
+          "fact": "the unlink handle commits only after orphan acceptance",
+          "function": "ocfs2_unlink",
+          "line": 1022,
+          "node_id": 19,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\namei.c"
+        }
+      ],
+      "stage": "registration",
+      "status": "CLOSED"
+    },
+    "replay_expectations_closed": true,
+    "replays": [
+      {
+        "actual": "CONFORMANT_UNDER_LOADED_SPEC",
+        "closed": true,
+        "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/oids-ocfs2-live-v0.1.json",
+        "profile": "SUCCESSFUL_LIVE_DELETION",
+        "violation_rules": []
+      },
+      {
+        "actual": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "closed": true,
+        "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+        "fixture": "tests/fixtures/events/oids-ocfs2-async-recovery-v0.1.json",
+        "profile": "RECOVERY_ASYNCHRONOUS_AFTER_MOUNT_EXPOSURE",
+        "violation_rules": []
+      }
+    ],
+    "screening_dimensions_decided": true,
+    "settlement": {
+      "blockers": [],
+      "closed": true,
+      "conclusion": "Orphan removal and terminal dinode deallocation are atomically co-settled in one delete-inode JBD2 transaction.",
+      "evidence": [
+        {
+          "fact": "orphan dirent retirement is staged in the delete handle",
+          "function": "ocfs2_remove_inode",
+          "line": 687,
+          "node_id": 28,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\inode.c"
+        },
+        {
+          "fact": "dinode deallocation is staged in the same handle",
+          "function": "ocfs2_remove_inode",
+          "line": 710,
+          "node_id": 13,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\inode.c"
+        },
+        {
+          "fact": "one commit atomically settles retirement and deletion",
+          "function": "ocfs2_remove_inode",
+          "line": 716,
+          "node_id": 10,
+          "source": "linux-sources\\linux-v6.14-fs\\fs\\ocfs2\\inode.c"
+        }
+      ],
+      "stage": "settlement",
+      "status": "CLOSED"
+    },
+    "source_witness_closed": false
+  },
+  "bug_specific_condition_count": 0,
+  "candidate_filesystem": "OCFS2",
+  "common_heldout_validated": false,
+  "controlled_reason_code": "DEADLINE_NOT_ALIGNED",
+  "evaluation_id": "fmpca-oids-phase10-ocfs2-heldout-v0.1",
+  "failed_heldout_gates": [
+    "heldout_correspondence_closed",
+    "heldout_source_witness_closed",
+    "heldout_replay_closed",
+    "heldout_proof_closure_closed"
+  ],
+  "heldout_gates": {
+    "common_freeze_ready": true,
+    "heldout_correspondence_closed": false,
+    "heldout_proof_closure_closed": false,
+    "heldout_replay_closed": false,
+    "heldout_source_witness_closed": false,
+    "no_post_freeze_semantic_modifications": true,
+    "third_filesystem_post_freeze": true
+  },
+  "interpretation": "OCFS2 is a valid post-COMMON blind held-out screening candidate and its object, relation, lifecycle, and authority correspondence close. Successful live deletion conforms because orphan registration and terminal deletion are transactionally ordered. Full COMMON applicability is nevertheless NON_APPLICABLE with controlled reason DEADLINE_NOT_ALIGNED: mount recovery queues orphan cleanup after root construction and does not join that work before successful exposure. Phase 10 therefore closes as a negative held-out screening result, preserves every Phase 9 semantic lock, and does not establish COMMON_HELDOUT_VALIDATED.",
+  "manifest": "configs/evaluation/oids-phase10-ocfs2-heldout-v0.1.json",
+  "manifest_sha256": "cdba00ca72f5518bd997e2e8e447a5538dc214e6fe229d9a5e3813111cd217d8",
+  "next_heldout_requirement": "Preregister a different unrevealed filesystem against the unchanged Phase 9 COMMON freeze. The next candidate must close recovery settlement before normal exposure; OCFS2 cannot be reused as blind held-out evidence.",
+  "no_post_freeze_semantic_modifications": true,
+  "operation_family": "ocfs2-slot-orphan-directory-jbd2-cluster-recovery",
+  "phase10_screening_closed": true,
+  "phase9_common_freeze_preserved": true,
+  "pre_reveal_locks_verified": true,
+  "preregistration_hash_verified": true,
+  "schema_version": 1,
+  "source_hashes_verified": true,
+  "third_filesystem_post_freeze": true,
+  "validation_role": "PREREGISTERED_POST_COMMON_BLIND_HELD_OUT"
+}

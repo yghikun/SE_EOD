@@ -1,0 +1,177 @@
+{
+  "allowed_next_work": [
+    "bug fixes",
+    "dependency maintenance",
+    "reproducibility maintenance"
+  ],
+  "artifact_hashes_verified": true,
+  "claim_matrix_closed": true,
+  "common_v0_2_validated": false,
+  "endpoint_closed": true,
+  "final_claim_matrix": [
+    {
+      "claim": "OIDS_V0_1_EXECUTABLE_PROTOCOL",
+      "closed": true,
+      "disposition": "FROZEN_AND_REGRESSION_PRESERVED"
+    },
+    {
+      "claim": "QUALIFIED_COMMON_CANDIDATE_SCOPE",
+      "closed": true,
+      "disposition": "BTRFS_EXT4_FAILSTOP_UBIFS"
+    },
+    {
+      "claim": "OIDS_V0_2_DIAGNOSTIC_EXTENSION",
+      "closed": true,
+      "disposition": "IMPLEMENTED_AND_DEVELOPMENT_VALIDATED"
+    },
+    {
+      "claim": "REISERFS_O1_O3",
+      "closed": true,
+      "disposition": "TWO_SOURCE_CONFIRMED_CORRECTNESS_BUGS"
+    },
+    {
+      "claim": "JFS_BLIND_HELDOUT",
+      "closed": true,
+      "disposition": "NON_APPLICABLE_PERSISTENT_CLEANUP_OBJECT_NOT_FOUND"
+    },
+    {
+      "claim": "COMMON_V0_2_VALIDATED",
+      "closed": true,
+      "disposition": "NOT_VALIDATED"
+    }
+  ],
+  "further_phase_expansion": false,
+  "hard_endpoint": "PHASE_18",
+  "interpretation": "The Phase 1-17 evidence chain, v0.1 protocol, v0.2 diagnostics, development bugs, regression boundaries, blind JFS non-applicable result, and final claim limitations are locked. The project is complete at Phase 18 and enters maintenance mode.",
+  "maintenance_mode": true,
+  "manifest": "configs/evaluation/oids-final-release-v0.2.json",
+  "manifest_sha256": "6470495535c18a29c46d0c3a452863f7ddbbba7857fc75e4106258bb2b1785a3",
+  "phase_chain": [
+    {
+      "artifact": "configs/evaluation/oids-phase1-evidence-v0.1.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 1,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 2,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase3-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 3,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase4-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 4,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase5-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 5,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase6-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 6,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase7-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 7,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase8-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 8,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase9-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 9,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase10-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 10,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase11-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 11,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase12-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 12,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase13-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 13,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase14-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 14,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase15-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 15,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase16-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 16,
+      "sha256_verified": true
+    },
+    {
+      "artifact": "outputs/fmpca-oids-phase17-v0.1/summary.json",
+      "assertions_closed": true,
+      "closed": true,
+      "phase": 17,
+      "sha256_verified": true
+    }
+  ],
+  "phase_chain_closed": true,
+  "project_complete": true,
+  "project_status": "COMPLETE",
+  "release_id": "fmpca-oids-final-release-v0.2",
+  "release_version": "0.2.0-final",
+  "schema_version": 1,
+  "v0_2_claim_disposition": "HELDOUT_NON_APPLICABLE_NO_COMMON_VALIDATION"
+}

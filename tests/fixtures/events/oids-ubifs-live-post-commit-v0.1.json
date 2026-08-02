@@ -1,0 +1,16 @@
+{
+  "expected": "CONFORMANT_UNDER_LOADED_SPEC",
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "FinalReferenceReleased", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area", "deletion_authority": "ubifs_evict_inode"}, "epoch": {}},
+    {"event": "TerminalDeletionPrepared", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "TerminalDeletionDurable", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "OrphanRegistryRemoval", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}, "data": {"same_transaction": false}},
+    {"event": "SettlementTransactionCommit", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "oids:ubifs:live:2", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:91:gen:2", "namespace_entry": "dent:91", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}}
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "artifact_hashes_verified": true,
+  "candidate_pool_closed": true,
+  "candidate_replaced": false,
+  "common_v0_2_validated": false,
+  "evaluation_id": "fmpca-oids-phase15-jfs-heldout-freeze-v0.1",
+  "heldout_validation_allowed": false,
+  "interpretation": "The v0.2 regression baseline and JFS blind held-out design were frozen before source reveal. This phase assigns no held-out result and makes no COMMON v0.2 validation claim.",
+  "manifest": "configs/evaluation/oids-phase15-jfs-heldout-freeze-v0.1.json",
+  "manifest_sha256": "89bf95786174f9bcaf7da85859a196ecca07f63f16e0f689f47b3e600a2e084a",
+  "next_phase_plan": "Phase 16 may now acquire only the ten preregistered JFS files from Linux v6.14, record their provenance and hashes, screen object/relation/lifecycle/authority/deadline in that order, and accept the first complete registered result without replacing the candidate.",
+  "phase14_closed": true,
+  "phase15_preregistration_closed": true,
+  "pre_reveal_locks_verified": true,
+  "preregistration": "configs/evaluation/oids-phase15-jfs-heldout-preregistration-v0.1.json",
+  "preregistration_sha256": "938f31a9381c8998d3f0aabdc314c38ca775626df559580aff61b1fce4076595",
+  "registered_source_count": 10,
+  "regression_freeze_closed": true,
+  "schema_version": 1,
+  "selected_candidate": "JFS",
+  "source_unrevealed_at_freeze": true
+}

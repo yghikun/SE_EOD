@@ -1,0 +1,13 @@
+{
+  "expected": "INCOMPLETE_UNDER_LOADED_SPEC",
+  "profile_status": "RECOVERY_DEFERRED_OUTSIDE_VALIDATED_RW_EXPOSURE",
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "OrphanRegistryAccepted", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}},
+    {"event": "RecoveryAuthorityAccepted", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area", "deletion_authority": "mount_ubifs_ro"}, "epoch": {}},
+    {"event": "TerminalDeletionPrepared", "roles": {"operation": "oids:ubifs:recovery:ro:1", "filesystem": "ubifs:ubi:1", "inode": "ubifs:ino:113:gen:5", "namespace_entry": "dent:113", "orphan_registry": "ubifs:orphan-area"}, "epoch": {}}
+  ]
+}

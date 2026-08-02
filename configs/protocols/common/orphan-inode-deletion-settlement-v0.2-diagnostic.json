@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "extension_id": "fmpca.orphan_inode_deletion_settlement.diagnostic",
+  "extension_version": "0.2.0",
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "base_protocol": {
+    "path": "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json",
+    "sha256": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "normative_outcomes_preserved": true,
+    "obligation_hashes": {
+      "OIDS-O1": "f569cd534b40277b0e0a2f97e9ba9c9b3239d17917b5c203edde559c81c8457d",
+      "OIDS-O3": "58ef0997a1e62f0b4dc014b198229369af79b97cee458ede7f0cbb392769c5f8"
+    }
+  },
+  "evidence_levels": [
+    {
+      "id": "SOURCE_CONFIRMED_CORRECTNESS_BUG",
+      "requires": ["source_anchor", "control_flow", "rule_specific_replay", "unsafe_checkpoint"]
+    },
+    {
+      "id": "RUNTIME_REPRODUCED_CORRECTNESS_BUG",
+      "requires": ["source_anchor", "control_flow", "rule_specific_replay", "unsafe_checkpoint", "runtime_reproduction"]
+    },
+    {
+      "id": "UPSTREAM_ACKNOWLEDGED_CORRECTNESS_BUG",
+      "requires": ["source_anchor", "control_flow", "rule_specific_replay", "unsafe_checkpoint", "upstream_reference"]
+    }
+  ],
+  "failure_causes": [
+    {
+      "id": "REGISTRATION_ACCEPTANCE_ERROR_SUPPRESSION",
+      "rule": "OIDS-O1",
+      "stage": "registration",
+      "trigger_facts": [
+        "persistent_registration_failed",
+        "failure_not_propagated",
+        "namespace_commit_reachable"
+      ],
+      "unsafe_checkpoint": "RegistrationTransactionCommit",
+      "repair_obligation": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT"
+    },
+    {
+      "id": "RECOVERY_CLEANUP_ERROR_SUPPRESSION",
+      "rule": "OIDS-O3",
+      "stage": "recovery",
+      "trigger_facts": [
+        "recovery_cleanup_failed",
+        "failure_not_propagated",
+        "successful_recovery_exposure_reachable"
+      ],
+      "unsafe_checkpoint": "RecoveryExposure",
+      "repair_obligation": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT"
+    }
+  ],
+  "repair_obligations": [
+    {
+      "id": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT",
+      "preserved_violation_rule": "OIDS-O1",
+      "forbidden_outcome": "commit namespace removal while persistent cleanup responsibility is absent",
+      "selection_policy": "AT_LEAST_ONE_SAFE_ALTERNATIVE_MUST_BE_PROVEN",
+      "safe_alternatives": [
+        {
+          "id": "REGISTRATION_PROPAGATE_AND_PREVENT_COMMIT",
+          "kind": "PROPAGATE_FAILURE",
+          "required_facts": ["failure_propagated", "namespace_commit_prevented"]
+        },
+        {
+          "id": "REGISTRATION_ABORT_OR_ROLLBACK",
+          "kind": "PROVE_ABORT_OR_ROLLBACK",
+          "required_facts": ["transaction_aborted", "final_link_transition_rolled_back"]
+        },
+        {
+          "id": "REGISTRATION_FAILSTOP",
+          "kind": "ENTER_FAILSTOP",
+          "required_facts": ["failstop_entered", "unsafe_success_exposure_prevented"]
+        }
+      ]
+    },
+    {
+      "id": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT",
+      "preserved_violation_rule": "OIDS-O3",
+      "forbidden_outcome": "return successful mount exposure with required cleanup incomplete",
+      "selection_policy": "AT_LEAST_ONE_SAFE_ALTERNATIVE_MUST_BE_PROVEN",
+      "safe_alternatives": [
+        {
+          "id": "RECOVERY_PROPAGATE_MOUNT_FAILURE",
+          "kind": "PROPAGATE_FAILURE",
+          "required_facts": ["mount_failure_propagated", "root_exposure_prevented"]
+        },
+        {
+          "id": "RECOVERY_CONTAIN_AND_RETAIN_RESPONSIBILITY",
+          "kind": "ENTER_CONTAINMENT",
+          "required_facts": ["failstop_or_read_only_containment", "cleanup_responsibility_retained"]
+        },
+        {
+          "id": "RECOVERY_DEADLINE_SAFE_DELEGATION",
+          "kind": "PROVE_SAFE_DELEGATION",
+          "required_facts": ["delegation_authority_accepted", "delegation_safety_proven", "delegation_before_exposure"]
+        }
+      ]
+    }
+  ],
+  "diagnostic_mappings": [
+    {
+      "rule": "OIDS-O1",
+      "cause": "REGISTRATION_ACCEPTANCE_ERROR_SUPPRESSION",
+      "repair_obligation": "REGISTRATION_ACCEPTANCE_FAILURE_CONTRACT"
+    },
+    {
+      "rule": "OIDS-O3",
+      "cause": "RECOVERY_CLEANUP_ERROR_SUPPRESSION",
+      "repair_obligation": "RECOVERY_CLEANUP_FAILURE_EXPOSURE_CONTRACT"
+    }
+  ],
+  "applicability_policy": {
+    "base_scope_preserved": true,
+    "new_applicability_predicates": [],
+    "rejected_outcome_predicates": [
+      "add_save_link_succeeded",
+      "remove_save_link_succeeded",
+      "finish_unfinished_succeeded"
+    ]
+  },
+  "heldout_policy": {
+    "heldout_partition_assigned": false,
+    "heldout_validation_allowed": false,
+    "common_v0_2_validated": false,
+    "future_candidate_requires_separate_preregistration": true
+  }
+}
+

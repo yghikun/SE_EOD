@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fmpca-oids-phase3-readiness-v0.1",
+  "taxonomy": "configs/catalog/protocol-scope-taxonomy-v0.1.json",
+  "protocol": "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json",
+  "test_artifact": "tests/test_oids_phase3_composition.py",
+  "declared_semantic_scope": "FS_SPECIFIC",
+  "freeze_boundary": "NARROW_FREEZE",
+  "artifact_hashes": {
+    "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+    "configs/bindings/common/orphan-inode-btrfs-v0.1.json": "71cff0452c3211ce2648003fa2c2687fef98b06cef45feb706af6394819ec620",
+    "configs/bindings/common/orphan-inode-ext4-v0.1.json": "c9634d37cab224dd778854246906933bb86f34511834620548a420bf452b61df",
+    "src/fmpca/frontend_orphan_common.py": "f9e18c615f3fca693dbf022823d511738faab7b6afd983ee9f53e9f13da09c4e",
+    "src/fmpca/orphan_composition.py": "9040a89928fb04a151c66ba74254d7c95a0ed712b11a15270e6e88687f17450e",
+    "tests/test_oids_phase3_composition.py": "005a1cb37a49c5543a5e940cd7b910de78aa648e762f9166e9e638d0d1547594",
+    "src/fmpca/orphan_candidate.py": "eba5cad9d456584d5e5b9cc0ad134d9b2873bc3b0a1fb9913bfcaf3347737e94",
+    "src/fmpca/semantics_extensions.py": "aea9392afccf75705f882d3a9933938343732636e20a896dc0af3482793bb65f",
+    "linux-sources/linux-v6.14-fs/fs/btrfs/inode.c": "a802ed49f32c5b48da14b474ed6f75c12d2d073f7afaf499fdb15a2a29b680fe",
+    "linux-sources/linux-v6.14-fs/fs/btrfs/disk-io.c": "ec2f75aef087365b843ffa5c1177e38c7b7dd0da5f4906c1eecb20b884a02a89",
+    "linux-sources/linux-v6.14-fs/fs/ext4/namei.c": "be2503b69f747a0f31412ca950908118335f99bd422f90ae5e709214fc55e9a1",
+    "linux-sources/linux-v6.14-fs/fs/ext4/inode.c": "235f4d1ba3be429853e4cf75c11866121b7882b8311459a52c2c31a44cd2c887",
+    "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c": "1d01da885095a3f909c208ea716bbb566df7afec06e39698e639a9d125a332c3",
+    "linux-sources/linux-v6.14-fs/fs/ext4/super.c": "90115e27db094c7abeb41de1466de65c27217c0dc51c8ec137bf3cea2fcc4a6c",
+    "tests/fixtures/events/oids-btrfs-fixed-live-v0.1.json": "4261300ae7c00912e13fc1f1ef2ad3346d4bd742a8830ac81d0dca6fdf9c4edf",
+    "tests/fixtures/events/oids-ext4-fixed-live-v0.1.json": "4059a4e1047ce79d1c7538e4f72e75bc824cb603500e5ca1527923d3edcc9b63",
+    "tests/fixtures/events/oids-normal-recovery-v0.1.json": "f53b685ad00c1dce07c243322f568f7f364e3ef2c8d5a69fde7b99e655f2eb3d",
+    "tests/fixtures/events/oids-negative-registration-v0.1.json": "e6567f5053c10ff7a26c2395034f6a8f10e1a082535bc8f464f10eb1ee59572c",
+    "tests/fixtures/events/oids-negative-removal-v0.1.json": "17a09601b41288c099ffc1cb8475d475fef42660bc37d5cc169baebbf90c5f07",
+    "tests/fixtures/events/oids-unknown-settlement-v0.1.json": "60a9250172f54b2c9fa35531638572ea7ba26a8548d3fe4b0bdb855964151007"
+  },
+  "filesystems": [
+    {
+      "filesystem": "btrfs",
+      "validation_role": "DEVELOPMENT",
+      "operation_family": "btrfs-orphan-item",
+      "binding": "configs/bindings/common/orphan-inode-btrfs-v0.1.json",
+      "identity": {
+        "filesystem": "btrfs:root:5",
+        "inode": "btrfs:5:ino:42:gen:7",
+        "namespace_entry": "dirent:42",
+        "orphan_registry": "btrfs:root:5:orphans",
+        "filesystem_mount": "btrfs:mount:phase3",
+        "inode_allocation_generation": 7
+      },
+      "correspondence": {"object": true, "relation": true, "lifecycle": true, "authority": true, "deadline": true},
+      "source_witness": {
+        "registration": {"source": "linux-sources/linux-v6.14-fs/fs/btrfs/inode.c", "function": "btrfs_unlink"},
+        "settlement": {"source": "linux-sources/linux-v6.14-fs/fs/btrfs/inode.c", "function": "btrfs_evict_inode"},
+        "recovery": {
+          "cleanup_source": "linux-sources/linux-v6.14-fs/fs/btrfs/inode.c",
+          "cleanup_function": "btrfs_orphan_cleanup",
+          "exposure_source": "linux-sources/linux-v6.14-fs/fs/btrfs/disk-io.c",
+          "exposure_function": "open_ctree"
+        }
+      }
+    },
+    {
+      "filesystem": "ext4",
+      "validation_role": "VALIDATION",
+      "operation_family": "ext4-orphan-file-or-list",
+      "binding": "configs/bindings/common/orphan-inode-ext4-v0.1.json",
+      "identity": {
+        "filesystem": "ext4:sb:1",
+        "inode": "ext4:ino:84:gen:3",
+        "namespace_entry": "dirent:84",
+        "orphan_registry": "ext4:orphan-registry",
+        "filesystem_mount": "ext4:mount:phase3",
+        "inode_allocation_generation": 3
+      },
+      "correspondence": {"object": true, "relation": true, "lifecycle": true, "authority": true, "deadline": true},
+      "source_witness": {
+        "registration": {"source": "linux-sources/linux-v6.14-fs/fs/ext4/namei.c", "function": "__ext4_unlink"},
+        "settlement": {"source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c", "function": "ext4_evict_inode"},
+        "recovery": {
+          "cleanup_source": "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c",
+          "cleanup_function": "ext4_orphan_cleanup",
+          "exposure_source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c",
+          "exposure_function": "__ext4_fill_super"
+        }
+      }
+    }
+  ],
+  "replays": [
+    {"id": "btrfs-fixed-live", "role": "DEVELOPMENT_FIXED", "fixture": "tests/fixtures/events/oids-btrfs-fixed-live-v0.1.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "ext4-fixed-live", "role": "INDEPENDENT_VALIDATION", "fixture": "tests/fixtures/events/oids-ext4-fixed-live-v0.1.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "normal-recovery", "role": "RECOVERY_NORMAL", "fixture": "tests/fixtures/events/oids-normal-recovery-v0.1.json", "expected": "CONFORMANT_UNDER_LOADED_SPEC"},
+    {"id": "missing-registration", "role": "DEADLINE_NEGATIVE", "fixture": "tests/fixtures/events/oids-negative-registration-v0.1.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "unsafe-removal", "role": "SETTLEMENT_NEGATIVE", "fixture": "tests/fixtures/events/oids-negative-removal-v0.1.json", "expected": "VIOLATION_UNDER_LOADED_SPEC"},
+    {"id": "unknown-settlement", "role": "UNKNOWN", "fixture": "tests/fixtures/events/oids-unknown-settlement-v0.1.json", "expected": "INCOMPLETE_UNDER_LOADED_SPEC"}
+  ],
+  "interpretation": "Btrfs and ext4 selected normal/recovery source paths satisfy the OIDS candidate, but static all-path proof closure is not established. The protocol remains an FS_SPECIFIC narrow candidate and is not declared COMMON."
+}

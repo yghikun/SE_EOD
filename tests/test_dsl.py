@@ -35,6 +35,22 @@ class ProtocolDslTests(unittest.TestCase):
         with self.assertRaises(ProtocolValidationError):
             validate_protocol(raw)
 
+    def test_protocol_deadline_events_are_optional_and_validated(self):
+        path = ROOT / "configs/protocols/metadata-transition-outcome-v0.1.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        validate_protocol(raw)
+
+        raw["deadline_events"] = {"OperationReturn": ["AT_SETTLEMENT"]}
+        validate_protocol(raw)
+
+        raw["deadline_events"] = {"UnknownEvent": ["AT_SETTLEMENT"]}
+        with self.assertRaises(ProtocolValidationError):
+            validate_protocol(raw)
+
+        raw["deadline_events"] = {"OperationReturn": ["UNKNOWN_DEADLINE"]}
+        with self.assertRaises(ProtocolValidationError):
+            validate_protocol(raw)
+
     def test_bug_specific_predicate_is_rejected(self):
         path = ROOT / "configs/protocols/metadata-transition-outcome-v0.1.json"
         raw = json.loads(path.read_text(encoding="utf-8"))

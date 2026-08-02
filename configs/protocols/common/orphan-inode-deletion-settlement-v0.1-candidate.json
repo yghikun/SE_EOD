@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fmpca.orphan_inode_deletion_settlement",
+  "protocol_version": "0.1.0-candidate",
+  "semantic_intent": "A zero-link inode deletion must register durable cleanup responsibility before namespace-transition commit, and registry removal must commit only after terminal deletion is durable or atomically co-settled with that deletion.",
+  "roles": [
+    {"id": "operation", "kind": "operation", "anchor": true, "required": true},
+    {"id": "filesystem", "kind": "container", "anchor": true, "required": true},
+    {"id": "inode", "kind": "metadata_object", "anchor": true, "required": true},
+    {"id": "namespace_entry", "kind": "namespace_relation", "anchor": false, "required": true},
+    {"id": "orphan_registry", "kind": "persistent_registry", "anchor": false, "required": true},
+    {"id": "registration_transaction", "kind": "transaction", "anchor": false, "required": false},
+    {"id": "settlement_transaction", "kind": "transaction", "anchor": false, "required": false},
+    {"id": "deletion_authority", "kind": "authority", "anchor": false, "required": false}
+  ],
+  "epoch_policy": {
+    "include": ["filesystem_mount", "inode_allocation_generation", "operation_root", "retry_generation"]
+  },
+  "entry_formula": {
+    "op": "all",
+    "items": [
+      {"op": "role_bound", "role": "operation"},
+      {"op": "role_bound", "role": "filesystem"},
+      {"op": "role_bound", "role": "inode"},
+      {"op": "role_bound", "role": "namespace_entry"},
+      {"op": "role_bound", "role": "orphan_registry"}
+    ]
+  },
+  "initial_phase": "START",
+  "phases": [
+    "START",
+    "ATTACHED",
+    "REGISTRATION_DUE",
+    "REGISTERED",
+    "WAITING_FOR_FINAL_REFERENCE",
+    "CLEANUP_PENDING",
+    "TERMINAL_PREPARED",
+    "TERMINAL_DURABLE",
+    "REMOVAL_STAGED",
+    "SETTLED"
+  ],
+  "events": [
+    "InitializeOrphanDeletion",
+    "LastLinkRemoved",
+    "OrphanRegistryAccepted",
+    "RegistrationTransactionCommit",
+    "FinalReferenceReleased",
+    "RecoveryAuthorityAccepted",
+    "TerminalDeletionPrepared",
+    "TerminalDeletionDurable",
+    "OrphanRegistryRemoval",
+    "SettlementTransactionCommit",
+    "RecoveryExposure",
+    "OperationReturn"
+  ],
+  "transitions": [
+    {
+      "event": "InitializeOrphanDeletion",
+      "from": ["START"],
+      "to": "ATTACHED",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "deletion.scope_zero_link", "value": true},
+        {"op": "set_relation", "name": "inode.namespace_attached", "value": true},
+        {"op": "set_relation", "name": "inode.last_link_removed", "value": false},
+        {"op": "set_relation", "name": "inode.cleanup_required", "value": false},
+        {"op": "set_relation", "name": "orphan_registry.records_inode", "value": false},
+        {"op": "set_relation", "name": "registration.accepted_before_commit", "value": false},
+        {"op": "set_relation", "name": "inode.terminal_deletion_prepared", "value": false},
+        {"op": "set_relation", "name": "inode.terminal_deletion_durable", "value": false},
+        {"op": "set_relation", "name": "settlement.same_transaction", "value": false},
+        {"op": "set_relation", "name": "recovery.cleanup_complete", "value": false}
+      ]
+    },
+    {
+      "event": "LastLinkRemoved",
+      "from": ["ATTACHED"],
+      "to": "REGISTRATION_DUE",
+      "guard": {"op": "relation_equals", "name": "deletion.scope_zero_link", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "inode.namespace_attached", "value": false},
+        {"op": "set_relation", "name": "inode.last_link_removed", "value": true},
+        {"op": "set_relation", "name": "inode.cleanup_required", "value": true},
+        {"op": "activate_obligation", "template": "OIDS-O1"},
+        {"op": "activate_obligation", "template": "OIDS-O2"}
+      ]
+    },
+    {
+      "event": "OrphanRegistryAccepted",
+      "from": ["REGISTRATION_DUE", "REGISTERED"],
+      "to": "REGISTERED",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "orphan_registry.records_inode", "value": true},
+        {"op": "set_relation", "name": "registration.accepted_before_commit", "value": true}
+      ]
+    },
+    {
+      "event": "RegistrationTransactionCommit",
+      "from": ["REGISTRATION_DUE", "REGISTERED"],
+      "to": "WAITING_FOR_FINAL_REFERENCE",
+      "guard": {"op": "literal", "value": true},
+      "actions": []
+    },
+    {
+      "event": "FinalReferenceReleased",
+      "from": ["REGISTERED", "WAITING_FOR_FINAL_REFERENCE"],
+      "to": "CLEANUP_PENDING",
+      "guard": {"op": "literal", "value": true},
+      "actions": []
+    },
+    {
+      "event": "RecoveryAuthorityAccepted",
+      "from": ["REGISTERED", "WAITING_FOR_FINAL_REFERENCE", "CLEANUP_PENDING"],
+      "to": "CLEANUP_PENDING",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "orphan_registry.records_inode", "value": true},
+        {"op": "set_relation", "name": "inode.cleanup_required", "value": true},
+        {"op": "activate_obligation", "template": "OIDS-O2"},
+        {"op": "activate_obligation", "template": "OIDS-O3"}
+      ]
+    },
+    {
+      "event": "TerminalDeletionPrepared",
+      "from": ["CLEANUP_PENDING", "TERMINAL_PREPARED"],
+      "to": "TERMINAL_PREPARED",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "inode.terminal_deletion_prepared", "value": true}
+      ]
+    },
+    {
+      "event": "TerminalDeletionDurable",
+      "from": ["CLEANUP_PENDING", "TERMINAL_PREPARED", "TERMINAL_DURABLE"],
+      "to": "TERMINAL_DURABLE",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "inode.terminal_deletion_prepared", "value": true},
+        {"op": "set_relation", "name": "inode.terminal_deletion_durable", "value": true}
+      ]
+    },
+    {
+      "event": "OrphanRegistryRemoval",
+      "from": ["CLEANUP_PENDING", "TERMINAL_PREPARED", "TERMINAL_DURABLE"],
+      "to": "REMOVAL_STAGED",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "settlement.same_transaction", "value": {"from_event": "same_transaction"}},
+        {"op": "set_relation", "name": "orphan_registry.records_inode", "value": false}
+      ]
+    },
+    {
+      "event": "SettlementTransactionCommit",
+      "from": ["REMOVAL_STAGED", "TERMINAL_DURABLE"],
+      "to": "SETTLED",
+      "guard": {"op": "literal", "value": true},
+      "actions": [
+        {"op": "set_relation", "name": "inode.cleanup_required", "value": false},
+        {"op": "set_relation", "name": "recovery.cleanup_complete", "value": true}
+      ]
+    },
+    {
+      "event": "RecoveryExposure",
+      "from": ["SETTLED"],
+      "to": "SETTLED",
+      "guard": {"op": "literal", "value": true},
+      "actions": []
+    },
+    {
+      "event": "OperationReturn",
+      "from": ["WAITING_FOR_FINAL_REFERENCE", "CLEANUP_PENDING", "TERMINAL_PREPARED", "TERMINAL_DURABLE", "REMOVAL_STAGED", "SETTLED"],
+      "to": "SETTLED",
+      "guard": {"op": "literal", "value": true},
+      "actions": []
+    }
+  ],
+  "invariants": [
+    {
+      "id": "OIDS-I1",
+      "deadline": "ALWAYS",
+      "formula": {"op": "relation_equals", "name": "deletion.scope_zero_link", "value": true},
+      "evidence": ["phase1:zero-link-scope"]
+    }
+  ],
+  "obligation_templates": [
+    {
+      "id": "OIDS-O1",
+      "required_formula": {"op": "relation_equals", "name": "registration.accepted_before_commit", "value": true},
+      "activation_horizon": "LastLinkRemoved",
+      "deadline_policy": "MUST_DISCHARGE",
+      "delegation_deadline": "BEFORE_COMMIT",
+      "completion_deadline": "BEFORE_COMMIT",
+      "allowed_authorities": []
+    },
+    {
+      "id": "OIDS-O2",
+      "required_formula": {
+        "op": "any",
+        "items": [
+          {"op": "relation_equals", "name": "inode.terminal_deletion_durable", "value": true},
+          {
+            "op": "all",
+            "items": [
+              {"op": "relation_equals", "name": "inode.terminal_deletion_prepared", "value": true},
+              {"op": "relation_equals", "name": "settlement.same_transaction", "value": true}
+            ]
+          }
+        ]
+      },
+      "activation_horizon": "LastLinkRemovedOrRecoveryAcceptance",
+      "deadline_policy": "MUST_DISCHARGE",
+      "delegation_deadline": "BEFORE_ORPHAN_REGISTRY_REMOVAL",
+      "completion_deadline": "BEFORE_ORPHAN_REGISTRY_REMOVAL",
+      "allowed_authorities": []
+    },
+    {
+      "id": "OIDS-O3",
+      "required_formula": {"op": "relation_equals", "name": "recovery.cleanup_complete", "value": true},
+      "activation_horizon": "RecoveryAuthorityAccepted",
+      "deadline_policy": "MUST_DISCHARGE",
+      "delegation_deadline": "BEFORE_RECOVERY_EXPOSURE",
+      "completion_deadline": "BEFORE_RECOVERY_EXPOSURE",
+      "allowed_authorities": []
+    }
+  ],
+  "allowed_authorities": [],
+  "deadlines": [
+    "ALWAYS",
+    "BEFORE_COMMIT",
+    "BEFORE_ORPHAN_REGISTRY_REMOVAL",
+    "BEFORE_RECOVERY_EXPOSURE",
+    "AT_SETTLEMENT"
+  ],
+  "deadline_events": {
+    "RegistrationTransactionCommit": ["BEFORE_COMMIT"],
+    "OrphanRegistryRemoval": ["BEFORE_ORPHAN_REGISTRY_REMOVAL"],
+    "RecoveryExposure": ["BEFORE_RECOVERY_EXPOSURE"],
+    "SettlementTransactionCommit": ["AT_SETTLEMENT"]
+  },
+  "checkpoint_events": [
+    "RegistrationTransactionCommit",
+    "OrphanRegistryRemoval",
+    "SettlementTransactionCommit",
+    "RecoveryExposure"
+  ],
+  "terminal_events": ["OperationReturn"],
+  "acceptance_formula": {
+    "op": "all",
+    "items": [
+      {"op": "phase_in", "values": ["SETTLED"]},
+      {"op": "relation_equals", "name": "inode.cleanup_required", "value": false},
+      {"op": "no_irreversible_violation"}
+    ]
+  },
+  "frame_relations": [
+    "inode.unrelated_links",
+    "filesystem.unrelated_registry_entries",
+    "namespace_entry.unrelated_names"
+  ],
+  "semantic_footprint": [
+    "zero_link_namespace_detachment",
+    "persistent_orphan_registry_acceptance",
+    "terminal_inode_deletion",
+    "orphan_registry_removal",
+    "transactional_settlement",
+    "recovery_exposure"
+  ],
+  "evidence_references": [
+    "docs/crossfs/orphan-inode/btrfs.md",
+    "docs/crossfs/orphan-inode/ext4.md",
+    "docs/crossfs/orphan-inode/correspondence-matrix.md"
+  ]
+}

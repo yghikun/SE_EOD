@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "freeze_id": "fmpca.oids.v0.2.diagnostic-regression-freeze.v0.1",
+  "frozen_on": "2026-08-02",
+  "base_protocol": "configs/protocols/common/orphan-inode-deletion-settlement-v0.1-candidate.json",
+  "base_protocol_sha256": "c95135df0a9c916cd863d557aedebf64f06ae7bfee5bcf81692ce56f3c263122",
+  "diagnostic_extension": "configs/protocols/common/orphan-inode-deletion-settlement-v0.2-diagnostic.json",
+  "diagnostic_extension_sha256": "613b00438c5ebb6bf3ed6abc48ceb7bf6d73991dd074219f7ed2f84bc4d25fb1",
+  "phase13_preregistration": "configs/evaluation/oids-phase13-v0.2-revision-preregistration-v0.1.json",
+  "phase13_preregistration_sha256": "5262d9db9c2f20b1434ad955de923deaf2df5c5a66267112db2c7c71e573f404",
+  "phase14_manifest": "configs/evaluation/oids-phase14-v0.2-diagnostic-v0.1.json",
+  "phase14_manifest_sha256": "af7fcf7969e1f2d4ee5941a937af7cfdd1aeae69d85e787a0728a2669dc214ff",
+  "phase14_summary": "outputs/fmpca-oids-phase14-v0.1/summary.json",
+  "phase14_summary_sha256": "cbb90e330aa384be04391c26cb50ac55b9e0a45884c12a15e21cc0d9d27ebdc1",
+  "regression_boundaries": [
+    {"filesystem": "Btrfs", "boundary": "QUALIFIED_SUCCESSFUL_PROFILE", "status": "PRESERVED"},
+    {"filesystem": "ext4", "boundary": "FAILSTOP_POSITIVE_AND_ERRORS_CONT_NEGATIVE", "status": "PRESERVED"},
+    {"filesystem": "UBIFS", "boundary": "LIVE_RW_POSITIVE_AND_READ_ONLY_DEFERRED", "status": "PRESERVED"},
+    {"filesystem": "OCFS2", "boundary": "NON_APPLICABLE_DEADLINE_NOT_ALIGNED", "status": "PRESERVED"}
+  ],
+  "development_violations": [
+    {"filesystem": "ReiserFS", "rule": "OIDS-O1", "status": "VIOLATION_PRESERVED"},
+    {"filesystem": "ReiserFS", "rule": "OIDS-O3", "status": "VIOLATION_PRESERVED"}
+  ],
+  "heldout_partition_assigned": false,
+  "common_v0_2_validated": false
+}
+

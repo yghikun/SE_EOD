@@ -1,0 +1,359 @@
+{
+  "artifact_hashes_verified": true,
+  "assessment": {
+    "blockers": [],
+    "configuration_scope_decision": "VALID_CONFIGURATION_BOUNDARY",
+    "errors_continue": [
+      {
+        "blockers": [],
+        "closed": true,
+        "configuration": "ERRORS_CONT",
+        "evidence": [
+          {
+            "fact": "directory deletion metadata is dirtied",
+            "function": "ext4_delete_entry",
+            "line": 2751,
+            "node_id": 9,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/namei.c"
+          },
+          {
+            "fact": "directory buffer reaches JBD2 dirty metadata",
+            "function": "ext4_handle_dirty_dirblock",
+            "line": 440,
+            "node_id": 2,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/namei.c"
+          },
+          {
+            "fact": "orphan registration reserves inode write",
+            "function": "ext4_orphan_add",
+            "line": 144,
+            "node_id": 32,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c"
+          },
+          {
+            "fact": "inode-location lookup allocates buffer head",
+            "function": "__ext4_get_inode_loc",
+            "line": 4465,
+            "node_id": 57,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "buffer-head allocation failure returns -ENOMEM",
+            "function": "__ext4_get_inode_loc",
+            "line": 4442,
+            "node_id": 71,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "registration failure enters configured error policy",
+            "function": "ext4_orphan_add",
+            "line": 188,
+            "node_id": 4,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c"
+          }
+        ],
+        "expected_rule": "OIDS-O1",
+        "fixture": "tests/fixtures/events/oids-ext4-errors-cont-registration-v0.1.json",
+        "negative_outcome": "namespace-only transaction commit",
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "source_witness_closed": true,
+        "stage": "registration",
+        "violation_rules": [
+          "ACCEPTANCE@AT_SETTLEMENT",
+          "OIDS-O1"
+        ]
+      },
+      {
+        "blockers": [],
+        "closed": true,
+        "configuration": "ERRORS_CONT",
+        "evidence": [
+          {
+            "fact": "orphan-file removal metadata is dirtied",
+            "function": "ext4_orphan_file_del",
+            "line": 215,
+            "node_id": 6,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c"
+          },
+          {
+            "fact": "persistent orphan removal precedes terminal settlement",
+            "function": "ext4_evict_inode",
+            "line": 237,
+            "node_id": 50,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "post-removal inode mark-dirty can fail",
+            "function": "ext4_evict_inode",
+            "line": 304,
+            "node_id": 13,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "mark-dirty failure selects in-core clear",
+            "function": "ext4_evict_inode",
+            "line": 306,
+            "node_id": 14,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "inode free exists only on mark-dirty success",
+            "function": "ext4_evict_inode",
+            "line": 308,
+            "node_id": 15,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          },
+          {
+            "fact": "eviction handle is stopped after branch join",
+            "function": "ext4_evict_inode",
+            "line": 278,
+            "node_id": 27,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/inode.c"
+          }
+        ],
+        "expected_rule": "OIDS-O2",
+        "fixture": "tests/fixtures/events/oids-ext4-errors-cont-settlement-v0.1.json",
+        "negative_outcome": "orphan-removal-only transaction commit",
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "source_witness_closed": true,
+        "stage": "settlement",
+        "violation_rules": [
+          "OIDS-O2"
+        ]
+      },
+      {
+        "blockers": [],
+        "closed": true,
+        "configuration": "ERRORS_CONT",
+        "evidence": [
+          {
+            "fact": "orphan lookup has an error exit",
+            "function": "ext4_orphan_cleanup",
+            "line": 468,
+            "node_id": 24,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/orphan.c"
+          },
+          {
+            "fact": "orphan lookup error enters configured error policy",
+            "function": "ext4_orphan_get",
+            "line": 1392,
+            "node_id": 27,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/ialloc.c"
+          },
+          {
+            "fact": "mount invokes void orphan cleanup",
+            "function": "__ext4_fill_super",
+            "line": 5602,
+            "node_id": 76,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+          },
+          {
+            "fact": "recovery completion remains after void cleanup",
+            "function": "__ext4_fill_super",
+            "line": 5614,
+            "node_id": 71,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+          },
+          {
+            "fact": "successful mount return remains reachable",
+            "function": "__ext4_fill_super",
+            "line": 5638,
+            "node_id": 52,
+            "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+          }
+        ],
+        "expected_rule": "OIDS-O3",
+        "fixture": "tests/fixtures/events/oids-ext4-errors-cont-recovery-v0.1.json",
+        "negative_outcome": "successful recovery exposure without per-inode settlement",
+        "result": "VIOLATION_UNDER_LOADED_SPEC",
+        "source_witness_closed": true,
+        "stage": "recovery",
+        "violation_rules": [
+          "ACCEPTANCE@AT_SETTLEMENT",
+          "OIDS-O3"
+        ]
+      }
+    ],
+    "errors_continue_negative_witness_closed": true,
+    "failstop_profile_closed": true,
+    "failstop_recovery": {
+      "blockers": [],
+      "closed": true,
+      "conclusion": "journal abort forces flush -EIO through recovery completion into mount failure",
+      "evidence": [
+        {
+          "fact": "non-continuing writable error aborts journal",
+          "function": "ext4_handle_error",
+          "line": 713,
+          "node_id": 17,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "ERRORS_CONT is a separate guard",
+          "function": "ext4_handle_error",
+          "line": 704,
+          "node_id": 22,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "flush tests journal-level abort",
+          "function": "jbd2_journal_flush",
+          "line": 2433,
+          "node_id": 23,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/journal.c"
+        },
+        {
+          "fact": "aborted journal flush returns -EIO",
+          "function": "jbd2_journal_flush",
+          "line": 2434,
+          "node_id": 24,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/journal.c"
+        },
+        {
+          "fact": "recovery completion flushes journal",
+          "function": "ext4_mark_recovery_complete",
+          "line": 6258,
+          "node_id": 15,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "negative flush result takes error exit",
+          "function": "ext4_mark_recovery_complete",
+          "line": 6259,
+          "node_id": 13,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "recovery completion propagates error",
+          "function": "ext4_mark_recovery_complete",
+          "line": 6275,
+          "node_id": 2,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "mount calls recovery completion marker",
+          "function": "__ext4_fill_super",
+          "line": 5614,
+          "node_id": 71,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "marker error selects failed_mount9",
+          "function": "__ext4_fill_super",
+          "line": 5616,
+          "node_id": 70,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "mount failure cleanup label",
+          "function": "__ext4_fill_super",
+          "line": 5640,
+          "node_id": 50,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        },
+        {
+          "fact": "mount returns propagated error",
+          "function": "__ext4_fill_super",
+          "line": 5699,
+          "node_id": 2,
+          "source": "linux-sources/linux-v6.14-fs/fs/ext4/super.c"
+        }
+      ],
+      "status": "CLOSED"
+    },
+    "transaction_commit": {
+      "blockers": [],
+      "closed": true,
+      "commit_reads_metadata_list": true,
+      "discard_requires_journal_abort": true,
+      "evidence": [
+        {
+          "fact": "dirty metadata files buffer as BJ_Metadata",
+          "function": "jbd2_journal_dirty_metadata",
+          "line": 1631,
+          "node_id": 8,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/transaction.c"
+        },
+        {
+          "fact": "BJ_Metadata transaction list selection",
+          "function": "jbd2_journal_dirty_metadata",
+          "line": 1517,
+          "node_id": 51,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/transaction.c"
+        },
+        {
+          "fact": "metadata maps to transaction t_buffers",
+          "function": "__jbd2_journal_file_buffer",
+          "line": 2525,
+          "node_id": 6,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/transaction.c"
+        },
+        {
+          "fact": "buffer is added to selected transaction list",
+          "function": "__jbd2_journal_file_buffer",
+          "line": 2545,
+          "node_id": 5,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/transaction.c"
+        },
+        {
+          "fact": "commit consumes transaction metadata list",
+          "function": "jbd2_journal_commit_transaction",
+          "line": 576,
+          "node_id": 236,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/commit.c"
+        },
+        {
+          "fact": "discard branch requires journal abort",
+          "function": "jbd2_journal_commit_transaction",
+          "line": 585,
+          "node_id": 310,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/commit.c"
+        },
+        {
+          "fact": "aborted-journal branch discards dirty buffer",
+          "function": "jbd2_journal_commit_transaction",
+          "line": 586,
+          "node_id": 318,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/commit.c"
+        },
+        {
+          "fact": "non-aborted transaction writes commit record",
+          "function": "jbd2_journal_commit_transaction",
+          "line": 784,
+          "node_id": 212,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/commit.c"
+        },
+        {
+          "fact": "handle abort is handle-local state",
+          "function": "jbd2_journal_abort_handle",
+          "line": 1697,
+          "node_id": 2,
+          "source": "linux-sources/linux-v6.14-fs/include/linux/jbd2.h"
+        },
+        {
+          "fact": "journal stop observes handle-local abort",
+          "function": "jbd2_journal_stop",
+          "line": 1835,
+          "node_id": 49,
+          "source": "linux-sources/linux-v6.14-fs/fs/jbd2/transaction.c"
+        }
+      ],
+      "handle_abort_does_not_prevent_commit": true,
+      "handle_abort_is_not_journal_abort": true,
+      "metadata_filed_on_transaction": true,
+      "status": "CLOSED"
+    },
+    "universal_all_path_closed": false
+  },
+  "bug_specific_condition_count": 0,
+  "common_freeze_manifest_generated": false,
+  "configuration_scope_decision": "VALID_CONFIGURATION_BOUNDARY",
+  "errors_continue_negative_witness_closed": true,
+  "evaluation_id": "fmpca-oids-phase6-configuration-boundary-v0.1",
+  "failstop_profile_closed": true,
+  "interpretation": "Linux v6.14 closes ext4 OIDS registration, settlement, and recovery for the explicitly qualified non-continuing failstop profile. ERRORS_CONT remains a valid ext4 configuration and now has closed source-plus-semantic negative witnesses for OIDS-O1, OIDS-O2, and OIDS-O3. It is therefore a configuration boundary that rejects unqualified universal ext4 validation; no COMMON freeze manifest is generated.",
+  "manifest": "configs/evaluation/oids-phase6-configuration-boundary-v0.1.json",
+  "manifest_sha256": "5eaa6300791801b58cea2b5d9283495f711976352f49c276be2df25a24963985",
+  "schema_version": 1,
+  "universal_all_path_closed": false
+}

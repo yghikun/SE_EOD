@@ -1,0 +1,17 @@
+{
+  "source_witness": {
+    "filesystem": "ext4",
+    "configuration": "ERRORS_CONT",
+    "failure": "__ext4_get_inode_loc returns -ENOMEM after directory metadata is journaled",
+    "transaction_effect": "namespace metadata remains on the running transaction while orphan registration is absent"
+  },
+  "expected_result": "VIOLATION_UNDER_LOADED_SPEC",
+  "expected_rule": "OIDS-O1",
+  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
+  "events": [
+    {"event": "InitializeOrphanDeletion", "roles": {"operation": "ext4:errors-cont:registration", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:registration", "namespace_entry": "ext4:dirent:registration", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "LastLinkRemoved", "roles": {"operation": "ext4:errors-cont:registration", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:registration", "namespace_entry": "ext4:dirent:registration", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "RegistrationTransactionCommit", "roles": {"operation": "ext4:errors-cont:registration", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:registration", "namespace_entry": "ext4:dirent:registration", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}},
+    {"event": "OperationReturn", "roles": {"operation": "ext4:errors-cont:registration", "filesystem": "ext4:sb:errors-cont", "inode": "ext4:inode:registration", "namespace_entry": "ext4:dirent:registration", "orphan_registry": "ext4:orphan-registry"}, "epoch": {}}
+  ]
+}

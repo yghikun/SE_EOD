@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "catalog_id": "fmpca.oids.phase11.reiserfs_heldout",
+  "catalog_version": "0.1.0",
+  "candidate_filesystem": "ReiserFS",
+  "source_version": "Linux v6.8",
+  "validation_role": "HELD_OUT",
+  "validation_provenance": "PREREGISTERED_POST_COMMON_BLIND",
+  "operation_family": "reiserfs-save-link-tree-journal-and-synchronous-mount-scan",
+  "applicability": "APPLICABLE",
+  "conformance_decision": "NON_CONFORMANT_HELDOUT",
+  "correspondence_dimensions": {
+    "object": "CLOSED",
+    "relation": "CLOSED",
+    "lifecycle": "CLOSED",
+    "authority": "CLOSED",
+    "deadline": "CLOSED"
+  },
+  "successful_profiles": [
+    "SUCCESSFUL_LIVE_DELETION",
+    "SUCCESSFUL_RW_RECOVERY_EXPOSURE"
+  ],
+  "failed_or_incomplete_profiles": [
+    {
+      "profile": "SAVE_LINK_ENOSPC_UNPROPAGATED",
+      "result": "VIOLATION_UNDER_LOADED_SPEC",
+      "rule": "OIDS-O1"
+    },
+    {
+      "profile": "SAVE_LINK_REMOVAL_ERROR_IGNORED",
+      "result": "INCOMPLETE_UNDER_LOADED_SPEC"
+    },
+    {
+      "profile": "RECOVERY_ERROR_EXPOSURE_REACHABLE",
+      "result": "VIOLATION_UNDER_LOADED_SPEC",
+      "rule": "OIDS-O3"
+    }
+  ],
+  "narrowing_rejected": "Internal success of add_save_link or finish_unfinished is an outcome-dependent condition and cannot be added as an applicability predicate after reveal.",
+  "common_heldout_validated": false,
+  "phase9_common_freeze_preserved": true
+}
