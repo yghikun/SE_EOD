@@ -1,7 +1,0 @@
-{
-  "closure": {"path_model_closed": true, "all_paths_closed": true, "repair_slice_closed": true, "alias_closed": true},
-  "events": [
-    {"event": "InitializeCapacityContribution", "roles": {"operation": "device-shrink:bug", "device": "device:1", "fs_devices": "fs_devices:1", "fs_info": "fs:1"}, "epoch": {"operation_root": "device-shrink:bug", "retry_generation": 0}, "data": {"contributing": "PRESENT", "writable": true, "allocation_eligible": true, "eligible": true, "eligibility_valid": true, "delta_valid": false, "released_device_capacity_detached": false}},
-    {"event": "OperationReturn", "roles": {"operation": "device-shrink:bug", "device": "device:1", "fs_devices": "fs_devices:1", "fs_info": "fs:1"}, "epoch": {"operation_root": "device-shrink:bug", "retry_generation": 0}}
-  ]
-}

@@ -1,0 +1,44 @@
+From a4e996b8a2b93a710d2f14904325b57ce8ae045d Mon Sep 17 00:00:00 2001
+From: Guanghui Yang <3497809730@qq.com>
+Date: Tue, 14 Jul 2026 14:05:00 +0800
+Subject: [PATCH 0/3] btrfs: fix failed sprout device add rollback
+
+Hi,
+
+This series fixes the error path for adding the first writable device to
+a seed filesystem.
+
+With fault injection after the metadata chunk creation in
+init_first_rw_device(), the newly created block group is drained by the
+transaction abort path. The problem is not a local block group reference
+leak, but partially installed device state left behind by
+btrfs_init_new_device().
+
+The failed sprout device can remain linked on the transaction device
+update list, latest_dev/s_bdev can still point to the failed device, and
+the mounted filesystem can remain in the partially initialized sprout
+fs_devices state with no open devices.
+
+Before this series, the injected failure triggered:
+
+  - WARN_ON(!list_empty(&device->post_commit_list)) in btrfs_free_device()
+  - a NULL pointer dereference through btrfs_show_devname()
+  - ASSERT(nr_devices) in btrfs_statfs()
+
+After this series, the same injected failure returns -EIO from the device
+add operation, the pending block group is removed by the transaction abort
+path, btrfs filesystem show still reports the seed device, and umount
+completes without the above warnings or crashes.
+
+Guanghui Yang (3):
+  btrfs: detach failed sprout device from transaction update list
+  btrfs: restore active device pointers after failed sprout
+  btrfs: roll back sprout setup after device add failure
+
+ fs/btrfs/volumes.c | 43 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+
+
+base-commit: a13c140cc289c0b7b3770bce5b3ad42ab35074aa
+-- 
+2.52.0.windows.1

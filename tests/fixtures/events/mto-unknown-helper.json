@@ -1,9 +1,0 @@
-{
-  "closure": {"path_model_closed": false, "all_paths_closed": false, "repair_slice_closed": false, "alias_closed": true},
-  "events": [
-    {"event": "Begin", "roles": {"operation": "op:5", "metadata_subject": "inode:5", "outcome_owner": "op:5"}, "epoch": {"operation_root": "op:5", "retry_generation": 0}},
-    {"event": "MetadataStep", "roles": {"operation": "op:5", "metadata_subject": "inode:5", "outcome_owner": "op:5"}, "epoch": {"operation_root": "op:5", "retry_generation": 0}, "precision": "UNKNOWN"},
-    {"event": "OperationReturn", "roles": {"operation": "op:5", "metadata_subject": "inode:5", "outcome_owner": "op:5"}, "epoch": {"operation_root": "op:5", "retry_generation": 0}}
-  ]
-}
-

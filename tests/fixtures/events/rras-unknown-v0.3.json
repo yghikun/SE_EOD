@@ -1,8 +1,0 @@
-{
-  "closure": {"path_model_closed": false, "all_paths_closed": false, "repair_slice_closed": false, "alias_closed": false},
-  "events": [
-    {"event": "RelocationAttachmentPrestate", "roles": {"operation": "op:unknown", "fs_root": "fs:root", "relocation_owner": "op:unknown"}, "epoch": {"operation_root": "op:unknown", "retry_generation": 0}, "data": {"relation": "root.reloc_root", "value": "DETACHED"}},
-    {"event": "UnknownHelper", "roles": {"operation": "op:unknown", "fs_root": "fs:root", "relocation_owner": "op:unknown"}, "epoch": {"operation_root": "op:unknown", "retry_generation": 0}, "data": {"footprint": ["fs_root_reloc_root_attachment"]}},
-    {"event": "OperationReturn", "roles": {"operation": "op:unknown", "fs_root": "fs:root", "relocation_owner": "op:unknown"}, "epoch": {"operation_root": "op:unknown", "retry_generation": 0}}
-  ]
-}

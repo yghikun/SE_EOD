@@ -7,7 +7,39 @@ checks relation, obligation, responsibility, observability, and outcome clauses
 at protocol-specific deadlines. Results are always relative to the loaded
 protocol, source binding, path model, and recorded assumptions.
 
+## Framework and Workstreams
+
+FMPCA is the reusable analyzer framework. It is not specialized to orphan inode
+deletion, and the framework remains extensible. OIDS (Orphan Inode Deletion
+Settlement) is one independently versioned protocol workstream and
+cross-filesystem case study built on FMPCA.
+
+```text
+FMPCA framework: EXTENSIBLE
+OIDS workstream: COMPLETE at OIDS_PHASE_18
+```
+
+Completion and maintenance fields in the historical OIDS Phase 18 release apply
+only to OIDS. They do not declare the FMPCA framework complete or impose a global
+hard endpoint. The machine-readable correction is
+`configs/evaluation/oids-scope-correction-v0.2.1.json`.
+
 ## Current Scope
+
+The post-v0.5 development branch adds an executable, backward-compatible
+hierarchical typestate layer. Its first draft treats `DeviceTopology` as the
+high-level state carrier, executes factorized membership, active-reference and
+transaction-attachment component machines, derives a high-level state after
+every source event, and checks both trace deadlines and outcome-specific
+high-level final states. The trace distinguishes `SPROUT_IN_PROGRESS` from
+`ROLLBACK_IN_PROGRESS`; `INVALID` is an analysis result, not a protocol state.
+A provenance-locked real-source
+differential now reports the Bug baseline as a violation and the three-patch
+fixed source as conformant on the same selected failure partition. This is a
+development case, not a frozen v0.6 capability, all-path proof, or independent
+evaluation result. See
+`docs/cases/device-topology-hierarchical-typestate.md` and
+`configs/protocols/device-topology-typestate-v0.6-draft.json`.
 
 Domain Protocol Catalog v0.2 freezes two filesystem-metadata protocols:
 
@@ -46,6 +78,12 @@ CMRC v0.5 is validated across the confirmed Bug #15 reservation family and an
 independent Btrfs device-item update family. This is cross-operation-family
 qualification, not post-freeze held-out or cross-filesystem generalization.
 
+The OIDS workstream adds a protocol for persistent orphan-inode deletion
+settlement across registration, terminal settlement, and recovery exposure. Its
+v0.2 diagnostic extension is development-validated; the preregistered JFS
+held-out attempt is a controlled non-applicable result, so COMMON OIDS v0.2 is
+not held-out validated.
+
 Versioned `v0.1`-`v0.3` artifacts are kept on purpose. They are still
 referenced by tests, freeze manifests, traceability docs, and the handoff
 history, so they are not dead weight. The disposable layer here is generated
@@ -70,6 +108,50 @@ complete concurrency, or general heap/shape analysis.
   when a snapshot is shallow
 
 ## Commands
+
+Run the experimental hierarchical `DeviceTopology` replay without modifying
+the frozen analyzer or its hash locks:
+
+```powershell
+python -m src.fmpca.hierarchical_typestate `
+  --protocol configs/protocols/device-topology-typestate-v0.6-draft.json `
+  --events tests/fixtures/events/dht-combined-bug.json
+```
+
+Run the provenance-locked real-source Bug/fixed differential:
+
+```powershell
+python -m src.fmpca.device_topology_differential `
+  --manifest configs/evaluation/device-topology-source-differential-v0.6.json `
+  --json-out outputs/fmpca-device-topology-v0.6-differential/results.json `
+  --markdown-out outputs/fmpca-device-topology-v0.6-differential/report.md
+```
+
+Expected differential:
+
+```text
+Bug   -> SEEDED_STABLE -> SPROUT_IN_PROGRESS -> ROLLBACK_IN_PROGRESS
+      -> ReleaseDevice: INVALID -> VIOLATION
+
+Fixed -> SEEDED_STABLE -> SPROUT_IN_PROGRESS -> ROLLBACK_IN_PROGRESS
+      -> OperationReturn(ERROR): SEEDED_STABLE -> CONFORMANT
+```
+
+The ignored `linux-sources/` snapshots are optional for this command. Locked
+source ZIPs and the original patch series are stored under
+`docs/cases/patches/sprout-rollback-v1/` and are verified before analysis.
+
+Draw six separate editable state-machine figures from the current protocol
+and differential result:
+
+```powershell
+python figures/draw_device_topology_typestate_separate.py
+```
+
+Outputs are stored under `figures/device-topology-v0.6-separate/`: one
+high-level machine, three child machines, one terminal Bug-decision figure,
+and one event-by-event child-state fusion figure.
+Every figure has editable SVG/PDF and PNG/TIFF exports.
 
 Validate a protocol:
 
@@ -213,6 +295,38 @@ CMRC and rejects `btrfs-device-item-update` as not independent from the v0.5
 freeze. Replay passes 4/4 for normal, fixed/repair, negative and unknown
 paths.
 
+Verify the OIDS scope correction:
+
+```powershell
+python -m src.fmpca.orphan_scope_correction `
+  --manifest configs/evaluation/oids-scope-correction-v0.2.1.json `
+  --json-out outputs/fmpca-oids-scope-correction-v0.2.1/summary.json `
+  --markdown-out outputs/fmpca-oids-scope-correction-v0.2.1/report.md
+```
+
+Run the read-only OIDS maintenance verification without overwriting outputs:
+
+```powershell
+python -m src.fmpca.orphan_maintenance
+```
+
+Run the independently versioned OIDS cross-filesystem survey over XFS, F2FS,
+GFS2, NILFS2, and bcachefs:
+
+```powershell
+python -m src.fmpca.orphan_crossfs_survey `
+  --manifest configs/evaluation/oids-crossfs-survey-v0.3-results-v0.1.json `
+  --json-out outputs/fmpca-oids-crossfs-survey-v0.3/summary.json `
+  --markdown-out outputs/fmpca-oids-crossfs-survey-v0.3/report.md
+```
+
+The v0.3 survey finds XFS, writable-recovery F2FS, and bcachefs applicable and
+conformant. GFS2 is non-applicable because its lazy cleanup deadline does not
+align with OIDS recovery exposure; NILFS2 is non-applicable because no
+persistent cleanup-responsibility object was found. bcachefs is the only blind
+held-out positive. The historical Phase 18 release remains unchanged; the new
+survey supplies later evidence supporting current COMMON validation.
+
 Run all tests:
 
 ```powershell
@@ -247,6 +361,14 @@ outputs/fmpca-cmrc-v0.5-freeze-readiness/
                        reproducible CMRC freeze-readiness result and report
 outputs/fmpca-e6-v0.5-heldout-screening/
                        reproducible post-v0.5 CMRC held-out screen
+outputs/fmpca-oids-scope-correction-v0.2.1/
+                       OIDS-local endpoint correction and FMPCA scope status
+outputs/fmpca-oids-crossfs-survey-v0.3/
+                       five-filesystem applicability/conformance survey
+outputs/fmpca-device-topology-v0.6-differential/
+                       provenance-locked sprout Bug/fixed source differential
+figures/device-topology-v0.6-separate/
+                       five independent high-level, child and decision figures
 ```
 
 ## Result Classes
